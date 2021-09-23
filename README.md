@@ -11,8 +11,11 @@ docker-compose up -d
 ## Verification
 
 Backend - [http://localhost:4000/swagger-ui.html](http://localhost:4000/swagger-ui.html)
+
 Frontend - [http://localhost:8080/login](http://localhost:8080/login)
+
 Prometheus - [http://localhost:9090/](http://localhost:9090/)
+
 Grafana - [http://localhost:3000/login](http://localhost:3000/login)
 
 ## Cleanup
