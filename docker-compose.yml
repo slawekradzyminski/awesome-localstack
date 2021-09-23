@@ -18,7 +18,7 @@ services:
     image: prom/prometheus
     restart: always
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     depends_on:
@@ -28,6 +28,9 @@ services:
     image: grafana/grafana
     environment:
       GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
+      GF_SECURITY_ADMIN_PASSWORD: grafana
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
     restart: always
     ports:
       - "3000:3000"
