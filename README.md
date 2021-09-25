@@ -28,8 +28,6 @@ docker-compose down
 
 [Article](https://stackabuse.com/monitoring-spring-boot-apps-with-micrometer-prometheus-and-grafana/)
 
-[JVM Dashboard id](https://grafana.com/grafana/dashboards/4701)
-
 ## Backend
 
 [https://github.com/slawekradzyminski/test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
