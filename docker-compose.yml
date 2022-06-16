@@ -2,17 +2,19 @@ version: '3.8'
 
 services:
   backend:
-    image: slawekradzyminski/jwt-auth-service
+    image: slawekradzyminski/backend:1.2
     restart: always
     ports:
-      - "4000:4000"
+      - "4001:4001"
     hostname: backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
-    image: slawekradzyminski/frontend
+    image: slawekradzyminski/frontend:1.2
     restart: always
     ports:
-      - "8080:8080"
+      - "8081:8081"
 
   prometheus:
     image: prom/prometheus
