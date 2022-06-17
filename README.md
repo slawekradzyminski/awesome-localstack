@@ -22,6 +22,8 @@ Active MQ - [http://localhost:8161](http://localhost:8161/) (admin/admin)
 
 Mailhog - [http://localhost:8025/](http://localhost:8025/) 
 
+Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
+
 ## Cleanup
 
 ```commandline
