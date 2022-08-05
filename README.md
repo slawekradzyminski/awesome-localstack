@@ -5,7 +5,7 @@ Localstack for my trainings
 ## Running
 
 ```commandline
-docker-compose up -d
+docker-compose up
 ```
 
 ## Verification
