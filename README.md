@@ -55,3 +55,9 @@ docker-compose down
 ```commandline
 docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)
 ```
+
+## K6 test execution command
+
+```commandline
+k6 run --out influxdb=http://localhost:8086/db0  dist/user-journey.js
+```
