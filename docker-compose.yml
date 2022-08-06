@@ -38,6 +38,7 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+      - influxdb
 
   activemq:
     image: symptoma/activemq:5.15.13
@@ -63,3 +64,17 @@ services:
     hostname: consumer
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  influxdb:
+    image: influxdb:1.8
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=db0
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+
+volumes:
+  influxdb-storage:
