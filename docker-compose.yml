@@ -20,28 +20,32 @@ services:
     networks:
       - my-private-ntwk
 
-#  prometheus:
-#    image: prom/prometheus
-#    restart: always
-#    volumes:
-#      - ./prometheus/:/etc/prometheus/
-#    ports:
-#      - "9090:9090"
-#    depends_on:
-#      - backend
-#
-#  grafana:
-#    image: grafana/grafana
-#    environment:
-#      GF_SECURITY_ADMIN_PASSWORD: grafana
-#    volumes:
-#      - ./grafana/provisioning/:/etc/grafana/provisioning/
-#    restart: always
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      - prometheus
-#      - influxdb
+  prometheus:
+    image: prom/prometheus
+    restart: always
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    networks:
+      - my-private-ntwk
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: grafana
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - influxdb
+    networks:
+      - my-private-ntwk
 
   activemq:
     image: symptoma/activemq:5.15.13
@@ -71,22 +75,22 @@ services:
     hostname: consumer
     networks:
       - my-private-ntwk
-#    extra_hosts:
-#      - "host.docker.internal:host-gateway"
 
-#  influxdb:
-#    image: influxdb:1.8
-#    ports:
-#      - '8086:8086'
-#    volumes:
-#      - influxdb-storage:/var/lib/influxdb
-#    environment:
-#      - INFLUXDB_DB=db0
-#      - INFLUXDB_ADMIN_USER=admin
-#      - INFLUXDB_ADMIN_PASSWORD=admin
-#
-#volumes:
-#  influxdb-storage:
+  influxdb:
+    image: influxdb:1.8
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=db0
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    networks:
+      - my-private-ntwk
+
+volumes:
+  influxdb-storage:
 
 networks:
   my-private-ntwk:
