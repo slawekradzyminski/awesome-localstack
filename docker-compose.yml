@@ -95,4 +95,4 @@ volumes:
 networks:
   my-private-ntwk:
     external:
-      name: my_recipe_ntwk
+      name: my_network
