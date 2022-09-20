@@ -2,6 +2,8 @@
 
 Localstack for my trainings
 
+![Localstack](img/Localstack.png)
+
 ## Running
 
 ```commandline
