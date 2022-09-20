@@ -2,7 +2,7 @@
 
 Localstack for my trainings
 
-![Localstack](img/Localstack.png)
+![Localstack](img/Localstack.jpeg)
 
 ## Running
 
