@@ -73,6 +73,8 @@ services:
     ports:
       - "4002:4002"
     hostname: consumer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - my-private-ntwk
 
