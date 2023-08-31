@@ -48,7 +48,7 @@ services:
       - my-private-ntwk
 
   activemq:
-    image: symptoma/activemq:5.15.13
+    image: symptoma/activemq:5.17.2
     restart: always
     ports:
       - "61616:61616"
