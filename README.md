@@ -8,7 +8,7 @@ Localstack for my trainings
 
 ```commandline
 docker network create --driver bridge my_network
-docker-compose up
+docker-compose up -d
 ```
 
 ## Verification
