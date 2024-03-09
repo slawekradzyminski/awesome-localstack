@@ -39,18 +39,12 @@ echo "Application started successfully."
 
 # Run smoke test for registration
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X 'POST' \
-  'http://localhost:4001/users/signup' \
+  'http://localhost:4001/users/signin' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
-  "username": "user",
-  "email": "user@example.com",
-  "password": "pass",
-  "roles": [
-    "ROLE_ADMIN"
-  ],
-  "firstName": "John",
-  "lastName": "Doe"
+  "username": "admin",
+  "password": "admin"
 }')
 
 if [ $RESPONSE_CODE -ne 201 ]; then
