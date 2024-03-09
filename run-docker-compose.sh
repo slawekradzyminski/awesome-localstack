@@ -37,7 +37,7 @@ done
 
 echo "Application started successfully."
 
-# Run smoke test for registration
+# Run smoke test for login
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X 'POST' \
   'http://localhost:4001/users/signin' \
   -H 'accept: */*' \
@@ -47,9 +47,9 @@ RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X 'POST' \
   "password": "admin"
 }')
 
-if [ $RESPONSE_CODE -ne 201 ]; then
-  echo "Registration smoke test failed. Response code: $RESPONSE_CODE. Exiting."
+if [ $RESPONSE_CODE -ne 200 ]; then
+  echo "Login smoke test failed. Response code: $RESPONSE_CODE. Exiting."
   exit 1
 fi
 
-echo "Registration smoke test passed successfully."
+echo "Login smoke test passed successfully."
