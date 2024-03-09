@@ -17,7 +17,7 @@ while true; do
   fi
 
   # Check if the application is up by making a request to the swagger UI
-  RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:4001/swagger-ui/index.html')
+  RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" 'http://localhost:4001/users/signup')
 
   if [ $RESPONSE_CODE -eq 200 ]; then
     break
