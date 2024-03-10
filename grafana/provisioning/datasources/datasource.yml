@@ -31,9 +31,12 @@ datasources:
   - name: InfluxDB
     type: influxdb
     access: proxy
-    database: db0
-    user: admin
-    password: admin
     url: http://influxdb:8086
     isDefault: false
     editable: true
+    jsonData:
+      organization: my-org
+      defaultBucket: my-bucket
+      version: Flux
+    secureJsonData:
+      token: my-super-secret-auth-token
