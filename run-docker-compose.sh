@@ -1,7 +1,5 @@
 #!/bin/bash
 
-docker network create --driver bridge my_network
-
 # Start the application in the background
 docker-compose up -d
 
