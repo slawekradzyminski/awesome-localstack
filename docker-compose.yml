@@ -21,7 +21,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.50.1
     restart: always
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -33,7 +33,7 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:10.3.4
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
     volumes:
@@ -58,7 +58,7 @@ services:
       - my-private-ntwk
 
   mailhog:
-    image: mailhog/mailhog
+    image: mailhog/mailhog:v1.0.1
     restart: always
     ports:
       - "8025:8025"
@@ -96,5 +96,4 @@ volumes:
 
 networks:
   my-private-ntwk:
-    external:
-      name: my_network
+    driver: bridge
