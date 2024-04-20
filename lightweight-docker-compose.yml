@@ -9,32 +9,17 @@ services:
     hostname: backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:1.2
+    image: slawekradzyminski/frontend:1.3
     restart: always
     ports:
       - "8081:8081"
+    networks:
+      - my-private-ntwk
 
-  prometheus:
-    image: prom/prometheus
-    restart: always
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    depends_on:
-      - backend
-
-  grafana:
-    image: grafana/grafana
-    environment:
-      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
-      GF_SECURITY_ADMIN_PASSWORD: grafana
-    volumes:
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    restart: always
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
+networks:
+  my-private-ntwk:
+    driver: bridge
