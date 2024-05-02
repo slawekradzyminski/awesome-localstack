@@ -7,7 +7,17 @@ Localstack for my trainings
 ## Running
 
 ```commandline
+docker-compose up --force-recreate --no-deps --build
+```
+
+```commandline
 docker-compose up -d
+```
+
+## Cleanup
+
+```commandline
+docker-compose down --volumes
 ```
 
 ## Verification
@@ -24,13 +34,11 @@ Active MQ - [http://localhost:8161](http://localhost:8161/) (admin/admin)
 
 Mailhog - [http://localhost:8025/](http://localhost:8025/) 
 
+Jenkins - [http://localhost:8080/](http://localhost:8080/) 
+
+See Container logs for initial Jenkins password.
+
 Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
-
-## Cleanup
-
-```commandline
-docker-compose down
-```
 
 ## Prometheus & Grafana
 

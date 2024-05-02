@@ -25,6 +25,8 @@ wait_for_http_200() {
             response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
         fi
 
+        echo "Response Code for $name: $response_code" 
+
         if [ $response_code -eq 200 ]; then
             echo "$name started successfully."
             break
@@ -48,6 +50,7 @@ urls=(
     "http://localhost:8161/index.html"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
+    "http://localhost:8080/login"
 )
 names=(
     "Backend"
@@ -57,6 +60,7 @@ names=(
     "Active MQ"
     "Mailhog"
     "Email consumer"
+    "Jenkins"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do
