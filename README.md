@@ -9,13 +9,19 @@ Localstack for my trainings
 ### Full
 
 ```commandline
-docker-compose up --force-recreate --no-deps --build
+docker-compose up --force-recreate --no-deps --build -d
 ```
 
-### CI
+### CI (No Monitoring and Jenkins)
 
 ```commandline
-docker-compose up -d
+docker-compose -f docker-compose-ci.yml up -d
+```
+
+### Minimal (Only Backend and Frontend)
+
+```commandline
+docker-compose -f lightweight-docker-compose.yml up -d
 ```
 
 ## Cleanup
