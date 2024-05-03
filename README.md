@@ -6,9 +6,13 @@ Localstack for my trainings
 
 ## Running
 
+### Full
+
 ```commandline
 docker-compose up --force-recreate --no-deps --build
 ```
+
+### CI
 
 ```commandline
 docker-compose up -d
