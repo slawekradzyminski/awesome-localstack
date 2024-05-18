@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start the application in the background
-docker-compose up -d
+docker compose up -d
 
 # Function to wait for an endpoint to return HTTP 200
 wait_for_http_200() {
