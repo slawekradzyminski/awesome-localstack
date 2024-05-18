@@ -3,6 +3,7 @@ version: '3.8'
 services:
   backend:
     image: slawekradzyminski/backend:1.2
+    platform: linux/amd64
     restart: always
     ports:
       - "4001:4001"
@@ -14,6 +15,7 @@ services:
 
   frontend:
     image: slawekradzyminski/frontend:1.3
+    platform: linux/amd64
     restart: always
     ports:
       - "8081:8081"
@@ -22,6 +24,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.50.1
+    platform: linux/amd64
     restart: always
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -34,6 +37,7 @@ services:
 
   grafana:
     image: grafana/grafana:10.3.4
+    platform: linux/amd64
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
     volumes:
@@ -49,6 +53,7 @@ services:
 
   activemq:
     image: symptoma/activemq:5.17.2
+    platform: linux/amd64
     restart: always
     ports:
       - "61616:61616"
@@ -59,6 +64,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:v1.0.1
+    platform: linux/amd64
     restart: always
     ports:
       - "8025:8025"
@@ -69,6 +75,7 @@ services:
 
   consumer:
     image: slawekradzyminski/consumer:1.2
+    platform: linux/amd64
     restart: always
     ports:
       - "4002:4002"
@@ -80,6 +87,7 @@ services:
 
   influxdb:
     image: influxdb:1.8
+    platform: linux/amd64
     ports:
       - '8086:8086'
     volumes:
@@ -93,6 +101,7 @@ services:
 
   jenkins:
     build: .
+    platform: linux/amd64
     ports:
       - "8080:8080"
       - "50000:50000"
