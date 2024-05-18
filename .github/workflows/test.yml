@@ -3,40 +3,26 @@ name: CI
 on: [push]
 
 jobs:
-  # runDocker:
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     docker:
-  #       image: docker:stable
-  #       volumes:
-  #         - /var/run/docker.sock:/var/run/docker.sock
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Build and run Docker Compose
-  #     run: bash ./run-docker-compose.sh
-
-  runDockerWindows:
-    runs-on: windows-latest
+  runDocker:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:stable
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    - name: Set up Docker Compose
-      run: |
-        Invoke-WebRequest "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-windows-x86_64.exe" -OutFile "$env:ProgramFiles\Docker\docker-compose.exe"
-        echo "$env:ProgramFiles\Docker" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
     - name: Build and run Docker Compose
       run: bash ./run-docker-compose.sh
-      shell: bash
 
-  # runDocker-CI:
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     docker:
-  #       image: docker:stable
-  #       volumes:
-  #         - /var/run/docker.sock:/var/run/docker.sock
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Build and run Docker Compose CI version
-  #     run: bash ./run-docker-compose-ci.sh
+  runDocker-CI:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:stable
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build and run Docker Compose CI version
+      run: bash ./run-docker-compose-ci.sh
