@@ -8,7 +8,7 @@ wait_for_http_200() {
     local url=$1
     local name=$2
     local elapsed_time=0
-    local timeout=300  # 5 minutes
+    local timeout=300 # 5 minutes
     local auth=$3      # Optional basic auth credentials in 'user:password' format
 
     echo "Waiting for $name to start..."
@@ -20,22 +20,28 @@ wait_for_http_200() {
         fi
 
         echo "Sending request to $url"
-        
         if [ -n "$auth" ]; then
-            response=$(curl -s -i -u "$auth" "$url")
+            response=$(curl -v -s -m 5 -u "$auth" "$url" 2>&1)
         else
-            response=$(curl -s -i "$url")
+            response=$(curl -v -s -m 5 "$url" 2>&1)
         fi
 
         echo "Response for $name:"
-        echo "$response"
+        if [ -z "$response" ]; then
+            echo "No response received (connection failed or timed out)"
+        else
+            echo "$response"
+        fi
         echo "------------------------"
 
-        response_code=$(echo "$response" | head -n 1 | awk '{print $2}')
+        response_code=$(echo "$response" | grep -i "< HTTP" | awk '{print $3}')
+        if [ -z "$response_code" ]; then
+            echo "Response Code for $name: No HTTP status code received"
+        else
+            echo "Response Code for $name: $response_code"
+        fi
 
-        echo "Response Code for $name: $response_code" 
-
-        if [ $response_code -eq 200 ]; then
+        if [[ "$response_code" =~ ^[0-9]+$ ]] && [ "$response_code" -eq 200 ]; then
             echo "$name started successfully."
             break
         fi
@@ -45,6 +51,11 @@ wait_for_http_200() {
 
         if [ $((elapsed_time % 60)) -eq 0 ]; then
             echo "Waiting for $name to start. Elapsed time: $elapsed_time seconds."
+            echo "Docker containers:"
+            docker ps
+            echo "Network information:"
+            docker network ls
+            docker network inspect $(docker network ls -q)
         fi
     done
 }
