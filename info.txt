@@ -1,0 +1,173 @@
+Docker network details:
+NETWORK ID     NAME                                 DRIVER    SCOPE
+bccaae9c93db   awesome-localstack_my-private-ntwk   bridge    local
+fdbc4568d0a4   bridge                               bridge    local
+169a7072b8be   host                                 host      local
+43d817d8a2a1   none                                 null      local
+Network: awesome-localstack_my-private-ntwk
+[
+    {
+        "Name": "awesome-localstack_my-private-ntwk",
+        "Id": "bccaae9c93dbcd9fde2505fb2f0dc1570ca655f60a28acac8d99275c94e1cfaf",
+        "Created": "2024-09-14T12:21:01.135524237Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.25.0.0/16",
+                    "Gateway": "172.25.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "57fb17f9eda8bded352de26db105494dbd037b4c2fd8735d121f1a2b77aa0434": {
+                "Name": "awesome-localstack-frontend-1",
+                "EndpointID": "10302794dfb00ef87e5efab1ea3ed9677b602cf9fbcc40c0ca711ca4da1151bf",
+                "MacAddress": "02:42:ac:19:00:04",
+                "IPv4Address": "172.25.0.4/16",
+                "IPv6Address": ""
+            },
+            "67c2b2d727f2cf1ee8c0acce45a5bf9c01370dcc5501b7c2e06a07aec578b8d7": {
+                "Name": "awesome-localstack-activemq-1",
+                "EndpointID": "703fc793c3d3046b1cf2f0016bfb60b7e1b5309a11356a6efb95ab26f1347bf1",
+                "MacAddress": "02:42:ac:19:00:06",
+                "IPv4Address": "172.25.0.6/16",
+                "IPv6Address": ""
+            },
+            "772d37f09f0391979e5ae523cdc3ccfe60c8319507ab47a6c65734552b3a5096": {
+                "Name": "awesome-localstack-mailhog-1",
+                "EndpointID": "d0a437f0a5f46b0ded2a21db875c5a6551d2209ef7ed869b2ba02231b336f917",
+                "MacAddress": "02:42:ac:19:00:03",
+                "IPv4Address": "172.25.0.3/16",
+                "IPv6Address": ""
+            },
+            "a7655378c9da2a10ee862823f1a4fc9ccdeffcb7e8680464384fbcfb41725de9": {
+                "Name": "awesome-localstack-consumer-1",
+                "EndpointID": "8d013be3043de068e491a3904de40d8c386c49c3adc842ab66b7c0ba7801c20e",
+                "MacAddress": "02:42:ac:19:00:05",
+                "IPv4Address": "172.25.0.5/16",
+                "IPv6Address": ""
+            },
+            "d6ded41ab89b7f23f95862fb6af683f265c450605345e162d2ba78608f7f62fc": {
+                "Name": "awesome-localstack-backend-1",
+                "EndpointID": "53501d140598425d5d14059975ce565376dbe4ab8298229053d96153ab749595",
+                "MacAddress": "02:42:ac:19:00:02",
+                "IPv4Address": "172.25.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {
+            "com.docker.compose.network": "my-private-ntwk",
+            "com.docker.compose.project": "awesome-localstack",
+            "com.docker.compose.version": "2.20.2"
+        }
+    }
+]
+Network: bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "fdbc4568d0a40a276876378b1e4fd8aed4ac9f219e7afb7152bc33f576eb9173",
+        "Created": "2024-09-14T10:49:19.763303691Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+Network: host
+[
+    {
+        "Name": "host",
+        "Id": "169a7072b8beb305c883ec2b7fa6a7fc8833c3e6566eab6303146cbafe2b4554",
+        "Created": "2023-08-27T08:27:18.962528531Z",
+        "Scope": "local",
+        "Driver": "host",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": []
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+Network: none
+[
+    {
+        "Name": "none",
+        "Id": "43d817d8a2a1de519ffef175ef1b004f3d61f0e3372d345a452dd759c3642adc",
+        "Created": "2023-08-27T08:27:18.949328552Z",
+        "Scope": "local",
+        "Driver": "null",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": []
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+Container IP addresses:
+/awesome-localstack-activemq-1 - 172.25.0.6
+/awesome-localstack-backend-1 - 172.25.0.2
+/awesome-localstack-consumer-1 - 172.25.0.5
+/awesome-localstack-frontend-1 - 172.25.0.4
+/awesome-localstack-mailhog-1 - 172.25.0.3
