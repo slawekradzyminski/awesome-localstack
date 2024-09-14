@@ -17,6 +17,7 @@ services:
     restart: always
     ports:
       - "8081:8081"
+    hostname: frontend
     networks:
       - my-private-ntwk
 
@@ -38,7 +39,7 @@ services:
     ports:
       - "8025:8025"
       - "1025:1025"
-    hostname: activemq
+    hostname: mailhog
     networks:
       - my-private-ntwk
 
