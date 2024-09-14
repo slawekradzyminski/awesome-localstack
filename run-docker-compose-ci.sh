@@ -1,5 +1,15 @@
 #!/bin/bash
 
+echo "Docker network details:"
+docker network ls
+for network in $(docker network ls --format "{{.Name}}"); do
+  echo "Network: $network"
+  docker network inspect $network
+done
+
+echo "Container IP addresses:"
+docker-compose -f docker-compose-ci.yml ps -q | xargs -I {} docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {}
+
 # Start the application in the background
 docker compose -f docker-compose-ci.yml up -d
 
