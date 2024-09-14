@@ -8,22 +8,30 @@ wait_for_http_200() {
     local url=$1
     local name=$2
     local elapsed_time=0
-    local timeout=1800 # 30 minutes
+    local timeout=300  # 5 minutes (300 seconds)
     local auth=$3      # Optional basic auth credentials in 'user:password' format
 
     echo "Waiting for $name to start..."
 
     while true; do
         if [ $elapsed_time -eq $timeout ]; then
-            echo "$name did not start within 30 minutes. Exiting."
+            echo "$name did not start within 5 minutes. Exiting."
             exit 1
         fi
 
+        echo "Sending request to $url"
+        
         if [ -n "$auth" ]; then
-            response_code=$(curl -s -o /dev/null -w "%{http_code}" -u "$auth" "$url")
+            response=$(curl -s -i -u "$auth" "$url")
         else
-            response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            response=$(curl -s -i "$url")
         fi
+
+        echo "Response for $name:"
+        echo "$response"
+        echo "------------------------"
+
+        response_code=$(echo "$response" | head -n 1 | awk '{print $2}')
 
         echo "Response Code for $name: $response_code" 
 
