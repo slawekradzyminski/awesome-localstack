@@ -12,6 +12,12 @@ Localstack for my trainings
 docker compose up --force-recreate --no-deps --build -d
 ```
 
+### No Docker Compose
+
+```commandline
+./docker-run-all.sh
+```
+
 ### CI (No Monitoring and Jenkins)
 
 ```commandline
@@ -80,4 +86,10 @@ docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)
 
 ```commandline
 K6_INFLUXDB_PUSH_INTERVAL=2s k6 run --out influxdb=http://localhost:8086/db0  dist/user-journey.js
+```
+
+## Log into container
+
+```commandline
+docker exec -it <container_id> bash
 ```
