@@ -1,25 +1,15 @@
 #!/bin/bash
 
-echo "Docker network details:"
-docker network ls
-for network in $(docker network ls --format "{{.Name}}"); do
-  echo "Network: $network"
-  docker network inspect $network
-done
-
-echo "Container IP addresses:"
-docker-compose -f docker-compose-ci.yml ps -q | xargs -I {} docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' {}
-
-# Start the application in the background
+echo "Starting containers..."
 docker compose -f docker-compose-ci.yml up -d
 
-# Function to wait for an endpoint to return HTTP 200
 wait_for_http_200() {
     local url=$1
     local name=$2
     local elapsed_time=0
-    local timeout=300 # 5 minutes
-    local auth=$3      # Optional basic auth credentials in 'user:password' format
+    local timeout=300
+    local auth=$3
+    local last_log_time=0
 
     echo "Waiting for $name to start..."
 
@@ -29,48 +19,30 @@ wait_for_http_200() {
             exit 1
         fi
 
-        echo "Sending request to $url"
         if [ -n "$auth" ]; then
-            response=$(curl -v -s -m 5 -u "$auth" "$url" 2>&1)
+            response=$(curl -s -m 5 -w "%{http_code}" -u "$auth" "$url" -o /dev/null 2>/dev/null)
         else
-            response=$(curl -v -s -m 5 "$url" 2>&1)
+            response=$(curl -s -m 5 -w "%{http_code}" "$url" -o /dev/null 2>/dev/null)
         fi
 
-        echo "Response for $name:"
-        if [ -z "$response" ]; then
-            echo "No response received (connection failed or timed out)"
-        else
-            echo "$response"
-        fi
-        echo "------------------------"
-
-        response_code=$(echo "$response" | grep -i "< HTTP" | awk '{print $3}')
-        if [ -z "$response_code" ]; then
-            echo "Response Code for $name: No HTTP status code received"
-        else
-            echo "Response Code for $name: $response_code"
-        fi
-
-        if [[ "$response_code" =~ ^[0-9]+$ ]] && [ "$response_code" -eq 200 ]; then
+        if [[ "$response" =~ ^[0-9]+$ ]] && [ "$response" -eq 200 ]; then
             echo "$name started successfully."
             break
         fi
 
+        if [ $((elapsed_time - last_log_time)) -ge 30 ]; then
+            echo "Still waiting for $name... (${elapsed_time}s elapsed, status: $response)"
+            last_log_time=$elapsed_time
+            
+            echo "Current containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+        fi
+
         sleep 1
         elapsed_time=$((elapsed_time + 1))
-
-        if [ $((elapsed_time % 60)) -eq 0 ]; then
-            echo "Waiting for $name to start. Elapsed time: $elapsed_time seconds."
-            echo "Docker containers:"
-            docker ps
-            echo "Network information:"
-            docker network ls
-            docker network inspect $(docker network ls -q)
-        fi
     done
 }
 
-# URLs and their respective names using parallel indexed arrays
 urls=(
     "http://localhost:4001/swagger-ui.html"
     "http://localhost:8081/login"
@@ -85,7 +57,7 @@ names=(
     "Mailhog"
     "Email consumer"
 )
-# Loop through the URLs and wait for each one
+
 for i in "${!urls[@]}"; do
     if [ "${names[$i]}" == "Active MQ" ]; then
         wait_for_http_200 "${urls[$i]}" "${names[$i]}" "admin:admin"
