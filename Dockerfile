@@ -31,6 +31,10 @@ RUN echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 # Copy and set the entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Disable Content Security Policy
+ENV JAVA_OPTS="-Dhudson.model.DirectoryBrowserSupport.CSP="
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 USER jenkins

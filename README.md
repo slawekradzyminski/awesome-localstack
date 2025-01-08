@@ -79,7 +79,11 @@ Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://lo
 ## Docker cleanup
 
 ```commandline
+# Stop and remove all containers
 docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)
+
+# Remove all Docker data (images, containers, volumes, networks)
+docker system prune -a --volumes
 ```
 
 ## K6 test execution command
