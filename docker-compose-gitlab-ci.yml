@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:1.2.1
+    image: slawekradzyminski/backend:2.3
     platform: linux/amd64
     restart: always
     ports:
@@ -12,7 +12,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:1.3.2
+    image: slawekradzyminski/frontend:2.0
     platform: linux/amd64
     restart: always
     ports:
@@ -24,12 +24,20 @@ services:
       - my-private-ntwk
 
   activemq:
-    image: symptoma/activemq:5.17.2
+    image: apache/activemq-artemis:2.31.2
     platform: linux/amd64
     restart: always
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+      ANONYMOUS_LOGIN: "true"
+      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
+      DISABLE_SECURITY: true
+      BROKER_CONFIG_GLOBAL_MAX_SIZE: 512mb
     ports:
       - "61616:61616"
       - "8161:8161"
+      - "5672:5672"
     hostname: activemq
     networks:
       - my-private-ntwk

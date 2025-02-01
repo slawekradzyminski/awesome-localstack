@@ -9,7 +9,6 @@ wait_for_http_200() {
     local elapsed_time=0
     local timeout=300
     local auth=$3
-    local last_log_time=0
 
     echo "Waiting for $name to start..."
 
@@ -19,11 +18,7 @@ wait_for_http_200() {
             exit 1
         fi
 
-        if [ -n "$auth" ]; then
-            response=$(curl -s -m 5 -w "%{http_code}" -u "$auth" "$url" -o /dev/null 2>/dev/null)
-        else
-            response=$(curl -s -m 5 -w "%{http_code}" "$url" -o /dev/null 2>/dev/null)
-        fi
+        response=$(curl -sL -m 5 -w "%{http_code}" "$url" -o /dev/null 2>/dev/null)
 
         if [[ "$response" =~ ^[0-9]+$ ]] && [ "$response" -eq 200 ]; then
             echo "$name started successfully."
@@ -44,10 +39,10 @@ wait_for_http_200() {
 }
 
 urls=(
-    "http://localhost:4001/swagger-ui.html"
+    "http://localhost:4001/swagger-ui/index.html"
     "http://localhost:8081/login"
     "http://localhost:8161/index.html"
-    "http://localhost:8025/"
+    "http://localhost:8025"
     "http://localhost:4002/actuator/prometheus"
 )
 names=(
@@ -59,9 +54,5 @@ names=(
 )
 
 for i in "${!urls[@]}"; do
-    if [ "${names[$i]}" == "Active MQ" ]; then
-        wait_for_http_200 "${urls[$i]}" "${names[$i]}" "admin:admin"
-    else
-        wait_for_http_200 "${urls[$i]}" "${names[$i]}"
-    fi
+    wait_for_http_200 "${urls[$i]}" "${names[$i]}"
 done

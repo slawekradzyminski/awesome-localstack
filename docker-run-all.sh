@@ -14,7 +14,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name backend \
-  slawekradzyminski/backend:1.2
+  slawekradzyminski/backend:2.3
 
 echo "Starting Frontend..."
 docker run -d \
@@ -23,7 +23,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:1.3
+  slawekradzyminski/frontend:2.0
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -62,12 +62,19 @@ echo "Starting ActiveMQ..."
 docker run -d \
   --platform linux/amd64 \
   --restart always \
+  -e ARTEMIS_USER=admin \
+  -e ARTEMIS_PASSWORD=admin \
+  -e ANONYMOUS_LOGIN="true" \
+  -e EXTRA_ARGS="--http-host 0.0.0.0 --relax-jolokia --no-autotune" \
+  -e DISABLE_SECURITY="true" \
+  -e BROKER_CONFIG_GLOBAL_MAX_SIZE="512mb" \
   -p 61616:61616 \
   -p 8161:8161 \
+  -p 5672:5672 \
   --hostname activemq \
   --network my-private-ntwk \
   --name activemq \
-  symptoma/activemq:5.17.2
+  apache/activemq-artemis:2.31.2
 
 echo "Starting Mailhog..."
 docker run -d \

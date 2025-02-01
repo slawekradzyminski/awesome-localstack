@@ -9,7 +9,6 @@ wait_for_http_200() {
     local name=$2
     local elapsed_time=0
     local timeout=1800 # 30 minutes
-    local auth=$3      # Optional basic auth credentials in 'user:password' format
 
     echo "Waiting for $name to start..."
 
@@ -19,11 +18,7 @@ wait_for_http_200() {
             exit 1
         fi
 
-        if [ -n "$auth" ]; then
-            response_code=$(curl -s -o /dev/null -w "%{http_code}" -u "$auth" "$url")
-        else
-            response_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
-        fi
+        response_code=$(curl -sL -o /dev/null -w "%{http_code}" "$url")
 
         echo "Response Code for $name: $response_code" 
 
@@ -43,11 +38,11 @@ wait_for_http_200() {
 
 # URLs and their respective names using parallel indexed arrays
 urls=(
-    "http://localhost:4001/swagger-ui.html"
+    "http://localhost:4001/swagger-ui/index.html"
     "http://localhost:8081/login"
     "http://localhost:9090/graph"
     "http://localhost:3000/login"
-    "http://localhost:8161/index.html"
+    "http://localhost:8161"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
     "http://localhost:8080/login"
@@ -64,9 +59,5 @@ names=(
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do
-    if [ "${names[$i]}" == "Active MQ" ]; then
-        wait_for_http_200 "${urls[$i]}" "${names[$i]}" "admin:admin"
-    else
         wait_for_http_200 "${urls[$i]}" "${names[$i]}"
-    fi
 done
