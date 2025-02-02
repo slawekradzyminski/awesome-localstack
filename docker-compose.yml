@@ -1,13 +1,20 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.3
+    image: slawekradzyminski/backend:2.4.6
     platform: linux/amd64
     restart: always
     ports:
       - "4001:4001"
     hostname: backend
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - activemq
+      - postgres
     networks:
       - my-private-ntwk
 
@@ -17,6 +24,21 @@ services:
     restart: always
     ports:
       - "8081:8081"
+    networks:
+      - my-private-ntwk
+
+  postgres:
+    image: postgres:16.1
+    platform: linux/amd64
+    restart: always
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - my-private-ntwk
 
@@ -75,7 +97,7 @@ services:
     ports:
       - "8025:8025"
       - "1025:1025"
-    hostname: activemq
+    hostname: mailhog
     networks:
       - my-private-ntwk
 
@@ -105,22 +127,23 @@ services:
     networks:
       - my-private-ntwk
 
-  jenkins:
-     build: .
-     platform: linux/amd64
-     ports:
-       - "8080:8080"
-       - "50000:50000"
-     volumes:
-       - jenkins-data:/var/jenkins_home
-       - /var/run/docker.sock:/var/run/docker.sock
-     restart: always
-     networks:
-       - my-private-ntwk
+#  jenkins:
+#     build: .
+#     platform: linux/amd64
+#     ports:
+#       - "8080:8080"
+#       - "50000:50000"
+#     volumes:
+#       - jenkins-data:/var/jenkins_home
+#       - /var/run/docker.sock:/var/run/docker.sock
+#     restart: always
+#     networks:
+#       - my-private-ntwk
 
 volumes:
   influxdb-storage:
   jenkins-data:
+  postgres-data:
 
 networks:
   my-private-ntwk:

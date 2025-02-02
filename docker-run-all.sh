@@ -2,8 +2,40 @@
 
 docker network create my-private-ntwk 2>/dev/null || true
 
-docker volume create influxdb-storage
-docker volume create jenkins-data
+docker volume create influxdb-storage 2>/dev/null
+docker volume create jenkins-data 2>/dev/null
+docker volume create postgres-data 2>/dev/null
+
+echo "Starting PostgreSQL..."
+docker run -d \
+  --platform linux/amd64 \
+  --restart always \
+  -p 5432:5432 \
+  -e POSTGRES_DB=testdb \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -v postgres-data:/var/lib/postgresql/data \
+  --name postgres \
+  --network my-private-ntwk \
+  postgres:16.1
+
+echo "Starting ActiveMQ..."
+docker run -d \
+  --platform linux/amd64 \
+  --restart always \
+  -e ARTEMIS_USER=admin \
+  -e ARTEMIS_PASSWORD=admin \
+  -e ANONYMOUS_LOGIN="true" \
+  -e EXTRA_ARGS="--http-host 0.0.0.0 --relax-jolokia --no-autotune" \
+  -e DISABLE_SECURITY="true" \
+  -e BROKER_CONFIG_GLOBAL_MAX_SIZE="512mb" \
+  -p 61616:61616 \
+  -p 8161:8161 \
+  -p 5672:5672 \
+  --hostname activemq \
+  --network my-private-ntwk \
+  --name activemq \
+  apache/activemq-artemis:2.31.2
 
 echo "Starting Backend..."
 docker run -d \
@@ -14,7 +46,12 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name backend \
-  slawekradzyminski/backend:2.3
+  -e SPRING_PROFILES_ACTIVE=docker \
+  -e SPRING_ARTEMIS_BROKER_URL=tcp://activemq:61616 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
+  -e SPRING_DATASOURCE_USERNAME=postgres \
+  -e SPRING_DATASOURCE_PASSWORD=postgres \
+  slawekradzyminski/backend:2.4.6
 
 echo "Starting Frontend..."
 docker run -d \
@@ -58,31 +95,13 @@ docker run -d \
   --name grafana \
   grafana/grafana:10.3.4
 
-echo "Starting ActiveMQ..."
-docker run -d \
-  --platform linux/amd64 \
-  --restart always \
-  -e ARTEMIS_USER=admin \
-  -e ARTEMIS_PASSWORD=admin \
-  -e ANONYMOUS_LOGIN="true" \
-  -e EXTRA_ARGS="--http-host 0.0.0.0 --relax-jolokia --no-autotune" \
-  -e DISABLE_SECURITY="true" \
-  -e BROKER_CONFIG_GLOBAL_MAX_SIZE="512mb" \
-  -p 61616:61616 \
-  -p 8161:8161 \
-  -p 5672:5672 \
-  --hostname activemq \
-  --network my-private-ntwk \
-  --name activemq \
-  apache/activemq-artemis:2.31.2
-
 echo "Starting Mailhog..."
 docker run -d \
   --platform linux/amd64 \
   --restart always \
   -p 8025:8025 \
   -p 1025:1025 \
-  --hostname activemq \
+  --hostname mailhog \
   --network my-private-ntwk \
   --name mailhog \
   mailhog/mailhog:v1.0.1

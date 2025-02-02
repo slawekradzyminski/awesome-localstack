@@ -1,13 +1,13 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.3
+    image: slawekradzyminski/backend:2.4.6
     platform: linux/amd64
     restart: always
     ports:
       - "4001:4001"
     hostname: backend
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
     networks:
       - my-private-ntwk
 
@@ -17,25 +17,6 @@ services:
     restart: always
     ports:
       - "8081:8081"
-    networks:
-      - my-private-ntwk
-
-  activemq:
-    image: apache/activemq-artemis:2.31.2
-    platform: linux/amd64
-    restart: always
-    environment:
-      ARTEMIS_USER: admin
-      ARTEMIS_PASSWORD: admin
-      ANONYMOUS_LOGIN: "true"
-      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
-      DISABLE_SECURITY: true
-      BROKER_CONFIG_GLOBAL_MAX_SIZE: 512mb
-    ports:
-      - "61616:61616"
-      - "8161:8161"
-      - "5672:5672"
-    hostname: activemq
     networks:
       - my-private-ntwk
 

@@ -56,6 +56,47 @@ See Container logs for initial Jenkins password.
 
 Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
 
+## PostgreSQL
+
+The stack includes a PostgreSQL database container named **postgres** running on port **5432**.
+
+### Accessing PostgreSQL Database
+
+You can interact with the PostgreSQL database in several ways:
+
+1. Using docker exec and the psql command-line tool:
+
+```bash
+# Connect to the database
+docker exec -it postgres psql -U postgres -d testdb
+
+# Common psql commands:
+\dt                 # List tables
+\d table_name       # Describe table
+\q                  # Quit psql
+
+# Example queries:
+SELECT * FROM app_user;
+SELECT * FROM products;
+SELECT * FROM cart_items;
+SELECT * FROM orders;
+```
+
+2. Using external tools:
+   - Host: localhost
+   - Port: 5432
+   - Database: testdb
+   - Username: postgres
+   - Password: postgres
+
+### Database Schema
+
+The main tables in the database:
+- `app_user`: Stores user information
+- `products`: Stores product catalog
+- `cart_items`: Stores shopping cart items
+- `orders`: Stores order information
+
 ## Prometheus & Grafana
 
 [Article](https://stackabuse.com/monitoring-spring-boot-apps-with-micrometer-prometheus-and-grafana/)
