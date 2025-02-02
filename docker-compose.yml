@@ -127,18 +127,18 @@ services:
     networks:
       - my-private-ntwk
 
-#  jenkins:
-#     build: .
-#     platform: linux/amd64
-#     ports:
-#       - "8080:8080"
-#       - "50000:50000"
-#     volumes:
-#       - jenkins-data:/var/jenkins_home
-#       - /var/run/docker.sock:/var/run/docker.sock
-#     restart: always
-#     networks:
-#       - my-private-ntwk
+  jenkins:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    networks:
+      - my-private-ntwk
 
 volumes:
   influxdb-storage:
