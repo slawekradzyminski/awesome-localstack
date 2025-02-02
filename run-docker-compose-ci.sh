@@ -41,8 +41,8 @@ wait_for_http_200() {
 urls=(
     "http://localhost:4001/swagger-ui/index.html"
     "http://localhost:8081/login"
-    "http://localhost:8161/index.html"
-    "http://localhost:8025"
+    "http://localhost:8161/"
+    "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
 )
 names=(
