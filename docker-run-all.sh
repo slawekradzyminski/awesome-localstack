@@ -70,7 +70,7 @@ docker run -d \
   -p 9090:9090 \
   --network my-private-ntwk \
   --name prometheus \
-  prom/prometheus:v2.50.1
+  prom/prometheus:v3.1.0
 
 echo "Starting InfluxDB..."
 docker run -d \
@@ -93,7 +93,7 @@ docker run -d \
   -p 3000:3000 \
   --network my-private-ntwk \
   --name grafana \
-  grafana/grafana:10.3.4
+  grafana/grafana:11.5.1
 
 echo "Starting Mailhog..."
 docker run -d \
