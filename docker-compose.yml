@@ -43,7 +43,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus:v2.50.1
+    image: prom/prometheus:v3.1.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -56,7 +56,7 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:10.3.4
+    image: grafana/grafana:11.5.1
     platform: linux/amd64
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
@@ -108,6 +108,8 @@ services:
     ports:
       - "4002:4002"
     hostname: consumer
+    depends_on:
+      - activemq
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
