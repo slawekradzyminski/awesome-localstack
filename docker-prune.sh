@@ -15,6 +15,8 @@ if [[ "$response" != "y" ]]; then
   exit 0
 fi
 
+read -p "Do you want to delete unused images as well? (y/n): " delete_images
+
 # Stop all currently running containers, if any.
 running_containers=$(docker ps -q)
 if [[ -n "$running_containers" ]]; then
@@ -27,7 +29,12 @@ fi
 # Prune Docker system resources.
 # -a: Removes all unused images not just dangling ones.
 # --volumes: Also removes all unused volumes.
-echo "Pruning unused Docker resources..."
-docker system prune -a --volumes -f
+if [[ "$delete_images" == "y" ]]; then
+  echo "Pruning unused Docker resources including images..."
+  docker system prune -a --volumes -f
+else
+  echo "Pruning unused Docker resources while keeping images..."
+  docker system prune --volumes -f
+fi
 
 echo "Docker resources pruned."
