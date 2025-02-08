@@ -4,8 +4,6 @@ Localstack for my trainings
 
 # Architecture
 
-# Architecture
-
 Here's an example of a Mermaid diagram that shows the different components in this project and how they interact:
 
 
