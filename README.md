@@ -2,7 +2,37 @@
 
 Localstack for my trainings
 
-![Localstack](img/Localstack.jpeg)
+# Architecture
+
+# Architecture
+
+Here's an example of a Mermaid diagram that shows the different components in this project and how they interact:
+
+
+```mermaid
+flowchart LR
+    F[Frontend]
+    B[Backend]
+    MQ[ActiveMQ]
+    C[Consumer]
+    E[Email Server]
+    DB[(PostgreSQL)]
+    PM[Prometheus]
+    IDB[InfluxDB]
+    GF[Grafana]
+
+    F -- REST --> B
+    B -- JMS --> MQ
+    MQ -- JMS --> B
+    MQ -- JMS --> C
+    C -- SMTP --> E
+    B -- DB --> DB
+
+    PM -- "scrapes metrics" --> B
+    PM -- "scrapes metrics" --> C
+    GF -- "queries metrics" --> PM
+    GF -- "queries data" --> IDB
+```
 
 ## Running
 
