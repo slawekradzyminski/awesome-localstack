@@ -8,6 +8,7 @@ Localstack for my trainings
 
 Here's an example of a Mermaid diagram that shows the different components in this project and how they interact:
 
+
 ```mermaid
 flowchart LR
     F[Frontend]
@@ -16,6 +17,9 @@ flowchart LR
     C[Consumer]
     E[Email Server]
     DB[(PostgreSQL)]
+    PM[Prometheus]
+    IDB[InfluxDB]
+    GF[Grafana]
 
     F -- REST --> B
     B -- JMS --> MQ
@@ -23,6 +27,11 @@ flowchart LR
     MQ -- JMS --> C
     C -- SMTP --> E
     B -- DB --> DB
+
+    PM -- "scrapes metrics" --> B
+    PM -- "scrapes metrics" --> C
+    GF -- "queries metrics" --> PM
+    GF -- "queries data" --> IDB
 ```
 
 ## Running
