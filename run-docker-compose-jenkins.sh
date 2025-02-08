@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start the application in the background
-docker compose up -d
+docker compose -f docker-compose-jenkins.yml up -d
 
 # Function to wait for an endpoint to return HTTP 200
 wait_for_http_200() {
@@ -38,22 +38,10 @@ wait_for_http_200() {
 
 # URLs and their respective names using parallel indexed arrays
 urls=(
-    "http://localhost:4001/swagger-ui/index.html"
-    "http://localhost:8081/login"
-    "http://localhost:9090/graph"
-    "http://localhost:3000/login"
-    "http://localhost:8161"
-    "http://localhost:8025/"
-    "http://localhost:4002/actuator/prometheus"
+    "http://localhost:8080/login"
 )
 names=(
-    "Backend"
-    "Frontend"
-    "Prometheus"
-    "Grafana"
-    "Active MQ"
-    "Mailhog"
-    "Email consumer"
+    "Jenkins"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do
