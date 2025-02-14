@@ -115,7 +115,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name consumer \
-  slawekradzyminski/consumer:1.2
+  slawekradzyminski/consumer:1.3
 
 echo "Building Jenkins image..."
 docker build -t custom-jenkins .
