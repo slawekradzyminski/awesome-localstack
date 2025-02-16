@@ -165,3 +165,53 @@ K6_INFLUXDB_PUSH_INTERVAL=2s k6 run --out influxdb=http://localhost:8086/db0  di
 ```commandline
 docker exec -it <container_id> bash
 ```
+
+# Docker Services Documentation (AI-generated)
+
+## Overview
+This project uses Docker Compose to orchestrate multiple environments including CI services and additional applications.
+
+### Additional Applications
+
+#### Jenkins
+- **File:** `docker-compose-jenkins.yml`
+- **Description:**  
+  Builds a Jenkins container from the local Dockerfile with the following configuration:
+  - **Ports:**  
+    - `8080`: Jenkins web interface  
+    - `50000`: Agent communication
+  - **Volumes:**  
+    - `jenkins-data` persists Jenkins home data  
+    - Mounts `/var/run/docker.sock` to allow Docker operations inside Jenkins
+- **Starting Jenkins:**
+  ```bash
+  docker-compose -f docker-compose-jenkins.yml up -d
+  ```
+
+#### Ollama Server
+- **File:** `docker-compose-llm.yml`
+- **Description:**  
+  Runs the Ollama server using the official image `ollama/ollama:latest` with the following setup:
+  - **Port:**  
+    - Exposes `11434` for API access
+  - **Volumes:**  
+    - `ollama-data` is mounted to persist server data at `/root/.ollama`
+  - **Environment:**  
+    - `OLLAMA_MODELS_DIR` is set to `/root/.ollama`
+- **Starting Ollama:**
+  ```bash
+  docker-compose -f docker-compose-llm.yml up -d
+  ```
+- **Testing the Ollama Server:**
+  Copy and paste the command below to test the server:
+  ```bash
+  curl -X POST http://localhost:11434/api/generate -d '{
+    "model": "gemma:2b",
+    "prompt": "Explain quantum mechanics in simple terms."
+  }'
+  ```
+
+## Final Notes
+- Verify that the exposed ports are free and not used by other services.
+- Use the corresponding docker-compose file per service needs.
+- For removing unused Docker objects—if needed—consult and run the `docker-prune.sh` script.
