@@ -131,19 +131,18 @@ The main tables in the database:
 
 ## Backend
 
-[https://github.com/slawekradzyminski/test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
+https://github.com/slawekradzyminski/test-secure-backend
 
 ## Frontend
 
-[https://github.com/slawekradzyminski/test-secure-frontend](https://github.com/slawekradzyminski/test-secure-frontend)
-
+https://github.com/slawekradzyminski/vite-react-frontend
 ## JMS email consumer
 
-[https://github.com/slawekradzyminski/jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+https://github.com/slawekradzyminski/jms-email-consumer
 
 ## Mailhog
 
-[https://github.com/mailhog/MailHog/tree/master/docs](https://github.com/mailhog/MailHog/tree/master/docs)
+https://github.com/mailhog/MailHog/tree/master/docs
 
 ## Docker cleanup
 

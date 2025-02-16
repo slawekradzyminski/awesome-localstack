@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.4.8
+    image: slawekradzyminski/backend:2.4.9
     platform: linux/amd64
     restart: always
     ports:
