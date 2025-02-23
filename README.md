@@ -18,6 +18,7 @@ flowchart LR
     PM[Prometheus]
     IDB[InfluxDB]
     GF[Grafana]
+    O[Ollama]
 
     F -- REST --> B
     B -- JMS --> MQ
@@ -25,6 +26,7 @@ flowchart LR
     MQ -- JMS --> C
     C -- SMTP --> E
     B -- DB --> DB
+    B -- LLM --> O
 
     PM -- "scrapes metrics" --> B
     PM -- "scrapes metrics" --> C
@@ -83,6 +85,8 @@ Jenkins - [http://localhost:8080/](http://localhost:8080/)
 See Container logs for initial Jenkins password.
 
 Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
+
+Ollama - [http://localhost:11434/api/tags](http://localhost:11434/api/tags)
 
 ## PostgreSQL
 
@@ -206,10 +210,22 @@ This project uses Docker Compose to orchestrate multiple environments including 
   Copy and paste the command below to test the server:
   ```bash
   curl -X POST http://localhost:11434/api/generate -d '{
-    "model": "gemma:2b",
-    "prompt": "Explain quantum mechanics in simple terms."
+    "model": "llama3.2:1b",
+    "prompt": "What is Docker?"
   }'
   ```
+
+## Ollama
+
+[Ollama](https://ollama.ai/) is included as a local LLM server that can be used by the backend for AI-related tasks. The server runs on port 11434 and comes with health checks to ensure model availability.
+
+To test the Ollama server:
+```bash
+curl -X POST http://localhost:11434/api/generate -d '{
+  "model": "llama3.2:1b",
+  "prompt": "What is Docker?"
+}'
+```
 
 ## Final Notes
 - Verify that the exposed ports are free and not used by other services.

@@ -51,7 +51,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:2.4.9
+  slawekradzyminski/backend:2.5.0
 
 echo "Starting Frontend..."
 docker run -d \
@@ -60,7 +60,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:2.0
+  slawekradzyminski/frontend:2.1
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -131,5 +131,21 @@ docker run -d \
   --network my-private-ntwk \
   --name jenkins \
   custom-jenkins
+
+echo "Starting Ollama..."
+docker run -d \
+  --platform linux/amd64 \
+  -p 11434:11434 \
+  -v ollama-data:/root/.ollama \
+  -e OLLAMA_MODELS_DIR=/root/.ollama \
+  --restart unless-stopped \
+  --network my-private-ntwk \
+  --name ollama \
+  --health-cmd "curl -f http://localhost:11434/api/pull -d '{\"model\":\"llama3.2:1b\"}' || exit 1" \
+  --health-interval 30s \
+  --health-timeout 600s \
+  --health-retries 3 \
+  --health-start-period 60s \
+  ollama/ollama:0.5.12
 
 echo "All containers have been started!" 

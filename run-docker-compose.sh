@@ -45,6 +45,7 @@ urls=(
     "http://localhost:8161"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
+    "http://localhost:11434/api/tags"
 )
 names=(
     "Backend"
@@ -54,6 +55,7 @@ names=(
     "Active MQ"
     "Mailhog"
     "Email consumer"
+    "Ollama"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do

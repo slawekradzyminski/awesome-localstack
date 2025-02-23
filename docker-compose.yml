@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.4.9
+    image: slawekradzyminski/backend:2.5.0
     platform: linux/amd64
     restart: always
     ports:
@@ -19,7 +19,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.0
+    image: slawekradzyminski/frontend:2.1
     platform: linux/amd64
     restart: always
     ports:
@@ -129,9 +129,29 @@ services:
     networks:
       - my-private-ntwk
 
+  ollama:
+    image: ollama/ollama:0.5.12
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_MODELS_DIR=/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/pull", "-d", '{"model":"llama3.2:1b"}', "||", "exit", "1"]
+      interval: 30s
+      timeout: 600s
+      retries: 3
+      start_period: 60s
+    networks:
+      - my-private-ntwk
+
 volumes:
   influxdb-storage:
   postgres-data:
+  ollama-data:
 
 networks:
   my-private-ntwk:
