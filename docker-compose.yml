@@ -12,6 +12,14 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+    # This is a hack - ollama does not have curl installed so we trigger download from local network
+    # TODO: https://stackoverflow.com/questions/78232178/ollama-in-docker-pulls-models-via-interactive-shell-but-not-via-run-command-in-t
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://ollama:11434/api/pull -d '{\"model\":\"llama3.2:1b\"}' || exit 1"]
+      interval: 30s
+      timeout: 1200s # 20 minutes
+      retries: 3
+      start_period: 10s
     depends_on:
       - activemq
       - postgres
@@ -139,12 +147,6 @@ services:
       - ollama-data:/root/.ollama
     environment:
       - OLLAMA_MODELS_DIR=/root/.ollama
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/pull", "-d", '{"model":"llama3.2:1b"}', "||", "exit", "1"]
-      interval: 30s
-      timeout: 600s
-      retries: 3
-      start_period: 60s
     networks:
       - my-private-ntwk
 
