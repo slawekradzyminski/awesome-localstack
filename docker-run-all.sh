@@ -5,6 +5,7 @@ docker network create my-private-ntwk 2>/dev/null || true
 docker volume create influxdb-storage 2>/dev/null
 docker volume create jenkins-data 2>/dev/null
 docker volume create postgres-data 2>/dev/null
+docker volume create ollama-data 2>/dev/null
 
 echo "Starting PostgreSQL..."
 docker run -d \
@@ -141,11 +142,6 @@ docker run -d \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  --health-cmd "curl -f http://localhost:11434/api/pull -d '{\"model\":\"llama3.2:1b\"}' || exit 1" \
-  --health-interval 30s \
-  --health-timeout 600s \
-  --health-retries 3 \
-  --health-start-period 60s \
-  ollama/ollama:0.5.12
+  slawekradzyminski/ollama-1b:1.0
 
 echo "All containers have been started!" 
