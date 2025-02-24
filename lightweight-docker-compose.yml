@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.4.9
+    image: slawekradzyminski/backend:2.5.0
     platform: linux/amd64
     restart: always
     ports:
@@ -12,7 +12,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.0
+    image: slawekradzyminski/frontend:2.1
     platform: linux/amd64
     restart: always
     ports:
