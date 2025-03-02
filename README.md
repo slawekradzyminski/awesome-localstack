@@ -19,6 +19,7 @@ flowchart LR
     IDB[InfluxDB]
     GF[Grafana]
     O[Ollama]
+    CDN[Nginx Static]
 
     F -- REST --> B
     B -- JMS --> MQ
@@ -27,6 +28,7 @@ flowchart LR
     C -- SMTP --> E
     B -- DB --> DB
     B -- LLM --> O
+    F -- "static assets" --> CDN
 
     PM -- "scrapes metrics" --> B
     PM -- "scrapes metrics" --> C
@@ -82,6 +84,8 @@ Mailhog - [http://localhost:8025/](http://localhost:8025/)
 
 Jenkins - [http://localhost:8080/](http://localhost:8080/) 
 
+Nginx Static (CDN) - [http://localhost:8082/images/](http://localhost:8082/images/)
+
 See Container logs for initial Jenkins password.
 
 Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
@@ -128,6 +132,24 @@ The main tables in the database:
 - `products`: Stores product catalog
 - `cart_items`: Stores shopping cart items
 - `orders`: Stores order information
+
+## Nginx Static (CDN)
+
+The stack includes an Nginx server that acts as a CDN equivalent for serving static assets:
+
+- **Port:** 8082
+- **Purpose:** Efficiently serves static files like images, CSS, and JavaScript
+- **Configuration:** 
+  - Mounts the local `./images` directory to `/usr/share/nginx/html/images` in the container
+  - Accessible at [http://localhost:8082/images/](http://localhost:8082/images/)
+
+### Usage
+
+1. Place your static assets in the `./images` directory in the project root
+2. Access them via `http://localhost:8082/images/your-file.jpg`
+3. Reference these assets in your application for improved performance and separation of concerns
+
+This setup allows you to offload static content delivery from your application servers, improving performance and scalability.
 
 ## Prometheus & Grafana
 

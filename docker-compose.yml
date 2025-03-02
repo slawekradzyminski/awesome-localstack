@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.5.1
+    image: slawekradzyminski/backend:2.5.2
     platform: linux/amd64
     restart: always
     ports:
@@ -19,7 +19,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.2
+    image: slawekradzyminski/frontend:2.3
     platform: linux/amd64
     restart: always
     ports:
@@ -139,6 +139,18 @@ services:
       - ollama-data:/root/.ollama
     environment:
       - OLLAMA_MODELS_DIR=/root/.ollama
+    networks:
+      - my-private-ntwk
+
+  nginx-static:
+    image: nginx:1.27-perl
+    platform: linux/amd64
+    hostname: nginx
+    restart: always
+    ports:
+      - "8082:80"
+    volumes:
+      - ./images:/usr/share/nginx/html/images
     networks:
       - my-private-ntwk
 

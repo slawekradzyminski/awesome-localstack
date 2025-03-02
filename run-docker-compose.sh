@@ -46,6 +46,7 @@ urls=(
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
     "http://localhost:11434/api/tags"
+    "http://localhost:8082/images/applewatch.png"
 )
 names=(
     "Backend"
@@ -56,6 +57,7 @@ names=(
     "Mailhog"
     "Email consumer"
     "Ollama"
+    "Nginx Static (CDN)"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do
