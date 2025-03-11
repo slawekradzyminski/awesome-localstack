@@ -9,7 +9,6 @@ docker volume create ollama-data 2>/dev/null
 
 echo "Starting PostgreSQL..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 5432:5432 \
   -e POSTGRES_DB=testdb \
@@ -22,7 +21,6 @@ docker run -d \
 
 echo "Starting ActiveMQ..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -e ARTEMIS_USER=admin \
   -e ARTEMIS_PASSWORD=admin \
@@ -40,7 +38,6 @@ docker run -d \
 
 echo "Starting Backend..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 4001:4001 \
   --hostname backend \
@@ -52,11 +49,10 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:2.5.2
+  slawekradzyminski/backend:2.6.0
 
 echo "Starting Frontend..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 8081:8081 \
   --network my-private-ntwk \
@@ -65,7 +61,6 @@ docker run -d \
 
 echo "Starting Prometheus..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -v "$(pwd)/prometheus/:/etc/prometheus/" \
   -p 9090:9090 \
@@ -75,7 +70,6 @@ docker run -d \
 
 echo "Starting InfluxDB..."
 docker run -d \
-  --platform linux/amd64 \
   -p 8086:8086 \
   -v influxdb-storage:/var/lib/influxdb \
   -e INFLUXDB_DB=db0 \
@@ -87,7 +81,6 @@ docker run -d \
 
 echo "Starting Grafana..."
 docker run -d \
-  --platform linux/amd64 \
   -e GF_SECURITY_ADMIN_PASSWORD=grafana \
   -v "$(pwd)/grafana/provisioning/:/etc/grafana/provisioning/" \
   --restart always \
@@ -98,7 +91,6 @@ docker run -d \
 
 echo "Starting Mailhog..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 8025:8025 \
   -p 1025:1025 \
@@ -109,7 +101,6 @@ docker run -d \
 
 echo "Starting Consumer..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 4002:4002 \
   --hostname consumer \
@@ -123,7 +114,6 @@ docker build -t custom-jenkins .
 
 echo "Starting Jenkins..."
 docker run -d \
-  --platform linux/amd64 \
   -p 8080:8080 \
   -p 50000:50000 \
   -v jenkins-data:/var/jenkins_home \
@@ -135,7 +125,6 @@ docker run -d \
 
 echo "Starting Ollama..."
 docker run -d \
-  --platform linux/amd64 \
   -p 11434:11434 \
   -v ollama-data:/root/.ollama \
   -e OLLAMA_MODELS_DIR=/root/.ollama \
@@ -146,7 +135,6 @@ docker run -d \
 
 echo "Starting Nginx Static (CDN)..."
 docker run -d \
-  --platform linux/amd64 \
   --restart always \
   -p 8082:80 \
   -v "$(pwd)/images:/usr/share/nginx/html/images" \

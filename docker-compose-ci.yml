@@ -1,7 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.5.2
-    platform: linux/amd64
+    image: slawekradzyminski/backend:2.6.0
     restart: always
     ports:
       - "4001:4001"
@@ -20,7 +19,6 @@ services:
 
   frontend:
     image: slawekradzyminski/frontend:2.4
-    platform: linux/amd64
     restart: always
     ports:
       - "8081:8081"
@@ -32,7 +30,6 @@ services:
 
   postgres:
     image: postgres:16.1
-    platform: linux/amd64
     restart: always
     environment:
       POSTGRES_DB: testdb
@@ -45,7 +42,6 @@ services:
 
   activemq:
     image: apache/activemq-artemis:2.31.2
-    platform: linux/amd64
     restart: always
     environment:
       ARTEMIS_USER: admin
@@ -64,7 +60,6 @@ services:
 
   mailhog:
     image: mailhog/mailhog:v1.0.1
-    platform: linux/amd64
     restart: always
     ports:
       - "8025:8025"
@@ -75,7 +70,6 @@ services:
 
   consumer:
     image: slawekradzyminski/consumer:1.3
-    platform: linux/amd64
     restart: always
     ports:
       - "4002:4002"

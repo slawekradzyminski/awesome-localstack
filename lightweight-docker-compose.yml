@@ -1,7 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.5.2
-    platform: linux/amd64
+    image: slawekradzyminski/backend:2.6.0
     restart: always
     ports:
       - "4001:4001"
@@ -13,7 +12,6 @@ services:
 
   frontend:
     image: slawekradzyminski/frontend:2.4
-    platform: linux/amd64
     restart: always
     ports:
       - "8081:8081"
@@ -22,7 +20,6 @@ services:
 
   nginx-static:
     image: nginx:1.27-perl
-    platform: linux/amd64
     hostname: nginx
     restart: always
     ports:

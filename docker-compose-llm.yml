@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: ollama/ollama:0.5.12
+    image: slawekradzyminski/ollama-1b:1.0
     container_name: ollama
     restart: unless-stopped
     ports:
@@ -9,6 +9,12 @@ services:
       - ollama-data:/root/.ollama
     environment:
       - OLLAMA_MODELS_DIR=/root/.ollama
+    networks:
+      - my-private-ntwk
 
 volumes:
   ollama-data:
+
+networks:
+  my-private-ntwk:
+    driver: bridge
