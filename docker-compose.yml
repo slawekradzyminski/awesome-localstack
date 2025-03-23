@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.6.0
+    image: slawekradzyminski/backend:2.7.0
     restart: always
     ports:
       - "4001:4001"
@@ -18,7 +18,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.4
+    image: slawekradzyminski/frontend:2.5
     restart: always
     ports:
       - "8081:8081"

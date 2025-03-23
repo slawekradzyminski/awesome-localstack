@@ -49,7 +49,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:2.6.0
+  slawekradzyminski/backend:2.7.0
 
 echo "Starting Frontend..."
 docker run -d \
@@ -57,7 +57,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:2.4
+  slawekradzyminski/frontend:2.5
 
 echo "Starting Prometheus..."
 docker run -d \
