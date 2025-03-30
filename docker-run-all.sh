@@ -57,7 +57,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:2.5
+  slawekradzyminski/frontend:2.5.1
 
 echo "Starting Prometheus..."
 docker run -d \

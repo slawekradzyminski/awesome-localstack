@@ -11,7 +11,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.5
+    image: slawekradzyminski/frontend:2.5.1
     restart: always
     ports:
       - "8081:8081"
