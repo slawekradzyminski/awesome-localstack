@@ -1,35 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS-PROMETHEUS",
-      "label": "Prometheus",
-      "description": "This data source collects HTTP request metrics from the Spring Boot Actuator endpoints exposed by the application. Metrics include response times, request counts, and status codes.",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "11.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -46,10 +15,11 @@
       }
     ]
   },
+  "description": "This dashboard provides real-time monitoring of HTTP requests in a Spring Boot application. It uses Spring Boot Actuator to expose metrics, Prometheus for data collection, and Grafana for visualization.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -61,6 +31,7 @@
         "y": 0
       },
       "id": 6,
+      "panels": [],
       "title": "Request per second (rps)",
       "type": "row"
     },
@@ -78,6 +49,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -109,7 +81,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -134,12 +107,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -168,6 +142,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -199,7 +174,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -224,12 +200,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -258,6 +235,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -289,7 +267,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -314,12 +293,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -343,7 +323,8 @@
         "y": 37
       },
       "id": 5,
-      "title": "Response Time",
+      "panels": [],
+      "title": "Average Response Time per minute",
       "type": "row"
     },
     {
@@ -360,6 +341,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -390,11 +372,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
-          "unit": "ms"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -415,11 +398,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -448,6 +433,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -478,7 +464,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -486,7 +473,7 @@
               }
             ]
           },
-          "unit": "ms"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -507,11 +494,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -540,6 +529,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "points",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -570,7 +560,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -578,7 +569,7 @@
               }
             ]
           },
-          "unit": "ms"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -599,11 +590,13 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "maxHeight": 600,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "11.5.1",
       "targets": [
         {
           "datasource": "Prometheus",
@@ -619,7 +612,9 @@
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 39,
+  "preload": false,
+  "refresh": "5s",
+  "schemaVersion": 40,
   "tags": [
     "http"
   ],
@@ -630,10 +625,8 @@
         "datasource": "Prometheus",
         "definition": "label_values(http_server_requests_seconds_sum,application)",
         "description": "Application",
-        "hide": 0,
         "includeAll": false,
         "label": "Application",
-        "multi": false,
         "name": "application",
         "options": [],
         "query": {
@@ -643,17 +636,13 @@
         },
         "refresh": 2,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
-        "allValue": "",
         "current": {},
         "datasource": "Prometheus",
         "definition": "label_values(http_server_requests_seconds_sum{application=\"$application\"},cluster)",
         "description": "Cluster",
-        "hide": 0,
         "includeAll": false,
         "label": "Cluster",
         "multi": true,
@@ -666,8 +655,6 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
@@ -676,7 +663,6 @@
         "datasource": "Prometheus",
         "definition": "label_values(http_server_requests_seconds_sum{application=~\"$application\", cluster=~\"$cluster\"},instance)",
         "description": "Instance",
-        "hide": 0,
         "includeAll": true,
         "label": "Instance",
         "multi": true,
@@ -689,8 +675,6 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
@@ -699,27 +683,10 @@
     "from": "now-15m",
     "to": "now"
   },
-  "timeRangeUpdatedDuringEditOrView": false,
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ],
-    "refresh": "5s"
-  },
+  "timepicker": {},
   "timezone": "browser",
   "title": "Spring Boot Http (3.x)",
   "uid": "http",
-  "version": 9,
-  "weekStart": "",
-  "gnetId": 21308,
-  "description": "This dashboard provides real-time monitoring of HTTP requests in a Spring Boot application. It uses Spring Boot Actuator to expose metrics, Prometheus for data collection, and Grafana for visualization."
+  "version": 1,
+  "weekStart": ""
 }

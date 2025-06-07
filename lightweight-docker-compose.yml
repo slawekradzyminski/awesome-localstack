@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.7.0
+    image: slawekradzyminski/backend:2.7.1
     restart: always
     ports:
       - "4001:4001"
