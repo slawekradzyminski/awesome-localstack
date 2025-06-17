@@ -1,14 +1,12 @@
-FROM ollama/ollama:0.5.12
+# ollama/Dockerfile
+FROM ollama/ollama:0.9.1
 
-# Copy the pull script into the image
-COPY wait-and-pull.sh /tmp/wait-and-pull.sh
+# Declare the model as a build-arg so you can swap variants later.
+ARG OLLAMA_MODEL=qwen3:0.6b
 
-# Ensure it’s executable, then run it at build time
-RUN chmod +x /tmp/wait-and-pull.sh \
- && /tmp/wait-and-pull.sh
-
-# Expose Ollama’s default port
+# Pull the model while the image is built
+COPY wait-and-pull.sh /usr/local/bin/wait-and-pull.sh
+RUN chmod +x /usr/local/bin/wait-and-pull.sh \
+    && export OLLAMA_MODEL=${OLLAMA_MODEL} && /usr/local/bin/wait-and-pull.sh
 EXPOSE 11434
-
-# By default, just serve
 ENTRYPOINT ["ollama", "serve"]

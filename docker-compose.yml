@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.7.1
+    image: slawekradzyminski/backend:2.8.0
     restart: always
     ports:
       - "4001:4001"
@@ -18,7 +18,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.5.1
+    image: slawekradzyminski/frontend:2.6.0
     restart: always
     ports:
       - "8081:8081"
@@ -121,13 +121,11 @@ services:
       - my-private-ntwk
 
   ollama:
-    image: slawekradzyminski/ollama-1b:1.0
+    image: slawekradzyminski/ollama:qwen3-thinking
     container_name: ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
     environment:
       - OLLAMA_MODELS_DIR=/root/.ollama
     networks:
