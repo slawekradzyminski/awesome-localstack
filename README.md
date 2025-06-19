@@ -35,6 +35,27 @@ flowchart LR
     
 ```
 
+## 🔗 Microservices Architecture
+
+This environment demonstrates a **microservices architecture** where each service is developed as a separate codebase:
+
+### 🏗️ Service Breakdown
+- **[Backend API](https://github.com/slawekradzyminski/test-secure-backend)** - Handles business logic, authentication, and data persistence
+- **[Frontend App](https://github.com/slawekradzyminski/vite-react-frontend)** - Provides user interface and client-side functionality  
+- **[Email Consumer](https://github.com/slawekradzyminski/jms-email-consumer)** - Processes asynchronous email notifications
+
+### 🔄 Communication Flow
+1. **User interactions** → Frontend React app
+2. **API requests** → Backend Spring Boot service
+3. **Async notifications** → ActiveMQ → Email Consumer → Mailhog
+4. **Static assets** → Nginx CDN for optimized delivery
+
+### 🎯 Benefits of This Architecture
+- **Independent development** - Each team can work on their service
+- **Technology diversity** - Different tech stacks per service
+- **Scalability** - Services can be scaled independently
+- **Fault isolation** - Issues in one service don't affect others
+
 ## 🚀 Quick Start
 
 ### Full Environment (Recommended)
@@ -78,14 +99,14 @@ docker compose down --volumes
 
 | Service | URL | Description | Credentials |
 |---------|-----|-------------|-------------|
-| **Backend API** | [http://localhost:4001/swagger-ui/index.html](http://localhost:4001/swagger-ui/index.html) | Spring Boot REST API with Swagger docs | - |
-| **Frontend** | [http://localhost:8081/login](http://localhost:8081/login) | React application | - |
+| **Backend API** | [http://localhost:4001/swagger-ui/index.html](http://localhost:4001/swagger-ui/index.html) | Spring Boot REST API with Swagger docs ([source](https://github.com/slawekradzyminski/test-secure-backend)) | - |
+| **Frontend** | [http://localhost:8081/login](http://localhost:8081/login) | React application ([source](https://github.com/slawekradzyminski/vite-react-frontend)) | - |
 | **Prometheus** | [http://localhost:9090/](http://localhost:9090/) | Metrics collection and monitoring | - |
 | **Grafana** | [http://localhost:3000/login](http://localhost:3000/login) | Dashboards and visualization | `admin/grafana` |
 | **ActiveMQ** | [http://localhost:8161](http://localhost:8161/) | Message broker web console | `admin/admin` |
 | **Mailhog** | [http://localhost:8025/](http://localhost:8025/) | Email testing interface | - |
 | **Nginx CDN** | [http://localhost:8082/images/](http://localhost:8082/images/) | Static asset delivery | - |
-| **Email Consumer** | [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus) | JMS email processing service | - |
+| **Email Consumer** | [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus) | JMS email processing service ([source](https://github.com/slawekradzyminski/jms-email-consumer)) | - |
 | **Ollama LLM** | [http://localhost:11434/api/tags](http://localhost:11434/api/tags) | Local AI model server | - |
 
 ## 🗄️ Database
@@ -230,11 +251,26 @@ docker compose stop <service_name>
 - **Type:** Bridge network
 - **Purpose:** Isolated communication between services
 
-## 📚 Related Projects
+## 🛠️ Related Projects
 
-- **Backend:** [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
-- **Frontend:** [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
-- **Email Consumer:** [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+This development environment orchestrates services from multiple dedicated repositories:
+
+### 🎯 Core Application Components
+- **[Backend API](https://github.com/slawekradzyminski/test-secure-backend)** - Spring Boot REST API with JWT authentication, user management, and e-commerce features
+- **[Frontend App](https://github.com/slawekradzyminski/vite-react-frontend)** - React + TypeScript application with modern UI, authentication, and admin dashboard
+- **[Email Consumer](https://github.com/slawekradzyminski/jms-email-consumer)** - JMS message processor that handles email notifications via ActiveMQ
+
+### 🔗 Service Integration
+Each component is designed to work seamlessly together:
+- **Backend** exposes REST APIs consumed by the **Frontend**
+- **Backend** publishes JMS messages to **ActiveMQ** 
+- **Email Consumer** processes messages and sends emails via **Mailhog**
+- **Frontend** serves static assets through **Nginx CDN**
+
+### 🛠️ Development Workflow
+- Clone individual repositories for focused development
+- Use this orchestration project for full-stack testing
+- Each service can be developed independently with Docker containers
 
 ## 🛠️ Environment Configurations
 
