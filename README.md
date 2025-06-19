@@ -1,255 +1,286 @@
-## Intro
+# Awesome LocalStack - Complete Development Environment
 
-Localstack for my trainings
+A comprehensive Docker-based development environment that provides a full-stack application with monitoring, CI/CD, and AI capabilities for training and development purposes.
 
-# Architecture
+## 🏗️ Architecture
 
-Here's an example of a Mermaid diagram that shows the different components in this project and how they interact:
-
+The project consists of multiple interconnected services that simulate a production-like environment:
 
 ```mermaid
 flowchart LR
-    F[Frontend]
-    B[Backend]
-    MQ[ActiveMQ]
-    C[Consumer]
-    E[Email Server]
-    DB[(PostgreSQL)]
-    PM[Prometheus]
-    IDB[InfluxDB]
-    GF[Grafana]
-    O[Ollama]
-    CDN[Nginx Static]
+    F[Frontend<br/>React App<br/>Port 8081]
+    B[Backend<br/>Spring Boot<br/>Port 4001]
+    MQ[ActiveMQ<br/>Message Broker<br/>Port 61616/8161]
+    C[Consumer<br/>JMS Email<br/>Port 4002]
+    E[Mailhog<br/>Email Server<br/>Port 8025]
+    DB[(PostgreSQL<br/>Database<br/>Port 5432)]
+    PM[Prometheus<br/>Metrics<br/>Port 9090]
+    IDB[InfluxDB<br/>Time Series<br/>Port 8086]
+    GF[Grafana<br/>Dashboards<br/>Port 3000]
+    O[Ollama<br/>LLM Server<br/>Port 11434]
+    CDN[Nginx Static<br/>CDN<br/>Port 8082]
 
-    F -- REST --> B
-    B -- JMS --> MQ
-    MQ -- JMS --> B
-    MQ -- JMS --> C
+    F -- REST API --> B
+    B -- JMS Messages --> MQ
+    MQ -- JMS Messages --> C
     C -- SMTP --> E
-    B -- DB --> DB
-    B -- LLM --> O
-    F -- "static assets" --> CDN
-
-    PM -- "scrapes metrics" --> B
-    PM -- "scrapes metrics" --> C
-    GF -- "queries metrics" --> PM
-    GF -- "queries data" --> IDB
+    B -- Database --> DB
+    B -- LLM API --> O
+    F -- Static Assets --> CDN
+    
+    PM -- Scrapes Metrics --> B
+    PM -- Scrapes Metrics --> C
+    GF -- Queries Metrics --> PM
+    GF -- Queries Data --> IDB
+    
 ```
 
-## Running
+## 🚀 Quick Start
 
-### Full
-
-```commandline
-docker compose up --force-recreate --no-deps --build -d
+### Full Environment (Recommended)
+```bash
+docker compose up -d
 ```
 
-### No Docker Compose
+### Alternative Methods
 
-```commandline
+**Using Docker Compose directly:**
+```bash
+./run-docker-compose.sh
+```
+
+**Using individual Docker commands:**
+```bash
 ./docker-run-all.sh
 ```
 
-### CI (No Monitoring and Jenkins)
-
-```commandline
+**CI Environment (No Monitoring/Jenkins):**
+```bash
 docker compose -f docker-compose-ci.yml up -d
 ```
 
-### Minimal (Only Backend and Frontend)
-
-```commandline
+**Minimal Environment (Backend + Frontend only):**
+```bash
 docker compose -f lightweight-docker-compose.yml up -d
 ```
 
-## Cleanup
-
-```commandline
-docker compose down --volumes
-```
-
-## Verification
-
-Backend - [http://localhost:4001/swagger-ui/index.html](http://localhost:4001/swagger-ui/index.html)
-
-Frontend - [http://localhost:8081/login](http://localhost:8081/login)
-
-Prometheus - [http://localhost:9090/](http://localhost:9090/)
-
-Grafana - [http://localhost:3000/login](http://localhost:3000/login) (admin/grafana)
-
-Active MQ - [http://localhost:8161](http://localhost:8161/)
-
-Mailhog - [http://localhost:8025/](http://localhost:8025/) 
-
-Jenkins - [http://localhost:8080/](http://localhost:8080/) 
-
-Nginx Static (CDN) - [http://localhost:8082/images/](http://localhost:8082/images/)
-
-See Container logs for initial Jenkins password.
-
-Email consumer (slow...) - [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus)
-
-Ollama - [http://localhost:11434/api/tags](http://localhost:11434/api/tags)
-
-## PostgreSQL
-
-The stack includes a PostgreSQL database container named **postgres** running on port **5432**.
-
-### Accessing PostgreSQL Database
-
-You can interact with the PostgreSQL database in several ways:
-
-1. Using docker exec and the psql command-line tool:
+## 🧹 Cleanup
 
 ```bash
-# Connect to the database
+# Stop and remove containers with volumes
+docker compose down --volumes
+
+# Complete cleanup (all Docker resources)
+./docker-prune.sh
+```
+
+## 📊 Services & Endpoints
+
+| Service | URL | Description | Credentials |
+|---------|-----|-------------|-------------|
+| **Backend API** | [http://localhost:4001/swagger-ui/index.html](http://localhost:4001/swagger-ui/index.html) | Spring Boot REST API with Swagger docs | - |
+| **Frontend** | [http://localhost:8081/login](http://localhost:8081/login) | React application | - |
+| **Prometheus** | [http://localhost:9090/](http://localhost:9090/) | Metrics collection and monitoring | - |
+| **Grafana** | [http://localhost:3000/login](http://localhost:3000/login) | Dashboards and visualization | `admin/grafana` |
+| **ActiveMQ** | [http://localhost:8161](http://localhost:8161/) | Message broker web console | `admin/admin` |
+| **Mailhog** | [http://localhost:8025/](http://localhost:8025/) | Email testing interface | - |
+| **Nginx CDN** | [http://localhost:8082/images/](http://localhost:8082/images/) | Static asset delivery | - |
+| **Email Consumer** | [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus) | JMS email processing service | - |
+| **Ollama LLM** | [http://localhost:11434/api/tags](http://localhost:11434/api/tags) | Local AI model server | - |
+
+## 🗄️ Database
+
+### PostgreSQL Configuration
+- **Host:** localhost
+- **Port:** 5432
+- **Database:** testdb
+- **Username:** postgres
+- **Password:** postgres
+
+### Database Access
+
+**Using Docker:**
+```bash
+# Connect to database
 docker exec -it postgres psql -U postgres -d testdb
 
-# Common psql commands:
+# Common commands:
 \dt                 # List tables
-\d table_name       # Describe table
+\d table_name       # Describe table structure
 \q                  # Quit psql
-
-# Example queries:
-SELECT * FROM app_user;
-SELECT * FROM products;
-SELECT * FROM cart_items;
-SELECT * FROM orders;
 ```
 
-2. Using external tools:
-   - Host: localhost
-   - Port: 5432
-   - Database: testdb
-   - Username: postgres
-   - Password: postgres
+**Using external tools:**
+- Use any PostgreSQL client with the credentials above
+- Popular options: pgAdmin, DBeaver, DataGrip
 
 ### Database Schema
+The application uses the following main tables:
+- `app_user` - User management
+- `products` - Product catalog
+- `cart_items` - Shopping cart
+- `orders` - Order management
 
-The main tables in the database:
-- `app_user`: Stores user information
-- `products`: Stores product catalog
-- `cart_items`: Stores shopping cart items
-- `orders`: Stores order information
+## 📁 Static Assets (CDN)
 
-## Nginx Static (CDN)
-
-The stack includes an Nginx server that acts as a CDN equivalent for serving static assets:
+The Nginx server acts as a CDN for static assets:
 
 - **Port:** 8082
-- **Purpose:** Efficiently serves static files like images, CSS, and JavaScript
-- **Configuration:** 
-  - Mounts the local `./images` directory to `/usr/share/nginx/html/images` in the container
-  - Accessible at [http://localhost:8082/images/](http://localhost:8082/images/)
+- **Local Directory:** `./images/`
+- **Container Path:** `/usr/share/nginx/html/images`
+- **Access:** `http://localhost:8082/images/filename.jpg`
 
-### Usage
+**Available Assets:**
+- Product images (applewatch.png, cleancode.png, iphone.png, etc.)
+- Brand logos (samsung.png, sony.png, mac.png, etc.)
 
-1. Place your static assets in the `./images` directory in the project root
-2. Access them via `http://localhost:8082/images/your-file.jpg`
-3. Reference these assets in your application for improved performance and separation of concerns
+## 📈 Monitoring Stack
 
-This setup allows you to offload static content delivery from your application servers, improving performance and scalability.
+### Prometheus
+- **Configuration:** `./prometheus/prometheus.yml`
+- **Scrape Interval:** 5s for Spring Boot apps, 10s global
+- **Targets:** Backend (4001), Consumer (4002)
 
-## Prometheus & Grafana
+### Grafana
+- **Pre-configured Dashboards:**
+  - Spring Boot Application Metrics
+  - HTTP Request Monitoring
+  - K6 Load Testing Results
+- **Data Sources:** Prometheus, InfluxDB
+- **Login:** admin/grafana
 
-[Article](https://stackabuse.com/monitoring-spring-boot-apps-with-micrometer-prometheus-and-grafana/)
+### InfluxDB
+- **Database:** db0
+- **Credentials:** admin/admin
+- **Purpose:** Time-series data storage for load testing
 
-## Backend
+## 🤖 AI/LLM Integration
 
-https://github.com/slawekradzyminski/test-secure-backend
+### Ollama Server
+- **Model:** qwen3-thinking (pre-loaded)
+- **API Endpoint:** http://localhost:11434
+- **Custom Image:** slawekradzyminski/ollama:qwen3-thinking
 
-## Frontend
-
-https://github.com/slawekradzyminski/vite-react-frontend
-## JMS email consumer
-
-https://github.com/slawekradzyminski/jms-email-consumer
-
-## Mailhog
-
-https://github.com/mailhog/MailHog/tree/master/docs
-
-## Docker cleanup
-
-```commandline
-# Stop and remove all containers
-docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)
-
-# Remove all Docker data (images, containers, volumes, networks)
-docker system prune -a --volumes
-```
-
-## K6 test execution command
-
-```commandline
-K6_INFLUXDB_PUSH_INTERVAL=2s k6 run --out influxdb=http://localhost:8086/db0  dist/user-journey.js
-```
-
-## Log into container
-
-```commandline
-docker exec -it <container_id> bash
-```
-
-# Docker Services Documentation (AI-generated)
-
-## Overview
-This project uses Docker Compose to orchestrate multiple environments including CI services and additional applications.
-
-### Additional Applications
-
-#### Jenkins
-- **File:** `docker-compose-jenkins.yml`
-- **Description:**  
-  Builds a Jenkins container from the local Dockerfile with the following configuration:
-  - **Ports:**  
-    - `8080`: Jenkins web interface  
-    - `50000`: Agent communication
-  - **Volumes:**  
-    - `jenkins-data` persists Jenkins home data  
-    - Mounts `/var/run/docker.sock` to allow Docker operations inside Jenkins
-- **Starting Jenkins:**
-  ```bash
-  docker-compose -f docker-compose-jenkins.yml up -d
-  ```
-
-#### Ollama Server
-- **File:** `docker-compose-llm.yml`
-- **Description:**  
-  Runs the Ollama server using the official image `ollama/ollama:latest` with the following setup:
-  - **Port:**  
-    - Exposes `11434` for API access
-  - **Volumes:**  
-    - `ollama-data` is mounted to persist server data at `/root/.ollama`
-  - **Environment:**  
-    - `OLLAMA_MODELS_DIR` is set to `/root/.ollama`
-- **Starting Ollama:**
-  ```bash
-  docker-compose -f docker-compose-llm.yml up -d
-  ```
-- **Testing the Ollama Server:**
-  Copy and paste the command below to test the server:
-  ```bash
-  curl -X POST http://localhost:11434/api/generate -d '{
-    "model": "llama3.2:1b",
-    "prompt": "What is Docker?"
-  }'
-  ```
-
-## Ollama
-
-[Ollama](https://ollama.ai/) is included as a local LLM server that can be used by the backend for AI-related tasks. The server runs on port 11434 and comes with health checks to ensure model availability.
-
-To test the Ollama server:
+**Testing the LLM:**
 ```bash
 curl -X POST http://localhost:11434/api/generate -d '{
-  "model": "llama3.2:1b",
+  "model": "qwen3:0.6b",
   "prompt": "What is Docker?"
 }'
 ```
 
-## Final Notes
-- Verify that the exposed ports are free and not used by other services.
-- Use the corresponding docker-compose file per service needs.
-- For removing unused Docker objects—if needed—consult and run the `docker-prune.sh` script.
+## 🔄 Message Queue
+
+### ActiveMQ Artemis
+- **JMS Port:** 61616
+- **Web Console:** 8161
+- **AMQP Port:** 5672
+- **Credentials:** admin/admin
+- **Features:** Anonymous login enabled, security disabled for development
+
+### Email Consumer
+- **Service:** slawekradzyminski/consumer:1.3
+- **Purpose:** Processes JMS messages and sends emails via SMTP
+- **Monitoring:** Exposes Prometheus metrics
+
+## 🚀 CI/CD Pipeline
+
+### Jenkins
+- **Custom Image:** Built from local Dockerfile
+- **Plugins:** Blue Ocean, Docker Workflow, Docker Plugin
+- **Docker Integration:** Full Docker-in-Docker support
+- **Ports:** 8080 (web), 50000 (agents)
+
+**Starting Jenkins separately:**
+```bash
+docker compose -f docker-compose-jenkins.yml up -d
+```
+
+## 📧 Email Testing
+
+### Mailhog
+- **Web Interface:** http://localhost:8025
+- **SMTP Port:** 1025
+- **Purpose:** Catches all emails for testing without sending to real addresses
+
+## 🧪 Load Testing
+
+### K6 Integration
+```bash
+# Run load tests with InfluxDB output
+K6_INFLUXDB_PUSH_INTERVAL=2s k6 run --out influxdb=http://localhost:8086/db0 dist/user-journey.js
+```
+
+## 🔧 Development Tools
+
+### Container Management
+```bash
+# Access container shell
+docker exec -it <container_name> bash
+
+# View logs
+docker logs <container_name>
+
+# Stop specific service
+docker compose stop <service_name>
+```
+
+### Network
+- **Network Name:** my-private-ntwk
+- **Type:** Bridge network
+- **Purpose:** Isolated communication between services
+
+## 📚 Related Projects
+
+- **Backend:** [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
+- **Frontend:** [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
+- **Email Consumer:** [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+
+## 🛠️ Environment Configurations
+
+### Full Stack (`docker-compose.yml`)
+- All services including monitoring, CI/CD, and AI
+- Persistent volumes for data storage
+- Complete development environment
+
+### CI Environment (`docker-compose-ci.yml`)
+- Core application services only
+- No monitoring or Jenkins
+- Suitable for CI/CD pipelines
+
+### Lightweight (`lightweight-docker-compose.yml`)
+- Backend and Frontend only
+- Minimal resource usage
+- Quick development setup
+
+### Jenkins Only (`docker-compose-jenkins.yml`)
+- Standalone Jenkins with Docker support
+- Custom image with pre-installed plugins
+
+### LLM Only (`docker-compose-llm.yml`)
+- Ollama server with persistent model storage
+- Independent AI development environment
+
+## 🔍 Troubleshooting
+
+### Common Issues
+1. **Port conflicts:** Ensure ports are not used by other services
+2. **Container startup order:** Services have proper dependencies configured
+3. **Volume permissions:** Docker volumes are created automatically
+4. **Network connectivity:** All services use the same bridge network
+
+### Logs and Debugging
+```bash
+# View all container logs
+docker compose logs
+
+# View specific service logs
+docker compose logs backend
+
+# Follow logs in real-time
+docker compose logs -f
+```
+
+## 📄 License
+
+This project is designed for training and development purposes. All external services and images maintain their respective licenses.
