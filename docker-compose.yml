@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:2.8.0
+    image: slawekradzyminski/backend:3.0.0
     restart: always
     ports:
       - "4001:4001"
@@ -18,7 +18,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:2.6.0
+    image: slawekradzyminski/frontend:3.0.0
     restart: always
     ports:
       - "8081:8081"
@@ -132,7 +132,7 @@ services:
       - my-private-ntwk
 
   nginx-static:
-    image: nginx:1.27-perl
+    image: nginx:1.29.1-perl
     hostname: nginx
     restart: always
     ports:
