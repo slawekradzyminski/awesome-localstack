@@ -8,13 +8,13 @@ wait_for_http_200() {
     local url=$1
     local name=$2
     local elapsed_time=0
-    local timeout=1800 # 30 minutes
+    local timeout=600 # 10 minutes
 
     echo "Waiting for $name to start..."
 
     while true; do
         if [ $elapsed_time -eq $timeout ]; then
-            echo "$name did not start within 30 minutes. Exiting."
+            echo "$name did not start within 10 minutes. Exiting."
             exit 1
         fi
 
