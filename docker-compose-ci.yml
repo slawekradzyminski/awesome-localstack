@@ -69,7 +69,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.1.0
+    image: slawekradzyminski/consumer:3.1.1
     restart: always
     ports:
       - "4002:4002"
