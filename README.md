@@ -200,7 +200,7 @@ curl -X POST http://localhost:11434/api/generate -d '{
 - **Features:** Anonymous login enabled, security disabled for development
 
 ### Email Consumer
-- **Service:** slawekradzyminski/consumer:1.3
+- **Service:** slawekradzyminski/consumer:3.1.0
 - **Purpose:** Processes JMS messages and sends emails via SMTP
 - **Monitoring:** Exposes Prometheus metrics
 

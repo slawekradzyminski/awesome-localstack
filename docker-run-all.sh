@@ -49,7 +49,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:3.0.1
+  slawekradzyminski/backend:3.1.0
 
 echo "Starting Frontend..."
 docker run -d \
@@ -57,7 +57,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:3.0.1
+  slawekradzyminski/frontend:3.1.0
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -107,7 +107,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name consumer \
-  slawekradzyminski/consumer:1.3
+  slawekradzyminski/consumer:3.1.0
 
 echo "Building Jenkins image..."
 docker build -t custom-jenkins .
