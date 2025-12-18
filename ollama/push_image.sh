@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "${1:-}" = "" ]; then
   echo "Usage: $0 <image-name-suffix>"
-  echo "Example: $0 qwens   # builds and pushes slawekradzyminski/qwens"
+  echo "Example: $0 qwens   # builds and pushes the qwens image"
   exit 1
 fi
 

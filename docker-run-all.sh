@@ -131,7 +131,7 @@ docker run -d \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  slawekradzyminski/qwens
+  slawekradzyminski/qwens@sha256:932f418cb484b0426b48c8e00788d3d84aa236be04b8e751224b784e41ec5802
 
 echo "Starting Nginx Static (CDN)..."
 docker run -d \

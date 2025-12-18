@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: slawekradzyminski/qwens
+    image: slawekradzyminski/qwens@sha256:932f418cb484b0426b48c8e00788d3d84aa236be04b8e751224b784e41ec5802
     container_name: ollama
     restart: unless-stopped
     ports:
