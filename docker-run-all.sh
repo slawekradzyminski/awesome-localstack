@@ -49,7 +49,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:3.1.0
+  slawekradzyminski/backend:3.2.0
 
 echo "Starting Frontend..."
 docker run -d \
@@ -57,7 +57,7 @@ docker run -d \
   -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:3.1.0
+  slawekradzyminski/frontend:3.2.0
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -131,7 +131,7 @@ docker run -d \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  slawekradzyminski/ollama:qwen3-thinking
+  slawekradzyminski/qwens
 
 echo "Starting Nginx Static (CDN)..."
 docker run -d \

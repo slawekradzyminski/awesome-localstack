@@ -1,92 +1,74 @@
 # Ollama Setup
 
-This directory contains configuration for running Ollama with the Qwen model in our Docker environment.
+This directory contains configuration for running Ollama with the `qwen3:4b-instruct` model pre-pulled into a custom image and `qwen3:0.6b` added for lightweight thinking tests.
 
 ## Current Implementation
 
-We're using a custom image with the Qwen model pre-downloaded. This approach:
-- Avoids network downloads during container startup
-- Reduces initial setup time
-- Ensures model consistency across deployments
+- Uses Ollama with `qwen3:4b-instruct` cached during the image build (model page: [link](https://ollama.com/library/qwen3:4b-instruct)).
+- Also pre-pulls `qwen3:0.6b` for lighter experimentation (model page: [link](https://ollama.com/library/qwen3:0.6b)).
+- Avoids model downloads at container start and keeps deployments consistent.
 
-## Technical Details
+## Building and Pushing
 
-### Model Loading Process
-
-Even with pre-downloaded models, Ollama performs these steps on container startup:
-
-1. System memory check and allocation (~0.1s)
-2. CPU backend loading (~0.1s)
-3. Model initialization and memory mapping (~3s)
-   - Loading meta data and tensors
-   - Initializing context
-   - Setting up KV cache
-
-This process takes approximately 3-4 seconds and cannot be pre-cached due to the nature of how LLMs work with memory.
-
-### Memory Usage
-
-The Qwen model (0.6B variant) requires:
-- Total model size: 523 MB (Q4_0)
-- Runtime memory: ~1 GiB
-- First-load latency: ~3s
-
-*Note: Measurements are based on M2-Max; expect ±10% variation on x86/GPU hosts.
-
-## Model Variants
-
-The setup supports multiple Qwen model sizes:
-- qwen3:0.6b (default, recommended for most use cases)
-- qwen3:1.7b
-- qwen3:4b
-- qwen3:8b
-
-To use a different size, build with:
 ```bash
-docker build --build-arg OLLAMA_MODEL=qwen3:1.7b -t myorg/ollama-qwen3:1.7b .
+# Build with the default models (qwen3:4b-instruct + qwen3:0.6b)
+docker build -t slawekradzyminski/qwen3:4b-instruct .
+
+# Build with explicit args (optional overrides)
+docker build \
+  --build-arg OLLAMA_MODEL=qwen3:4b-instruct \
+  --build-arg OLLAMA_EXTRA_MODELS="qwen3:0.6b" \
+  -t slawekradzyminski/qwen3:4b-instruct .
+
+# Push to Docker Hub
+docker push slawekradzyminski/qwen3:4b-instruct
 ```
 
-## Usage
+## Running the Container
 
-### Building the Image
 ```bash
-docker build -t myorg/ollama-qwen3:0.6b .
+docker run -d --name ollama \
+  -p 11434:11434 \
+  -v ollama-cache:/root/.ollama \
+  slawekradzyminski/qwen3:4b-instruct
 ```
 
-### Running the Container
+## Querying the Model
+
+### CLI (inside container)
 ```bash
-docker run -d --name ollama-qwen \
-           -p 11434:11434 \
-           -v ollama-cache:/root/.ollama \
-           myorg/ollama-qwen3:0.6b
+docker exec -it ollama ollama run qwen3:4b-instruct
+# Lightweight thinking test
+docker exec -it ollama ollama run qwen3:0.6b
 ```
 
-### Querying the Model
-
-#### CLI (inside container)
+### HTTP API
 ```bash
-docker exec -it ollama-qwen ollama run qwen3:0.6b
-```
+curl -s http://localhost:11434/api/chat \
+  -d '{
+        "model":"qwen3:4b-instruct",
+        "messages":[
+          {"role":"user","content":"Define entropy in two sentences."}
+        ]
+      }'
 
-#### HTTP API
-```bash
+# Query the lighter model
 curl -s http://localhost:11434/api/chat \
   -d '{
         "model":"qwen3:0.6b",
         "messages":[
-          {"role":"user","content":"Define entropy in two sentences. /think"}
+          {"role":"user","content":"Summarize entropy in one sentence."}
         ]
       }'
 ```
 
-## Important Notes
+## Notes
 
-1. **Startup Time**: The ~3s model loading time is unavoidable as it's required for memory initialization
-2. **Memory Usage**: Ensure your host has at least 2GB of available memory for the 0.6B model
-3. **Volume Persistence**: If you mount a volume at `/root/.ollama`, any additional models pulled will persist across restarts
-4. **Thinking Mode**: Qwen 3 supports `/think` and `/no_think` instruction tags for controlling response generation
+1. Startup still performs a short initialization (memory checks, tensor mapping) even with the model cached.
+2. Mount `/root/.ollama` to persist models pulled later.
 
 ## References
 
 - [Ollama Official Documentation](https://github.com/ollama/ollama)
-- [Qwen Model Documentation](https://huggingface.co/Qwen)
+- [Qwen3 4B Instruct model page](https://ollama.com/library/qwen3:4b-instruct)
+- [Qwen3 0.6B model page](https://ollama.com/library/qwen3:0.6b)

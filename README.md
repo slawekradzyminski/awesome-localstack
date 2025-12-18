@@ -178,15 +178,21 @@ The Nginx server acts as a CDN for static assets:
 ## 🤖 AI/LLM Integration
 
 ### Ollama Server
-- **Model:** qwen3-thinking (pre-loaded)
+- **Models (pre-pulled):** qwen3:4b-instruct (default), qwen3:0.6b (lightweight)
 - **API Endpoint:** http://localhost:11434
-- **Custom Image:** slawekradzyminski/ollama:qwen3-thinking
+- **Custom Image:** slawekradzyminski/qwen3:4b-instruct
 
 **Testing the LLM:**
 ```bash
 curl -X POST http://localhost:11434/api/generate -d '{
-  "model": "qwen3:0.6b",
+  "model": "qwen3:4b-instruct",
   "prompt": "What is Docker?"
+}'
+
+# Lightweight thinking/model test
+curl -X POST http://localhost:11434/api/generate -d '{
+  "model": "qwen3:0.6b",
+  "prompt": "Summarize entropy in one sentence."
 }'
 ```
 

@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: slawekradzyminski/ollama:qwen3-thinking
+    image: slawekradzyminski/qwens
     container_name: ollama
     restart: unless-stopped
     ports:
