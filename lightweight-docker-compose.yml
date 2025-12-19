@@ -7,6 +7,7 @@ services:
     hostname: backend
     environment:
       SPRING_PROFILES_ACTIVE: local
+      OLLAMA_BASE_URL: http://ollama-mock:11434
     networks:
       - my-private-ntwk
 
