@@ -39,32 +39,32 @@ services:
     networks:
       - my-private-ntwk
 
-  # prometheus:
-  #   image: prom/prometheus:v3.1.0
-  #   restart: always
-  #   volumes:
-  #     - ./prometheus/:/etc/prometheus/
-  #   ports:
-  #     - "9090:9090"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - my-private-ntwk
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: always
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    networks:
+      - my-private-ntwk
 
-  # grafana:
-  #   image: grafana/grafana:11.5.1
-  #   environment:
-  #     GF_SECURITY_ADMIN_PASSWORD: grafana
-  #   volumes:
-  #     - ./grafana/provisioning/:/etc/grafana/provisioning/
-  #   restart: always
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - prometheus
-  #     - influxdb
-  #   networks:
-  #     - my-private-ntwk
+  grafana:
+    image: grafana/grafana:11.5.1
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: grafana
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - influxdb
+    networks:
+      - my-private-ntwk
 
   activemq:
     image: apache/activemq-artemis:2.31.2
@@ -131,17 +131,17 @@ services:
     networks:
       - my-private-ntwk
 
-  # nginx-static:
-  #   image: nginx:1.29.1-perl
-  #   hostname: nginx
-  #   restart: always
-  #   ports:
-  #     - "8082:80"
-  #   volumes:
-  #     - ./images:/usr/share/nginx/html/images
-  #     - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
-  #   networks:
-  #     - my-private-ntwk
+  nginx-static:
+    image: nginx:1.29.1-perl
+    hostname: nginx
+    restart: always
+    ports:
+      - "8082:80"
+    volumes:
+      - ./images:/usr/share/nginx/html/images
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    networks:
+      - my-private-ntwk
 
 volumes:
   influxdb-storage:
