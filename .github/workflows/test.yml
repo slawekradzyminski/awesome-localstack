@@ -2,6 +2,9 @@ name: CI
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   runDocker:
     runs-on: ubuntu-latest
@@ -11,7 +14,7 @@ jobs:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6.0.1
     - name: Build and run Docker Compose
       run: bash ./run-docker-compose.sh
 
@@ -23,7 +26,7 @@ jobs:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6.0.1
     - name: Build and run Docker Compose CI version
       run: bash ./run-docker-compose-ci.sh
 
@@ -35,6 +38,6 @@ jobs:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6.0.1
     - name: Build and run Docker Compose CI version
       run: bash ./run-docker-compose-jenkins.sh
