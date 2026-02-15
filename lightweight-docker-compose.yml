@@ -1,6 +1,6 @@
 services:
   backend:
-    image: slawekradzyminski/backend:3.2.0
+    image: slawekradzyminski/backend:3.3.0
     restart: always
     ports:
       - "4001:4001"
@@ -12,7 +12,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.2.0
+    image: slawekradzyminski/frontend:3.3.0
     restart: always
     ports:
       - "8081:8081"
@@ -35,6 +35,7 @@ services:
       - "8082:80"
     volumes:
       - ./images:/usr/share/nginx/html/images
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
 
