@@ -1,9 +1,9 @@
 services:
   backend:
-    image: slawekradzyminski/backend:3.3.0
+    image: slawekradzyminski/backend:3.4.1
     restart: always
-    ports:
-      - "4001:4001"
+    expose:
+      - "4001"
     hostname: backend
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -11,6 +11,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
+      SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
     depends_on:
       - activemq
       - postgres
@@ -18,13 +22,25 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.3.0
+    image: slawekradzyminski/frontend:3.4.0
     restart: always
-    ports:
-      - "8081:8081"
+    expose:
+      - "80"
     hostname: frontend
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      - my-private-ntwk
+
+  gateway:
+    image: nginx:1.29.1-perl
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+      - nginx-static
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - my-private-ntwk
 
@@ -68,8 +84,20 @@ services:
     networks:
       - my-private-ntwk
 
+  nginx-static:
+    image: nginx:1.29.1-perl
+    hostname: nginx
+    restart: always
+    ports:
+      - "8082:80"
+    volumes:
+      - ./images:/usr/share/nginx/html/images
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    networks:
+      - my-private-ntwk
+
   consumer:
-    image: slawekradzyminski/consumer:3.1.3
+    image: slawekradzyminski/consumer:3.3.1
     restart: always
     ports:
       - "4002:4002"

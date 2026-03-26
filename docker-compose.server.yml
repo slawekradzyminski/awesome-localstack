@@ -1,9 +1,7 @@
 services:
   backend:
     image: slawekradzyminski/backend:3.4.1
-    restart: always
-    expose:
-      - "4001"
+    restart: unless-stopped
     hostname: backend
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -12,18 +10,25 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SERVER_FORWARD_HEADERS_STRATEGY: framework
-      PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
-      SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
-      APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
+      OLLAMA_BASE_URL: http://ollama-mock:11434
+      PASSWORD_RESET_FRONTEND_BASE_URL: https://awesome.byst.re/reset
+      SWAGGER_UI_OAUTH2_REDIRECT_URL: https://awesome.byst.re/swagger-ui/oauth2-redirect.html
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://awesome.byst.re,https://awesome.byst.re,http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
     depends_on:
-      - activemq
-      - postgres
+      postgres:
+        condition: service_healthy
+      activemq:
+        condition: service_started
+      ollama-mock:
+        condition: service_started
+    expose:
+      - "4001"
     networks:
       - my-private-ntwk
 
   frontend:
     image: slawekradzyminski/frontend:3.4.0
-    restart: always
+    restart: unless-stopped
     expose:
       - "80"
     networks:
@@ -31,140 +36,101 @@ services:
 
   gateway:
     image: nginx:1.29.1-perl
-    restart: always
+    restart: unless-stopped
     depends_on:
       - frontend
       - backend
       - nginx-static
     ports:
-      - "8081:80"
+      - "80:80"
     volumes:
-      - ./nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/conf.d/app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - my-private-ntwk
 
   postgres:
     image: postgres:16.1
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: testdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks:
-      - my-private-ntwk
-
-  prometheus:
-    image: prom/prometheus:v3.1.0
-    restart: always
-    volumes:
-      - ./prometheus/:/etc/prometheus/
-    ports:
-      - "9090:9090"
-    depends_on:
-      - backend
-    networks:
-      - my-private-ntwk
-
-  grafana:
-    image: grafana/grafana:11.5.1
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: grafana
-    volumes:
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    restart: always
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-      - influxdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       - my-private-ntwk
 
   activemq:
     image: apache/activemq-artemis:2.31.2
-    restart: always
+    restart: unless-stopped
     environment:
       ARTEMIS_USER: admin
       ARTEMIS_PASSWORD: admin
       ANONYMOUS_LOGIN: "true"
       EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
-      DISABLE_SECURITY: true
-      BROKER_CONFIG_GLOBAL_MAX_SIZE: 512mb
+      DISABLE_SECURITY: "true"
+      BROKER_CONFIG_GLOBAL_MAX_SIZE: 256mb
     ports:
       - "61616:61616"
       - "8161:8161"
-      - "5672:5672"
     hostname: activemq
     networks:
       - my-private-ntwk
 
   mailhog:
     image: mailhog/mailhog:v1.0.1
-    restart: always
-    ports:
-      - "8025:8025"
-      - "1025:1025"
+    restart: unless-stopped
+    expose:
+      - "8025"
+      - "1025"
     hostname: mailhog
     networks:
       - my-private-ntwk
 
   consumer:
     image: slawekradzyminski/consumer:3.3.1
-    restart: always
+    restart: unless-stopped
     ports:
       - "4002:4002"
     hostname: consumer
     depends_on:
-      - activemq
+      activemq:
+        condition: service_started
+      mailhog:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - my-private-ntwk
 
-  influxdb:
-    image: influxdb:1.8
-    ports:
-      - '8086:8086'
-    volumes:
-      - influxdb-storage:/var/lib/influxdb
-    environment:
-      - INFLUXDB_DB=db0
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin
-    networks:
-      - my-private-ntwk
-
-  ollama:
-    image: slawekradzyminski/qwens@sha256:932f418cb484b0426b48c8e00788d3d84aa236be04b8e751224b784e41ec5802
-    container_name: ollama
+  ollama-mock:
+    image: slawekradzyminski/ollama-mock:1.0.2
     restart: unless-stopped
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_MODELS_DIR=/root/.ollama
+    expose:
+      - "11434"
     networks:
       - my-private-ntwk
 
   nginx-static:
     image: nginx:1.29.1-perl
     hostname: nginx
-    restart: always
+    restart: unless-stopped
     ports:
       - "8082:80"
     volumes:
-      - ./images:/usr/share/nginx/html/images
+      - ./images:/usr/share/nginx/html/images:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
 
 volumes:
-  influxdb-storage:
   postgres-data:
-  ollama-data:
 
 networks:
   my-private-ntwk:

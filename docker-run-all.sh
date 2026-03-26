@@ -39,7 +39,6 @@ docker run -d \
 echo "Starting Backend..."
 docker run -d \
   --restart always \
-  -p 4001:4001 \
   --hostname backend \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
@@ -49,15 +48,17 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
-  slawekradzyminski/backend:3.3.0
+  -e PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:8081/reset \
+  -e APP_CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081 \
+  slawekradzyminski/backend:3.4.1
 
 echo "Starting Frontend..."
 docker run -d \
   --restart always \
-  -p 8081:8081 \
   --network my-private-ntwk \
   --name frontend \
-  slawekradzyminski/frontend:3.3.0
+  --expose 80 \
+  slawekradzyminski/frontend:3.4.0
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -107,7 +108,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name consumer \
-  slawekradzyminski/consumer:3.1.3
+  slawekradzyminski/consumer:3.3.1
 
 echo "Building Jenkins image..."
 docker build -t custom-jenkins .
@@ -142,6 +143,15 @@ docker run -d \
   --hostname nginx \
   --network my-private-ntwk \
   --name nginx-static \
+  nginx:1.29.1-perl
+
+echo "Starting App Gateway..."
+docker run -d \
+  --restart always \
+  -p 8081:80 \
+  -v "$(pwd)/nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro" \
+  --network my-private-ntwk \
+  --name gateway \
   nginx:1.29.1-perl
 
 echo "All containers have been started!" 

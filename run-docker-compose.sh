@@ -38,7 +38,7 @@ wait_for_http_200() {
 
 # URLs and their respective names using parallel indexed arrays
 urls=(
-    "http://localhost:4001/swagger-ui/index.html"
+    "http://localhost:8081/swagger-ui/index.html"
     "http://localhost:8081/login"
     "http://localhost:9090/graph"
     "http://localhost:3000/login"

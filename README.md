@@ -99,7 +99,7 @@ docker compose down --volumes
 
 | Service | URL | Description | Credentials |
 |---------|-----|-------------|-------------|
-| **Backend API** | [http://localhost:4001/swagger-ui/index.html](http://localhost:4001/swagger-ui/index.html) | Spring Boot REST API with Swagger docs ([source](https://github.com/slawekradzyminski/test-secure-backend)) | - |
+| **Backend API** | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) | Spring Boot REST API with Swagger docs through the gateway ([source](https://github.com/slawekradzyminski/test-secure-backend)) | - |
 | **Frontend** | [http://localhost:8081/login](http://localhost:8081/login) | React application ([source](https://github.com/slawekradzyminski/vite-react-frontend)) | - |
 | **Prometheus** | [http://localhost:9090/](http://localhost:9090/) | Metrics collection and monitoring | - |
 | **Grafana** | [http://localhost:3000/login](http://localhost:3000/login) | Dashboards and visualization | `admin/grafana` |
@@ -206,7 +206,7 @@ curl -X POST http://localhost:11434/api/generate -d '{
 - **Features:** Anonymous login enabled, security disabled for development
 
 ### Email Consumer
-- **Service:** slawekradzyminski/consumer:3.1.3
+- **Service:** slawekradzyminski/consumer:3.3.1
 - **Purpose:** Processes JMS messages and sends emails via SMTP
 - **Monitoring:** Exposes Prometheus metrics
 
@@ -250,6 +250,25 @@ docker logs <container_name>
 
 # Stop specific service
 docker compose stop <service_name>
+```
+
+### Server debugging
+```bash
+# SSH to the server using .env values from this repo
+set -a
+source .env
+set +a
+ssh -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
+
+# Follow backend logs on the deployed server stack
+cd /opt/awesome-localstack
+docker compose -f docker-compose.server.yml logs --tail=200 -f backend
+
+# Follow gateway logs
+docker compose -f docker-compose.server.yml logs --tail=200 -f gateway
+
+# Check service status
+docker compose -f docker-compose.server.yml ps
 ```
 
 ### Network
