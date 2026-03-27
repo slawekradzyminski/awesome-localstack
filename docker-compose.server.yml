@@ -1,3 +1,5 @@
+name: awesome-server
+
 services:
   backend:
     image: slawekradzyminski/backend:3.4.1
@@ -76,9 +78,9 @@ services:
       EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
       DISABLE_SECURITY: "true"
       BROKER_CONFIG_GLOBAL_MAX_SIZE: 256mb
-    ports:
-      - "61616:61616"
-      - "8161:8161"
+    expose:
+      - "61616"
+      - "8161"
     hostname: activemq
     networks:
       - my-private-ntwk
@@ -96,8 +98,8 @@ services:
   consumer:
     image: slawekradzyminski/consumer:3.3.1
     restart: unless-stopped
-    ports:
-      - "4002:4002"
+    expose:
+      - "4002"
     hostname: consumer
     depends_on:
       activemq:
@@ -121,8 +123,8 @@ services:
     image: nginx:1.29.1-perl
     hostname: nginx
     restart: unless-stopped
-    ports:
-      - "8082:80"
+    expose:
+      - "80"
     volumes:
       - ./images:/usr/share/nginx/html/images:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro

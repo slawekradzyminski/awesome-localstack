@@ -1,3 +1,5 @@
+name: awesome-full
+
 services:
   backend:
     image: slawekradzyminski/backend:3.4.1

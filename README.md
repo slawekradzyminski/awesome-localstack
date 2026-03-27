@@ -1,347 +1,287 @@
-# Awesome LocalStack - Complete Development Environment
+# Awesome LocalStack
 
-A comprehensive Docker-based development environment that provides a full-stack application with monitoring, CI/CD, and AI capabilities for training and development purposes.
+Docker orchestration for the training stack built from separate backend, frontend, and consumer repositories.
 
-## 🏗️ Architecture
+This README is organized by the three main profiles:
 
-The project consists of multiple interconnected services that simulate a production-like environment:
+- lightweight
+- full
+- server
 
-```mermaid
-flowchart LR
-    F[Frontend<br/>React App<br/>Port 8081]
-    B[Backend<br/>Spring Boot<br/>Port 4001]
-    MQ[ActiveMQ<br/>Message Broker<br/>Port 61616/8161]
-    C[Consumer<br/>JMS Email<br/>Port 4002]
-    E[Mailhog<br/>Email Server<br/>Port 8025]
-    DB[(PostgreSQL<br/>Database<br/>Port 5432)]
-    PM[Prometheus<br/>Metrics<br/>Port 9090]
-    IDB[InfluxDB<br/>Time Series<br/>Port 8086]
-    GF[Grafana<br/>Dashboards<br/>Port 3000]
-    O[Ollama<br/>LLM Server<br/>Port 11434]
-    CDN[Nginx Static<br/>CDN<br/>Port 8082]
+For the detailed published-port matrix, see [PROFILE_URLS.md](/Users/admin/IdeaProjects/awesome-localstack/PROFILE_URLS.md).
 
-    F -- REST API --> B
-    B -- JMS Messages --> MQ
-    MQ -- JMS Messages --> C
-    C -- SMTP --> E
-    B -- Database --> DB
-    B -- LLM API --> O
-    F -- Static Assets --> CDN
-    
-    PM -- Scrapes Metrics --> B
-    PM -- Scrapes Metrics --> C
-    GF -- Queries Metrics --> PM
-    GF -- Queries Data --> IDB
-    
-```
+For classroom or workshop use focused on the lightweight stack, see [STUDENT_GUIDE.md](/Users/admin/IdeaProjects/awesome-localstack/STUDENT_GUIDE.md).
 
-## 🔗 Microservices Architecture
+Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
-This environment demonstrates a **microservices architecture** where each service is developed as a separate codebase:
+This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081`, `8082`, and `11434`, so stop one profile before starting the other.
 
-### 🏗️ Service Breakdown
-- **[Backend API](https://github.com/slawekradzyminski/test-secure-backend)** - Handles business logic, authentication, and data persistence
-- **[Frontend App](https://github.com/slawekradzyminski/vite-react-frontend)** - Provides user interface and client-side functionality  
-- **[Email Consumer](https://github.com/slawekradzyminski/jms-email-consumer)** - Processes asynchronous email notifications
+## Lightweight Profile
 
-### 🔄 Communication Flow
-1. **User interactions** → Frontend React app
-2. **API requests** → Backend Spring Boot service
-3. **Async notifications** → ActiveMQ → Email Consumer → Mailhog
-4. **Static assets** → Nginx CDN for optimized delivery
+Use this most of the time for local work.
 
-### 🎯 Benefits of This Architecture
-- **Independent development** - Each team can work on their service
-- **Technology diversity** - Different tech stacks per service
-- **Scalability** - Services can be scaled independently
-- **Fault isolation** - Issues in one service don't affect others
+Start it with:
 
-## 🚀 Quick Start
-
-### Full Environment (Recommended)
-```bash
-docker compose up -d
-```
-
-### Alternative Methods
-
-**Using Docker Compose directly:**
-```bash
-./run-docker-compose.sh
-```
-
-**Using individual Docker commands:**
-```bash
-./docker-run-all.sh
-```
-
-**CI Environment (No Monitoring/Jenkins):**
-```bash
-docker compose -f docker-compose-ci.yml up -d
-```
-
-**Minimal Environment (Backend + Frontend only):**
 ```bash
 docker compose -f lightweight-docker-compose.yml up -d
 ```
 
-## 🧹 Cleanup
+Main app URL:
 
-```bash
-# Stop and remove containers with volumes
-docker compose down --volumes
+- `http://localhost:8081/login`
 
-# Complete cleanup (all Docker resources)
-./docker-prune.sh
+Other useful lightweight URLs:
+
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- image through gateway: `http://localhost:8081/images/iphone.png`
+- mocked LLM generate endpoint: `http://localhost:11434/api/generate`
+- raw static image host: `http://localhost:8082/images/iphone.png`
+
+Architecture:
+
+```mermaid
+flowchart LR
+    U[Browser]
+    G[Gateway<br/>localhost:8081]
+    F[Frontend]
+    B[Backend]
+    S[Static Images]
+    O[Ollama Mock<br/>localhost:11434]
+
+    U --> G
+    G --> F
+    G --> B
+    G --> S
+    B --> O
 ```
 
-## 📊 Services & Endpoints
+What students should verify:
 
-| Service | URL | Description | Credentials |
-|---------|-----|-------------|-------------|
-| **Backend API** | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) | Spring Boot REST API with Swagger docs through the gateway ([source](https://github.com/slawekradzyminski/test-secure-backend)) | - |
-| **Frontend** | [http://localhost:8081/login](http://localhost:8081/login) | React application ([source](https://github.com/slawekradzyminski/vite-react-frontend)) | - |
-| **Prometheus** | [http://localhost:9090/](http://localhost:9090/) | Metrics collection and monitoring | - |
-| **Grafana** | [http://localhost:3000/login](http://localhost:3000/login) | Dashboards and visualization | `admin/grafana` |
-| **ActiveMQ** | [http://localhost:8161](http://localhost:8161/) | Message broker web console | `admin/admin` |
-| **Mailhog** | [http://localhost:8025/](http://localhost:8025/) | Email testing interface | - |
-| **Nginx CDN** | [http://localhost:8082/images/](http://localhost:8082/images/) | Static asset delivery | - |
-| **Email Consumer** | [http://localhost:4002/actuator/prometheus](http://localhost:4002/actuator/prometheus) | JMS email processing service ([source](https://github.com/slawekradzyminski/jms-email-consumer)) | - |
-| **Ollama LLM** | [http://localhost:11434/api/tags](http://localhost:11434/api/tags) | Local AI model server | - |
-
-## 🗄️ Database
-
-### PostgreSQL Configuration
-- **Host:** localhost
-- **Port:** 5432
-- **Database:** testdb
-- **Username:** postgres
-- **Password:** postgres
-
-### Database Access
-
-**Using Docker:**
 ```bash
-# Connect to database
+docker compose -f lightweight-docker-compose.yml ps
+curl -i http://localhost:8081/login
+curl -i http://localhost:8081/v3/api-docs
+curl -i http://localhost:8081/images/iphone.png
+curl -i -X POST http://localhost:11434/api/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3:0.6b","prompt":"hello"}'
+```
+
+Expected:
+
+- all lightweight containers are `Up`
+- login page loads
+- Swagger and OpenAPI respond with `200`
+- product image responds with `200`
+- mocked LLM generate endpoint responds with `200`
+
+Useful logs:
+
+```bash
+docker compose -f lightweight-docker-compose.yml logs -f backend gateway
+docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
+```
+
+## Full Profile
+
+Use this when you want the local app plus monitoring, DB, queueing, email testing, consumer, and real Ollama.
+
+Start it with:
+
+```bash
+docker compose up -d
+```
+
+Main app URL:
+
+- `http://localhost:8081/login`
+
+Other useful full-profile URLs:
+
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- Prometheus: `http://localhost:9090/graph`
+- Grafana: `http://localhost:3000/login`
+- ActiveMQ console: `http://localhost:8161`
+- Mailhog UI: `http://localhost:8025/`
+- consumer metrics: `http://localhost:4002/actuator/prometheus`
+- Ollama: `http://localhost:11434/api/tags`
+- Postgres: `localhost:5432`
+- raw static image host: `http://localhost:8082/images/iphone.png`
+
+Architecture:
+
+```mermaid
+flowchart LR
+    U[Browser]
+    G[Gateway<br/>localhost:8081]
+    F[Frontend]
+    B[Backend]
+    S[Static Images<br/>localhost:8082]
+    DB[(Postgres<br/>localhost:5432)]
+    MQ[ActiveMQ<br/>localhost:8161 and 61616]
+    C[Consumer<br/>localhost:4002]
+    M[Mailhog<br/>localhost:8025]
+    O[Ollama<br/>localhost:11434]
+    P[Prometheus<br/>localhost:9090]
+    GR[Grafana<br/>localhost:3000]
+    I[InfluxDB<br/>localhost:8086]
+
+    U --> G
+    G --> F
+    G --> B
+    G --> S
+    B --> DB
+    B --> MQ
+    MQ --> C
+    C --> M
+    B --> O
+    P --> B
+    P --> C
+    GR --> P
+    GR --> I
+```
+
+Quick verification:
+
+```bash
+./run-docker-compose.sh
+```
+
+That script waits for the main local services and endpoints to come up.
+
+If you ever need to force cleanup after interrupted local runs, `--remove-orphans` remains a fallback, but it should no longer be part of normal profile switching.
+
+Database access:
+
+- host: `localhost`
+- port: `5432`
+- database: `testdb`
+- user: `postgres`
+- password: `postgres`
+
+Connect with Docker:
+
+```bash
 docker exec -it postgres psql -U postgres -d testdb
-
-# Common commands:
-\dt                 # List tables
-\d table_name       # Describe table structure
-\q                  # Quit psql
 ```
 
-**Using external tools:**
-- Use any PostgreSQL client with the credentials above
-- Popular options: pgAdmin, DBeaver, DataGrip
+Useful logs:
 
-### Database Schema
-The application uses the following main tables:
-- `app_user` - User management
-- `products` - Product catalog
-- `cart_items` - Shopping cart
-- `orders` - Order management
-
-## 📁 Static Assets (CDN)
-
-The Nginx server acts as a CDN for static assets:
-
-- **Port:** 8082
-- **Local Directory:** `./images/`
-- **Container Path:** `/usr/share/nginx/html/images`
-- **Access:** `http://localhost:8082/images/filename.jpg`
-
-**Available Assets:**
-- Product images (applewatch.png, cleancode.png, iphone.png, etc.)
-- Brand logos (samsung.png, sony.png, mac.png, etc.)
-
-## 📈 Monitoring Stack
-
-### Prometheus
-- **Configuration:** `./prometheus/prometheus.yml`
-- **Scrape Interval:** 5s for Spring Boot apps, 10s global
-- **Targets:** Backend (4001), Consumer (4002)
-
-### Grafana
-- **Pre-configured Dashboards:**
-  - Spring Boot Application Metrics
-  - HTTP Request Monitoring
-  - K6 Load Testing Results
-- **Data Sources:** Prometheus, InfluxDB
-- **Login:** admin/grafana
-
-### InfluxDB
-- **Database:** db0
-- **Credentials:** admin/admin
-- **Purpose:** Time-series data storage for load testing
-
-## 🤖 AI/LLM Integration
-
-### Ollama Server
-- **Models (pre-pulled):** qwen3:4b-instruct (default), qwen3:0.6b (lightweight)
-- **API Endpoint:** http://localhost:11434
-- **Custom Image:** slawekradzyminski/qwen3:4b-instruct
-
-**Testing the LLM:**
 ```bash
-curl -X POST http://localhost:11434/api/generate -d '{
-  "model": "qwen3:4b-instruct",
-  "prompt": "What is Docker?"
-}'
-
-# Lightweight thinking/model test
-curl -X POST http://localhost:11434/api/generate -d '{
-  "model": "qwen3:0.6b",
-  "prompt": "Summarize entropy in one sentence."
-}'
+docker compose logs -f backend
+docker compose logs -f gateway
+docker compose logs -f consumer
 ```
 
-## 🔄 Message Queue
+## Server Profile
 
-### ActiveMQ Artemis
-- **JMS Port:** 61616
-- **Web Console:** 8161
-- **AMQP Port:** 5672
-- **Credentials:** admin/admin
-- **Features:** Anonymous login enabled, security disabled for development
+Use this for the deployed production-like environment.
 
-### Email Consumer
-- **Service:** slawekradzyminski/consumer:3.3.1
-- **Purpose:** Processes JMS messages and sends emails via SMTP
-- **Monitoring:** Exposes Prometheus metrics
+Deploy it with:
 
-## 🚀 CI/CD Pipeline
-
-### Jenkins
-- **Custom Image:** Built from local Dockerfile
-- **Plugins:** Blue Ocean, Docker Workflow, Docker Plugin
-- **Docker Integration:** Full Docker-in-Docker support
-- **Ports:** 8080 (web), 50000 (agents)
-
-**Starting Jenkins separately:**
 ```bash
-docker compose -f docker-compose-jenkins.yml up -d
+./deploy-server.sh
 ```
 
-## 📧 Email Testing
+Main public URL:
 
-### Mailhog
-- **Web Interface:** http://localhost:8025
-- **SMTP Port:** 1025
-- **Purpose:** Catches all emails for testing without sending to real addresses
+- `https://awesome.byst.re/login`
 
-## 🧪 Load Testing
+Other public server URLs:
 
-### K6 Integration
-```bash
-# Run load tests with InfluxDB output
-K6_INFLUXDB_PUSH_INTERVAL=2s k6 run --out influxdb=http://localhost:8086/db0 dist/user-journey.js
+- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
+- OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
+- sign in API: `https://awesome.byst.re/api/v1/users/signin`
+- image through gateway: `https://awesome.byst.re/images/iphone.png`
+- Mailhog API: `https://awesome.byst.re/mailhog/api/v2/messages`
+
+Architecture:
+
+```mermaid
+flowchart LR
+    U[Browser]
+    G[Gateway<br/>awesome.byst.re]
+    F[Frontend]
+    B[Backend]
+    S[Static Images]
+    MH[Mailhog API only]
+    DB[(Postgres<br/>internal only)]
+    MQ[ActiveMQ<br/>internal only]
+    C[Consumer<br/>internal only]
+    O[Ollama Mock<br/>internal only]
+
+    U --> G
+    G --> F
+    G --> B
+    G --> S
+    G --> MH
+    B --> DB
+    B --> MQ
+    MQ --> C
+    C --> MH
+    B --> O
 ```
 
-## 🔧 Development Tools
+Production hardening in this profile:
 
-### Container Management
+- only the gateway is published on the host
+- Postgres is not published
+- Mailhog UI is not published
+- Mailhog SMTP is not published
+- ActiveMQ is internal-only
+- consumer metrics are internal-only
+- raw static nginx is internal-only
+
+Quick public verification:
+
 ```bash
-# Access container shell
-docker exec -it <container_name> bash
-
-# View logs
-docker logs <container_name>
-
-# Stop specific service
-docker compose stop <service_name>
+curl -i https://awesome.byst.re/login
+curl -i https://awesome.byst.re/v3/api-docs
+curl -i https://awesome.byst.re/images/iphone.png
+curl -i https://awesome.byst.re/mailhog/api/v2/messages
 ```
 
-### Server debugging
-```bash
-# SSH to the server using .env values from this repo
-set -a
-source .env
-set +a
-ssh -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
+Server operations:
 
-# Follow backend logs on the deployed server stack
+Connection details are read from `.env`. See [SSH_SERVER.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_SERVER.md).
+
+Tail backend logs on the server:
+
+```bash
 cd /opt/awesome-localstack
 docker compose -f docker-compose.server.yml logs --tail=200 -f backend
-
-# Follow gateway logs
-docker compose -f docker-compose.server.yml logs --tail=200 -f gateway
-
-# Check service status
-docker compose -f docker-compose.server.yml ps
 ```
 
-### Network
-- **Network Name:** my-private-ntwk
-- **Type:** Bridge network
-- **Purpose:** Isolated communication between services
+Tail gateway logs:
 
-## 🛠️ Related Projects
-
-This development environment orchestrates services from multiple dedicated repositories:
-
-### 🎯 Core Application Components
-- **[Backend API](https://github.com/slawekradzyminski/test-secure-backend)** - Spring Boot REST API with JWT authentication, user management, and e-commerce features
-- **[Frontend App](https://github.com/slawekradzyminski/vite-react-frontend)** - React + TypeScript application with modern UI, authentication, and admin dashboard
-- **[Email Consumer](https://github.com/slawekradzyminski/jms-email-consumer)** - JMS message processor that handles email notifications via ActiveMQ
-
-### 🔗 Service Integration
-Each component is designed to work seamlessly together:
-- **Backend** exposes REST APIs consumed by the **Frontend**
-- **Backend** publishes JMS messages to **ActiveMQ** 
-- **Email Consumer** processes messages and sends emails via **Mailhog**
-- **Frontend** serves static assets through **Nginx CDN**
-
-### 🛠️ Development Workflow
-- Clone individual repositories for focused development
-- Use this orchestration project for full-stack testing
-- Each service can be developed independently with Docker containers
-
-## 🛠️ Environment Configurations
-
-### Full Stack (`docker-compose.yml`)
-- All services including monitoring, CI/CD, and AI
-- Persistent volumes for data storage
-- Complete development environment
-
-### CI Environment (`docker-compose-ci.yml`)
-- Core application services only
-- No monitoring or Jenkins
-- Suitable for CI/CD pipelines
-
-### Lightweight (`lightweight-docker-compose.yml`)
-- Backend and Frontend only
-- Minimal resource usage
-- Quick development setup
-
-### Jenkins Only (`docker-compose-jenkins.yml`)
-- Standalone Jenkins with Docker support
-- Custom image with pre-installed plugins
-
-### LLM Only (`docker-compose-llm.yml`)
-- Ollama server with persistent model storage
-- Independent AI development environment
-
-## 🔍 Troubleshooting
-
-### Common Issues
-1. **Port conflicts:** Ensure ports are not used by other services
-2. **Container startup order:** Services have proper dependencies configured
-3. **Volume permissions:** Docker volumes are created automatically
-4. **Network connectivity:** All services use the same bridge network
-
-### Logs and Debugging
 ```bash
-# View all container logs
-docker compose logs
-
-# View specific service logs
-docker compose logs backend
-
-# Follow logs in real-time
-docker compose logs -f
+cd /opt/awesome-localstack
+docker compose -f docker-compose.server.yml logs --tail=200 -f gateway
 ```
 
-## 📄 License
+## Shared App Routes
 
-This project is designed for training and development purposes. All external services and images maintain their respective licenses.
+Across the main profiles, the gateway serves:
+
+- frontend pages under `/`
+- backend API under `/api/v1/...`
+- Swagger UI under `/swagger-ui/...`
+- OpenAPI under `/v3/api-docs`
+- actuator under `/actuator/...`
+- traffic WebSocket under `/api/v1/ws-traffic`
+- static images under `/images/...`
+
+## Related Projects
+
+- [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
+- [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
+- [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+
+## Troubleshooting
+
+- If the app returns `502`, backend startup is usually still in progress.
+- If Swagger generates the wrong host or scheme, inspect `/v3/api-docs` and check `.servers[0].url`.
+- If images are missing in the app, check the gateway URL first.
+- If nginx config changes do not seem to apply, recreate `gateway`.
