@@ -37,10 +37,9 @@ That gateway is the intended public surface for:
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 8081]
+    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G --> S[Static Images]
     B --> O[Ollama Mock 11434]
 ```
 
@@ -48,10 +47,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 8081]
+    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G --> S[Static Images]
     B --> DB[(Postgres 5432)]
     B --> MQ[ActiveMQ 8161/61616/5672]
     MQ --> C[Consumer 4002]
@@ -67,10 +65,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 80]
+    U[Browser] --> G[Gateway 80<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G --> S[Static Images]
     G --> MH[Mailhog API]
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]

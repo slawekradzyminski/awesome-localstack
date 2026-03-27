@@ -42,16 +42,14 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    S[Static Images]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
     G --> B
-    G --> S
     B --> O
 ```
 
@@ -113,10 +111,9 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    S[Static Images]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
@@ -129,7 +126,6 @@ flowchart LR
     U --> G
     G --> F
     G --> B
-    G --> S
     B --> DB
     B --> MQ
     MQ --> C
@@ -200,10 +196,9 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>awesome.byst.re]
+    G[Gateway<br/>awesome.byst.re<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    S[Static Images]
     MH[Mailhog API only]
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
@@ -213,7 +208,6 @@ flowchart LR
     U --> G
     G --> F
     G --> B
-    G --> S
     G --> MH
     B --> DB
     B --> MQ

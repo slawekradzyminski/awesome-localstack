@@ -33,16 +33,14 @@ Do not think in terms of “frontend on one port and backend on another port” 
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    S[Static Images]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
     G --> B
-    G --> S
     B --> O
 ```
 
