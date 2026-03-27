@@ -11,7 +11,7 @@ Each profile now uses its own fixed Compose project name:
 
 That keeps profile switching from producing normal orphan warnings just because the profiles declare different services.
 
-Profiles still cannot share the same host ports at the same time. For example, `full` and `lightweight` both use `8081`, `8082`, and `11434`.
+Profiles still cannot share the same host ports at the same time. For example, `full` and `lightweight` both use `8081` and `11434`.
 
 ## Core Rule
 
@@ -115,8 +115,6 @@ Published host ports:
 | Consumer metrics | `http://localhost:4002/actuator/prometheus` | Direct metrics |
 | InfluxDB | `localhost:8086` | K6 / time-series |
 | Ollama | `http://localhost:11434/api/tags` | Raw model API |
-| Static nginx | `http://localhost:8082/images/iphone.png` | Direct static host |
-
 What is internal only:
 
 - backend raw port `4001`
@@ -148,8 +146,6 @@ Published host ports:
 | --- | --- | --- |
 | Gateway | `http://localhost:8081` | Main app entrypoint |
 | Ollama mock | `http://localhost:11434` | Mocked LLM API |
-| Static nginx | `http://localhost:8082/images/iphone.png` | Direct static host |
-
 What is not included:
 
 - Postgres
@@ -200,7 +196,6 @@ Not published on the host:
 - ActiveMQ console `8161`
 - ActiveMQ JMS `61616`
 - consumer `4002`
-- static nginx `8082`
 - backend `4001`
 - frontend `80`
 - ollama-mock `11434`
@@ -221,7 +216,7 @@ Special behavior:
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
-- `/images/` -> static nginx
+- `/images/` -> gateway static files
 - `/` -> frontend
 
 ### Server Gateway
@@ -233,7 +228,7 @@ Special behavior:
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
-- `/images/` -> static nginx
+- `/images/` -> gateway static files
 - `/mailhog/api/` -> Mailhog API
 - `/mailhog` and `/mailhog/` -> `404`
 - `/` -> frontend
@@ -292,6 +287,6 @@ Internal-only checks on the VPS:
 cd /opt/awesome-localstack
 docker compose -f docker-compose.server.yml exec backend curl -i http://backend:4001/actuator/health
 docker compose -f docker-compose.server.yml exec consumer curl -i http://consumer:4002/actuator/prometheus
-docker compose -f docker-compose.server.yml exec gateway curl -i http://nginx-static/images/iphone.png
+docker compose -f docker-compose.server.yml exec gateway curl -i http://localhost/images/iphone.png
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```

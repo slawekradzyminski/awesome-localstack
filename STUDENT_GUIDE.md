@@ -9,7 +9,7 @@ Its goal is to give you a fast local environment with:
 - frontend
 - backend
 - gateway
-- static images
+- static images served by the gateway
 - mocked LLM
 
 ## Main Idea
@@ -72,7 +72,6 @@ Expected services:
 - `frontend`
 - `gateway`
 - `ollama-mock`
-- `nginx-static`
 
 Expected status:
 
@@ -91,7 +90,6 @@ Useful lightweight URLs:
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
-- raw static image host: `http://localhost:8082/images/iphone.png`
 
 For everyday work, prefer `8081`.
 
@@ -150,16 +148,6 @@ Expected:
 
 - HTTP `200`
 
-You can also test the raw static host:
-
-```bash
-curl -i http://localhost:8082/images/iphone.png
-```
-
-Expected:
-
-- HTTP `200`
-
 ### 5. Mocked LLM Responds
 
 Run:
@@ -208,7 +196,7 @@ docker compose -f lightweight-docker-compose.yml logs -f backend gateway
 
 Usually means one of these:
 
-- `nginx-static` is not running
+- gateway is still starting
 - you are testing the wrong URL
 - browser cache is stale after changes
 

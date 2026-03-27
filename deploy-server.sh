@@ -59,7 +59,7 @@ expect {
 "
 
 run_expect "
-set remote_cmd [list bash -lc {set -euo pipefail; mkdir -p ${REMOTE_APP_DIR}; tar -xzf /tmp/awesome-localstack.tgz -C ${REMOTE_APP_DIR}; cd ${REMOTE_APP_DIR}; if ! command -v docker >/dev/null 2>&1; then bash install-docker-ubuntu.sh; fi; docker compose -f docker-compose.server.yml pull; docker compose -f docker-compose.server.yml up -d; docker compose -f docker-compose.server.yml up -d --force-recreate gateway frontend backend nginx-static}]
+set remote_cmd [list bash -lc {set -euo pipefail; mkdir -p ${REMOTE_APP_DIR}; tar -xzf /tmp/awesome-localstack.tgz -C ${REMOTE_APP_DIR}; cd ${REMOTE_APP_DIR}; if ! command -v docker >/dev/null 2>&1; then bash install-docker-ubuntu.sh; fi; docker compose -f docker-compose.server.yml pull; docker compose -f docker-compose.server.yml up -d; docker compose -f docker-compose.server.yml up -d --force-recreate gateway frontend backend}]
 spawn ssh -tt -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no ${SSH_USER}@${SSH_HOST} {*}\$remote_cmd
 expect {
   -re \".*assword:.*\" { send -- \"${SSH_PASSWORD}\r\"; exp_continue }

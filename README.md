@@ -14,7 +14,7 @@ For classroom or workshop use focused on the lightweight stack, see [STUDENT_GUI
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
-This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081`, `8082`, and `11434`, so stop one profile before starting the other.
+This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081` and `11434`, so stop one profile before starting the other.
 
 ## Lightweight Profile
 
@@ -36,7 +36,6 @@ Other useful lightweight URLs:
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - image through gateway: `http://localhost:8081/images/iphone.png`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
-- raw static image host: `http://localhost:8082/images/iphone.png`
 
 Architecture:
 
@@ -108,7 +107,6 @@ Other useful full-profile URLs:
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
 - Ollama: `http://localhost:11434/api/tags`
 - Postgres: `localhost:5432`
-- raw static image host: `http://localhost:8082/images/iphone.png`
 
 Architecture:
 
@@ -118,7 +116,7 @@ flowchart LR
     G[Gateway<br/>localhost:8081]
     F[Frontend]
     B[Backend]
-    S[Static Images<br/>localhost:8082]
+    S[Static Images]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
@@ -232,7 +230,7 @@ Production hardening in this profile:
 - Mailhog SMTP is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
-- raw static nginx is internal-only
+- images are served directly by the gateway
 
 Quick public verification:
 

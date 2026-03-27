@@ -37,16 +37,17 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.29.1-perl
+    image: nginx:1.29.7-perl
     restart: unless-stopped
     depends_on:
       - frontend
       - backend
-      - nginx-static
     ports:
       - "80:80"
     volumes:
       - ./nginx/conf.d/app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./images:/usr/share/nginx/html/images:ro
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
 
@@ -116,18 +117,6 @@ services:
     restart: unless-stopped
     expose:
       - "11434"
-    networks:
-      - my-private-ntwk
-
-  nginx-static:
-    image: nginx:1.29.1-perl
-    hostname: nginx
-    restart: unless-stopped
-    expose:
-      - "80"
-    volumes:
-      - ./images:/usr/share/nginx/html/images:ro
-      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
 

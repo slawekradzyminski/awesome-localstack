@@ -134,24 +134,15 @@ docker run -d \
   --name ollama \
   slawekradzyminski/qwens@sha256:932f418cb484b0426b48c8e00788d3d84aa236be04b8e751224b784e41ec5802
 
-echo "Starting Nginx Static (CDN)..."
-docker run -d \
-  --restart always \
-  -p 8082:80 \
-  -v "$(pwd)/images:/usr/share/nginx/html/images" \
-  -v "$(pwd)/nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro" \
-  --hostname nginx \
-  --network my-private-ntwk \
-  --name nginx-static \
-  nginx:1.29.1-perl
-
 echo "Starting App Gateway..."
 docker run -d \
   --restart always \
   -p 8081:80 \
   -v "$(pwd)/nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro" \
+  -v "$(pwd)/images:/usr/share/nginx/html/images:ro" \
+  -v "$(pwd)/nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro" \
   --network my-private-ntwk \
   --name gateway \
-  nginx:1.29.1-perl
+  nginx:1.29.7-perl
 
 echo "All containers have been started!" 
