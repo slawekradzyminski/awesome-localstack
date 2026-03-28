@@ -1,0 +1,37 @@
+- name: Install baseline packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+    update_cache: true
+
+- name: Ensure SSH config override directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: ssh_hardening_enabled | bool
+
+- name: Enforce key-only SSH for root
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-awesome-localstack.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      PermitRootLogin prohibit-password
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      ChallengeResponseAuthentication no
+      PubkeyAuthentication yes
+  notify: Restart SSH
+  when: ssh_hardening_enabled | bool
+
+- name: Ensure application directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"

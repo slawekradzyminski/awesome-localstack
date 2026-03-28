@@ -1,0 +1,8 @@
+- name: Deploy application stack
+  hosts: production
+  become: true
+  gather_facts: true
+
+  roles:
+    - app
+    - verify

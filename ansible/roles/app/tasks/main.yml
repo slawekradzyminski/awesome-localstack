@@ -1,0 +1,52 @@
+- name: Ensure application directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy Docker Compose file
+  ansible.builtin.copy:
+    src: "{{ repo_root }}/{{ app_compose_src }}"
+    dest: "{{ app_dir }}/{{ app_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy deployment asset directories
+  ansible.builtin.copy:
+    src: "{{ repo_root }}/{{ item }}"
+    dest: "{{ app_dir }}/"
+    owner: root
+    group: root
+    mode: preserve
+  loop: "{{ app_copy_paths }}"
+
+- name: Render runtime environment file
+  ansible.builtin.template:
+    src: env.runtime.j2
+    dest: "{{ app_dir }}/.env.runtime"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Normalize application directory ownership
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: root
+    group: root
+    recurse: true
+
+- name: Deploy Docker Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    files:
+      - "{{ app_compose_file }}"
+    pull: missing
+    recreate: auto
+    remove_orphans: true
+    state: present
+    wait: true
+    wait_timeout: 120

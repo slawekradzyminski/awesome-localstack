@@ -179,7 +179,7 @@ Compose file:
 Deployment command:
 
 ```bash
-./deploy-server.sh
+make ansible-deploy
 ```
 
 Direct server stop command on the VPS:

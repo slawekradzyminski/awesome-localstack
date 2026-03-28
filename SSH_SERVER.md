@@ -1,72 +1,42 @@
 # SSH server access
 
-## Environment variables
+## Current source of truth
 
-Store all SSH connection details in `.env`. Use `.env.example` as the template:
+Ansible phase 2 moved deployment configuration to:
 
-```env
-SSH_HOST=example.host
-SSH_PORT=22
-SSH_USER=root
-SSH_KEY_PATH=/absolute/path/to/private-key
-SSH_IPV6=::1
-SSH_NODE=example-node
-GRAFANA_ADMIN_PASSWORD=change-this-to-a-strong-value
-```
+- [main.yml](/Users/admin/IdeaProjects/awesome-localstack/ansible/inventory/group_vars/production/main.yml)
+- `ansible/inventory/group_vars/production/vault.yml.example`
+- local gitignored `ansible/inventory/group_vars/production/vault.yml`
 
-`.env` is already ignored by git in this repository.
+See [ANSIBLE.md](/Users/admin/IdeaProjects/awesome-localstack/ANSIBLE.md) for the operational workflow.
 
-## Connect from terminal
+## Recommended commands
 
-Load the variables and connect with standard SSH:
+Use Ansible-backed `make` targets for normal operations:
 
 ```bash
-set -a
-source .env
-set +a
-ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
-```
-
-Equivalent explicit form:
-
-```bash
-ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
-```
-
-## Quick connectivity check using `.env`
-
-This verifies login by reading all required values from `.env`:
-
-```bash
-set -a
-source .env
-set +a
-ssh -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" "whoami"
+make ansible-ping
+make ansible-ssh
+make ansible-deploy
+make ansible-verify
 ```
 
 ## Notes
 
-`SSH_HOST`, `SSH_PORT`, and `SSH_USER` stay in `.env` so the real server details are not hardcoded into commands in this repository.
+For deployment, verification, SSH access, and tunnels, the source of truth is the Ansible inventory plus Vault.
 
-`SSH_KEY_PATH` should point to your private key file and is read directly from `.env`.
-
-`SSH_IPV6` and `SSH_NODE` are stored in `.env` for reference, but they are not required for the standard SSH command above.
-
-`GRAFANA_ADMIN_PASSWORD` is optional for SSH itself, but recommended if you deploy Grafana in the server profile. `deploy-server.sh` copies only this runtime secret into `.env.runtime` on the server, not the SSH credentials.
+Grafana runtime configuration also comes from Vault-backed Ansible vars.
 
 ## SSH tunnels for local browser access
 
 The server profile binds Grafana and Mailhog UI only to `127.0.0.1` on the VPS. They are not public on the internet.
 
-Use SSH tunnels to access them from your browser.
+Use the Ansible-backed `make` targets to access them from your browser.
 
 ### Grafana only
 
 ```bash
-set -a
-source .env
-set +a
-ssh -N -L 3000:127.0.0.1:3000 -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+make ansible-tunnel-grafana
 ```
 
 Then open:
@@ -78,10 +48,7 @@ Keep that terminal open while you use Grafana.
 ### Mailhog UI only
 
 ```bash
-set -a
-source .env
-set +a
-ssh -N -L 8025:127.0.0.1:8025 -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+make ansible-tunnel-mailhog
 ```
 
 Then open:
@@ -91,21 +58,21 @@ Then open:
 ### Grafana and Mailhog UI in one tunnel
 
 ```bash
-set -a
-source .env
-set +a
-ssh -N \
-  -L 3000:127.0.0.1:3000 \
-  -L 8025:127.0.0.1:8025 \
-  -p "$SSH_PORT" \
-  -i "$SSH_KEY_PATH" \
-  "$SSH_USER@$SSH_HOST"
+make ansible-tunnel-all
 ```
 
 Then open:
 
 - `http://localhost:3000`
 - `http://localhost:8025`
+
+Kill helper targets:
+
+```bash
+make ansible-tunnel-kill-grafana
+make ansible-tunnel-kill-mailhog
+make ansible-tunnel-kill-all
+```
 
 ## Backend logs on the server
 
@@ -114,10 +81,7 @@ For the deployed server stack in `/opt/awesome-localstack`, use `docker compose`
 Open a shell on the server:
 
 ```bash
-set -a
-source .env
-set +a
-ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+make ansible-ssh
 ```
 
 Then follow backend logs live:

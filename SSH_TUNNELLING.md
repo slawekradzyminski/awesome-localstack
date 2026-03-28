@@ -2,70 +2,31 @@
 
 This file explains how to access private server-only UIs through SSH tunnels.
 
+The recommended path is to use the Ansible-backed `make` targets. They resolve SSH connection details from the Vault-backed inventory.
+
 Current intended private UIs:
 
 - Grafana on remote `127.0.0.1:3000`
 - Mailhog UI on remote `127.0.0.1:8025`
 
-## Prerequisites
+## Recommended usage
 
-Store connection details in `.env`:
-
-```env
-SSH_HOST=example.host
-SSH_PORT=22
-SSH_USER=example-user
-SSH_KEY_PATH=/absolute/path/to/private-key
-GRAFANA_ADMIN_PASSWORD=choose-a-strong-password
-```
-
-Load them into your shell before running the commands below:
+Grafana only:
 
 ```bash
-set -a
-source .env
-set +a
+make ansible-tunnel-grafana
 ```
 
-## Start a tunnel
-
-### Grafana only
+Mailhog only:
 
 ```bash
-ssh -N \
-  -L 3000:127.0.0.1:3000 \
-  -p "$SSH_PORT" \
-  -i "$SSH_KEY_PATH" \
-  "$SSH_USER@$SSH_HOST"
+make ansible-tunnel-mailhog
 ```
 
-Then open:
-
-- `http://localhost:3000`
-
-### Mailhog UI only
+Grafana and Mailhog together:
 
 ```bash
-ssh -N \
-  -L 8025:127.0.0.1:8025 \
-  -p "$SSH_PORT" \
-  -i "$SSH_KEY_PATH" \
-  "$SSH_USER@$SSH_HOST"
-```
-
-Then open:
-
-- `http://localhost:8025`
-
-### Grafana and Mailhog in one SSH session
-
-```bash
-ssh -N \
-  -L 3000:127.0.0.1:3000 \
-  -L 8025:127.0.0.1:8025 \
-  -p "$SSH_PORT" \
-  -i "$SSH_KEY_PATH" \
-  "$SSH_USER@$SSH_HOST"
+make ansible-tunnel-all
 ```
 
 Then open:
@@ -97,7 +58,27 @@ Kill a specific tunnel process:
 kill <PID>
 ```
 
-### Quick kill examples
+### Make targets
+
+Kill Grafana-only tunnels:
+
+```bash
+make ansible-tunnel-kill-grafana
+```
+
+Kill Mailhog-only tunnels:
+
+```bash
+make ansible-tunnel-kill-mailhog
+```
+
+Kill the combined Grafana + Mailhog tunnel:
+
+```bash
+make ansible-tunnel-kill-all
+```
+
+### Raw process kill examples
 
 Kill Grafana-only tunnels:
 
@@ -111,10 +92,10 @@ Kill Mailhog-only tunnels:
 pkill -f 'ssh -N .*8025:127.0.0.1:8025'
 ```
 
-Kill the combined Grafana + Mailhog tunnel:
+Kill any supported tunnel:
 
 ```bash
-pkill -f 'ssh -N .*3000:127.0.0.1:3000.*8025:127.0.0.1:8025'
+pkill -f 'ssh -N .*3000:127.0.0.1:3000|ssh -N .*8025:127.0.0.1:8025'
 ```
 
 ## How to verify the tunnel is active

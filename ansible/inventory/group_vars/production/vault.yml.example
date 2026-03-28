@@ -1,0 +1,13 @@
+# Copy this file to `ansible/inventory/group_vars/production/vault.yml`
+# and encrypt it with:
+#
+#   cd ansible
+#   ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password-file .vault_pass
+#
+# The encrypted `vault.yml` stays local and must not be committed.
+
+production_ssh_host: example.host
+production_ssh_port: "22"
+production_ssh_user: root
+production_ssh_key_path: /absolute/path/to/private-key
+grafana_admin_password: change-this-to-a-strong-value

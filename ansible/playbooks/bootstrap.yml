@@ -1,0 +1,8 @@
+- name: Bootstrap production host
+  hosts: production
+  become: true
+  gather_facts: true
+
+  roles:
+    - base
+    - docker

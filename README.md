@@ -188,11 +188,17 @@ docker compose -f docker-compose.yml down
 
 Use this for the deployed production-like environment.
 
-Deploy it with:
+Server operations:
 
 ```bash
-./deploy-server.sh
+make ansible-ssh
+make ansible-deploy
+make ansible-verify
 ```
+
+- `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
+- `make ansible-deploy`: converge the server stack and run post-deploy verification
+- `make ansible-verify`: run health checks without changing deployment state
 
 Main public URL:
 
@@ -252,7 +258,7 @@ curl -i https://awesome.byst.re/mailhog/api/v2/messages
 
 Server operations:
 
-Connection details are read from `.env`. See [SSH_SERVER.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_SERVER.md).
+Deployment and server access are managed through Ansible. See [ANSIBLE.md](/Users/admin/IdeaProjects/awesome-localstack/ANSIBLE.md), [SSH_SERVER.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_SERVER.md), and [SSH_TUNNELLING.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_TUNNELLING.md).
 
 Tail backend logs on the server:
 

@@ -1,0 +1,5 @@
+all:
+  children:
+    production:
+      hosts:
+        awesome_server:

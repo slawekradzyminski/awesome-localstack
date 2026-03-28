@@ -1,0 +1,7 @@
+- name: Verify deployed application stack
+  hosts: production
+  become: true
+  gather_facts: false
+
+  roles:
+    - verify

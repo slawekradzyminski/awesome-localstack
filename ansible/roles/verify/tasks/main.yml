@@ -1,0 +1,21 @@
+- name: Show Docker Compose service status
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} ps
+    chdir: "{{ app_dir }}"
+  register: compose_ps
+  changed_when: false
+
+- name: Print Docker Compose service status
+  ansible.builtin.debug:
+    var: compose_ps.stdout_lines
+
+- name: Verify local HTTP endpoints
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    status_code: "{{ item.status_code }}"
+    return_content: false
+  loop: "{{ verify_urls }}"
+  register: verify_http_result
+  until: verify_http_result.status == item.status_code
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"

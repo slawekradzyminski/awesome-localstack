@@ -1,0 +1,49 @@
+ansible_host: "{{ production_ssh_host }}"
+ansible_port: "{{ production_ssh_port }}"
+ansible_user: "{{ production_ssh_user }}"
+ansible_ssh_private_key_file: "{{ production_ssh_key_path }}"
+
+app_dir: /opt/awesome-localstack
+app_compose_file: docker-compose.server.yml
+repo_root: "{{ playbook_dir | dirname | dirname }}"
+
+base_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - rsync
+
+ssh_hardening_enabled: true
+ssh_service_name: ssh
+
+docker_apt_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+
+docker_apt_arch: "{{ docker_apt_arch_map.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+app_compose_src: docker-compose.server.yml
+
+app_copy_paths:
+  - nginx
+  - grafana
+  - prometheus
+  - images
+
+app_runtime_env:
+  GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
+
+verify_urls:
+  - url: http://127.0.0.1/v3/api-docs
+    status_code: 200
+  - url: http://127.0.0.1/mailhog/api/v2/messages
+    status_code: 200
+
+verify_retries: 12
+verify_delay_seconds: 10
