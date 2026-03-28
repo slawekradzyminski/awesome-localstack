@@ -62,7 +62,7 @@ curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen3:0.6b","prompt":"hello"}'
+  -d '{"model":"qwen3.5:2b","prompt":"hello"}'
 ```
 
 Expected:
@@ -71,6 +71,7 @@ Expected:
 - login page loads
 - Swagger and OpenAPI respond with `200`
 - product image responds with `200`
+- the mocked model path responds with the same `qwen3.5:2b` default used across the migration
 - mocked LLM generate endpoint responds with `200`
 
 Useful logs:
@@ -111,6 +112,8 @@ Other useful full-profile URLs:
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
 - Ollama: `http://localhost:11434/api/tags`
 - Postgres: `localhost:5432`
+
+The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
 
 Architecture:
 

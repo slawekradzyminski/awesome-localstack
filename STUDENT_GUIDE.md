@@ -12,6 +12,8 @@ Its goal is to give you a fast local environment with:
 - static images served by the gateway
 - mocked LLM
 
+The lightweight profile still uses `ollama-mock`; the coordinated mock refresh will make `qwen3.5:2b` the expected request model there as well.
+
 ## Main Idea
 
 Treat this as a single local web app served through one URL:
@@ -153,7 +155,7 @@ Run:
 ```bash
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen3:0.6b","prompt":"hello"}'
+  -d '{"model":"qwen3.5:2b","prompt":"hello"}'
 ```
 
 Expected:
@@ -172,7 +174,7 @@ curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen3:0.6b","prompt":"hello"}'
+  -d '{"model":"qwen3.5:2b","prompt":"hello"}'
 ```
 
 ## How To Read Failures
@@ -228,7 +230,7 @@ What to check:
 docker compose -f lightweight-docker-compose.yml ps
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen3:0.6b","prompt":"hello"}'
+  -d '{"model":"qwen3.5:2b","prompt":"hello"}'
 docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
 ```
 

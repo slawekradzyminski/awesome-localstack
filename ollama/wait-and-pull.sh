@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PRIMARY_MODEL="${OLLAMA_MODEL:-qwen3:4b-instruct}"
+PRIMARY_MODEL="${OLLAMA_MODEL:-qwen3.5:2b}"
 EXTRA_MODELS="${OLLAMA_EXTRA_MODELS:-}"
 
 echo "Starting temporary Ollama server…"

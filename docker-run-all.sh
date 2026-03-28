@@ -50,7 +50,7 @@ docker run -d \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
   -e PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:8081/reset \
   -e APP_CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081 \
-  slawekradzyminski/backend:3.4.1
+  slawekradzyminski/backend:3.5.0
 
 echo "Starting Frontend..."
 docker run -d \
@@ -58,7 +58,7 @@ docker run -d \
   --network my-private-ntwk \
   --name frontend \
   --expose 80 \
-  slawekradzyminski/frontend:3.4.0
+  slawekradzyminski/frontend:3.5.0
 
 echo "Starting Prometheus..."
 docker run -d \
@@ -132,7 +132,7 @@ docker run -d \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  slawekradzyminski/qwens@sha256:932f418cb484b0426b48c8e00788d3d84aa236be04b8e751224b784e41ec5802
+  slawekradzyminski/ollama-qwen35-2b:0.18.3
 
 echo "Starting App Gateway..."
 docker run -d \

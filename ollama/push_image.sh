@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "${1:-}" = "" ]; then
   echo "Usage: $0 <image-name-suffix>"
-  echo "Example: $0 qwens   # builds and pushes the qwens image"
+  echo "Example: $0 ollama-qwen35-2b:0.18.3   # builds and pushes the qwen3.5:2b image"
   exit 1
 fi
 
@@ -19,4 +19,3 @@ echo "Pushing image: $IMAGE_NAME"
 docker push "$IMAGE_NAME"
 
 echo "Done: $IMAGE_NAME pushed."
-

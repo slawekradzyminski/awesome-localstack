@@ -1,11 +1,11 @@
 # ollama/Dockerfile
-FROM ollama/ollama:0.13.2
+FROM ollama/ollama:0.18.3
 
 # Declare the model as a build-arg so you can swap variants later.
-ARG OLLAMA_MODEL=qwen3:4b-instruct
+ARG OLLAMA_MODEL=qwen3.5:2b
 # Optional space-separated list of additional models to pre-pull.
-# Use the qwen3:* namespace; legacy qwen:* tags will be rewritten in wait-and-pull.sh.
-ARG OLLAMA_EXTRA_MODELS="qwen3:0.6b"
+# Keep empty unless a fallback model is explicitly needed later.
+ARG OLLAMA_EXTRA_MODELS=""
 
 # Pull the model while the image is built
 COPY wait-and-pull.sh /usr/local/bin/wait-and-pull.sh
