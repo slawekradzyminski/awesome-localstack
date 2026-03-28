@@ -8,9 +8,9 @@ This README is organized by the three main profiles:
 - full
 - server
 
-For the detailed published-port matrix, see [PROFILE_URLS.md](/Users/admin/IdeaProjects/awesome-localstack/PROFILE_URLS.md).
+For the detailed published-port matrix, see [docs/PROFILE_URLS.md](docs/PROFILE_URLS.md).
 
-For classroom or workshop use focused on the lightweight stack, see [STUDENT_GUIDE.md](/Users/admin/IdeaProjects/awesome-localstack/STUDENT_GUIDE.md).
+For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
@@ -258,7 +258,7 @@ curl -i https://awesome.byst.re/mailhog/api/v2/messages
 
 Server operations:
 
-Deployment and server access are managed through Ansible. See [ANSIBLE.md](/Users/admin/IdeaProjects/awesome-localstack/ANSIBLE.md), [SSH_SERVER.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_SERVER.md), and [SSH_TUNNELLING.md](/Users/admin/IdeaProjects/awesome-localstack/SSH_TUNNELLING.md).
+Deployment and server access are managed through Ansible. See [docs/ANSIBLE.md](docs/ANSIBLE.md), [docs/SSH_SERVER.md](docs/SSH_SERVER.md), and [docs/SSH_TUNNELLING.md](docs/SSH_TUNNELLING.md).
 
 Tail backend logs on the server:
 

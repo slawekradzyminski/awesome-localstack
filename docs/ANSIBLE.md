@@ -6,7 +6,7 @@ This repository uses Ansible for VPS bootstrap, deployment, and post-deploy veri
 
 Phase 2 moved Ansible off local shell env files and onto inventory plus Vault.
 
-- Non-secret deployment defaults live in [main.yml](/Users/admin/IdeaProjects/awesome-localstack/ansible/inventory/group_vars/production/main.yml).
+- Non-secret deployment defaults live in [main.yml](../ansible/inventory/group_vars/production/main.yml).
 - The tracked template is `ansible/inventory/group_vars/production/vault.yml.example`.
 - The real local secret file is `ansible/inventory/group_vars/production/vault.yml`.
 - The local Vault password file is `ansible/.vault_pass` and is gitignored.

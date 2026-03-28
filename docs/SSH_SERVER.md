@@ -4,11 +4,11 @@
 
 Ansible phase 2 moved deployment configuration to:
 
-- [main.yml](/Users/admin/IdeaProjects/awesome-localstack/ansible/inventory/group_vars/production/main.yml)
+- [main.yml](../ansible/inventory/group_vars/production/main.yml)
 - `ansible/inventory/group_vars/production/vault.yml.example`
 - local gitignored `ansible/inventory/group_vars/production/vault.yml`
 
-See [ANSIBLE.md](/Users/admin/IdeaProjects/awesome-localstack/ANSIBLE.md) for the operational workflow.
+See [ANSIBLE.md](ANSIBLE.md) for the operational workflow.
 
 ## Recommended commands
 
