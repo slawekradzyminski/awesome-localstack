@@ -8,9 +8,10 @@ Store all SSH connection details in `.env`. Use `.env.example` as the template:
 SSH_HOST=example.host
 SSH_PORT=22
 SSH_USER=root
+SSH_KEY_PATH=/absolute/path/to/private-key
 SSH_IPV6=::1
 SSH_NODE=example-node
-SSH_PASSWORD=example-password
+GRAFANA_ADMIN_PASSWORD=change-this-to-a-strong-value
 ```
 
 `.env` is already ignored by git in this repository.
@@ -23,47 +24,88 @@ Load the variables and connect with standard SSH:
 set -a
 source .env
 set +a
-ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
+ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
 ```
 
-If the server does not accept plain password auth, force `keyboard-interactive`:
+Equivalent explicit form:
+
+```bash
+ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+```
+
+## Quick connectivity check using `.env`
+
+This verifies login by reading all required values from `.env`:
 
 ```bash
 set -a
 source .env
 set +a
-ssh -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
-```
-
-## Quick connectivity check using `.env`
-
-This verifies login non-interactively by reading all required values from `.env`:
-
-```bash
-expect <<'EOF'
-set timeout 20
-array set cfg {}
-set fh [open ".env" r]
-while {[gets $fh line] >= 0} {
-  if {[regexp {^([A-Z0-9_]+)=(.*)$} $line -> key value]} {
-    set cfg($key) $value
-  }
-}
-close $fh
-
-spawn ssh -o StrictHostKeyChecking=accept-new -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no -p $cfg(SSH_PORT) $cfg(SSH_USER)@$cfg(SSH_HOST) "whoami"
-expect {
-  -re ".*assword:.*" { send -- "$cfg(SSH_PASSWORD)\r"; exp_continue }
-  -re "$cfg\\(SSH_USER\\)\r?\n" { puts "SSH connected successfully"; exit 0 }
-  timeout { puts "SSH connection timed out"; exit 1 }
-  eof { exit 1 }
-}
-EOF
+ssh -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST" "whoami"
 ```
 
 ## Notes
 
+`SSH_HOST`, `SSH_PORT`, and `SSH_USER` stay in `.env` so the real server details are not hardcoded into commands in this repository.
+
+`SSH_KEY_PATH` should point to your private key file and is read directly from `.env`.
+
 `SSH_IPV6` and `SSH_NODE` are stored in `.env` for reference, but they are not required for the standard SSH command above.
+
+`GRAFANA_ADMIN_PASSWORD` is optional for SSH itself, but recommended if you deploy Grafana in the server profile. `deploy-server.sh` copies only this runtime secret into `.env.runtime` on the server, not the SSH credentials.
+
+## SSH tunnels for local browser access
+
+The server profile binds Grafana and Mailhog UI only to `127.0.0.1` on the VPS. They are not public on the internet.
+
+Use SSH tunnels to access them from your browser.
+
+### Grafana only
+
+```bash
+set -a
+source .env
+set +a
+ssh -N -L 3000:127.0.0.1:3000 -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+```
+
+Then open:
+
+- `http://localhost:3000`
+
+Keep that terminal open while you use Grafana.
+
+### Mailhog UI only
+
+```bash
+set -a
+source .env
+set +a
+ssh -N -L 8025:127.0.0.1:8025 -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
+```
+
+Then open:
+
+- `http://localhost:8025`
+
+### Grafana and Mailhog UI in one tunnel
+
+```bash
+set -a
+source .env
+set +a
+ssh -N \
+  -L 3000:127.0.0.1:3000 \
+  -L 8025:127.0.0.1:8025 \
+  -p "$SSH_PORT" \
+  -i "$SSH_KEY_PATH" \
+  "$SSH_USER@$SSH_HOST"
+```
+
+Then open:
+
+- `http://localhost:3000`
+- `http://localhost:8025`
 
 ## Backend logs on the server
 
@@ -75,7 +117,7 @@ Open a shell on the server:
 set -a
 source .env
 set +a
-ssh -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST"
+ssh -p "$SSH_PORT" -i "$SSH_KEY_PATH" "$SSH_USER@$SSH_HOST"
 ```
 
 Then follow backend logs live:

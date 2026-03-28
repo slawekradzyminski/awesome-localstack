@@ -15,7 +15,7 @@ set -a
 source "${ENV_FILE}"
 set +a
 
-required_vars=(SSH_HOST SSH_PORT SSH_USER SSH_PASSWORD)
+required_vars=(SSH_HOST SSH_PORT SSH_USER SSH_KEY_PATH)
 for name in "${required_vars[@]}"; do
   if [[ -z "${!name:-}" ]]; then
     echo "Missing required variable: ${name}" >&2
@@ -23,46 +23,48 @@ for name in "${required_vars[@]}"; do
   fi
 done
 
-if ! command -v expect >/dev/null 2>&1; then
-  echo "expect is required for password-based SSH deployment" >&2
+if [[ ! -f "${SSH_KEY_PATH}" ]]; then
+  echo "SSH key not found at ${SSH_KEY_PATH}" >&2
   exit 1
 fi
 
 create_archive() {
   local archive_path="$1"
+  local runtime_env_path="${ROOT_DIR}/.env.runtime"
+  local grafana_admin_password="${GRAFANA_ADMIN_PASSWORD:-${GF_SECURITY_ADMIN_PASSWORD:-}}"
+
+  {
+    if [[ -n "${grafana_admin_password}" ]]; then
+      printf 'GF_SECURITY_ADMIN_PASSWORD=%s\n' "${grafana_admin_password}"
+    fi
+  } > "${runtime_env_path}"
+
   tar -C "${ROOT_DIR}" -czf "${archive_path}" \
     docker-compose.server.yml \
+    .env.runtime \
+    grafana \
     install-docker-ubuntu.sh \
     images \
-    nginx
-}
-
-run_expect() {
-  local script="$1"
-  expect <<EOF
-set timeout -1
-${script}
-EOF
+    nginx \
+    prometheus
 }
 
 TMP_ARCHIVE="$(mktemp "${TMPDIR:-/tmp}/awesome-localstack.XXXXXX.tgz")"
-trap 'rm -f "${TMP_ARCHIVE}"' EXIT
+TMP_RUNTIME_ENV="${ROOT_DIR}/.env.runtime"
+trap 'rm -f "${TMP_ARCHIVE}" "${TMP_RUNTIME_ENV}"' EXIT
 
 create_archive "${TMP_ARCHIVE}"
 
-run_expect "
-spawn scp -P ${SSH_PORT} -o StrictHostKeyChecking=accept-new ${TMP_ARCHIVE} ${SSH_USER}@${SSH_HOST}:/tmp/awesome-localstack.tgz
-expect {
-  -re \".*assword:.*\" { send -- \"${SSH_PASSWORD}\r\"; exp_continue }
-  eof
-}
-"
+scp -P "${SSH_PORT}" -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=accept-new \
+  "${TMP_ARCHIVE}" "${SSH_USER}@${SSH_HOST}:/tmp/awesome-localstack.tgz"
 
-run_expect "
-set remote_cmd [list bash -lc {set -euo pipefail; mkdir -p ${REMOTE_APP_DIR}; tar -xzf /tmp/awesome-localstack.tgz -C ${REMOTE_APP_DIR}; cd ${REMOTE_APP_DIR}; if ! command -v docker >/dev/null 2>&1; then bash install-docker-ubuntu.sh; fi; docker compose -f docker-compose.server.yml pull; docker compose -f docker-compose.server.yml up -d; docker compose -f docker-compose.server.yml up -d --force-recreate gateway frontend backend}]
-spawn ssh -tt -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new -o PreferredAuthentications=keyboard-interactive -o PubkeyAuthentication=no ${SSH_USER}@${SSH_HOST} {*}\$remote_cmd
-expect {
-  -re \".*assword:.*\" { send -- \"${SSH_PASSWORD}\r\"; exp_continue }
-  eof
-}
-"
+ssh -tt -p "${SSH_PORT}" -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=accept-new \
+  "${SSH_USER}@${SSH_HOST}" \
+  "bash -lc 'set -euo pipefail; \
+    mkdir -p \"${REMOTE_APP_DIR}\"; \
+    tar -xzf /tmp/awesome-localstack.tgz -C \"${REMOTE_APP_DIR}\"; \
+    cd \"${REMOTE_APP_DIR}\"; \
+    if ! command -v docker >/dev/null 2>&1; then bash install-docker-ubuntu.sh; fi; \
+    docker compose -f docker-compose.server.yml down --remove-orphans; \
+    docker compose -f docker-compose.server.yml pull; \
+    docker compose -f docker-compose.server.yml up -d --force-recreate --remove-orphans'"

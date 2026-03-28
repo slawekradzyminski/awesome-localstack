@@ -1,4 +1,5 @@
 .idea
 .DS_Store
 .env
+.env.runtime
 .playwright-cli

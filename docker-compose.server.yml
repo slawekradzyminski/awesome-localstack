@@ -12,6 +12,8 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SECURITY_RATE_LIMIT_ENABLED: "true"
+      SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: https://awesome.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://awesome.byst.re/swagger-ui/oauth2-redirect.html
@@ -48,6 +50,37 @@ services:
       - ./nginx/conf.d/app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./images:/usr/share/nginx/html/images:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    networks:
+      - my-private-ntwk
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/:/etc/prometheus/:ro
+    depends_on:
+      - backend
+      - consumer
+    expose:
+      - "9090"
+    networks:
+      - my-private-ntwk
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    restart: unless-stopped
+    env_file:
+      - path: .env.runtime
+        required: false
+    volumes:
+      - ./grafana/server-provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./grafana/server-provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
+      - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3000:3000"
     networks:
       - my-private-ntwk
 
@@ -89,8 +122,9 @@ services:
   mailhog:
     image: mailhog/mailhog:v1.0.1
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
     expose:
-      - "8025"
       - "1025"
     hostname: mailhog
     networks:
