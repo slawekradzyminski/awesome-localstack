@@ -85,7 +85,13 @@ Compose file:
 Start command:
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml up -d
+```
+
+Stop command:
+
+```bash
+docker compose -f docker-compose.yml down
 ```
 
 Recommended app URLs:
@@ -129,6 +135,12 @@ Start command:
 docker compose -f lightweight-docker-compose.yml up -d
 ```
 
+Stop command:
+
+```bash
+docker compose -f lightweight-docker-compose.yml down
+```
+
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
@@ -168,6 +180,12 @@ Deployment command:
 
 ```bash
 ./deploy-server.sh
+```
+
+Direct server stop command on the VPS:
+
+```bash
+docker compose -f docker-compose.server.yml down
 ```
 
 Recommended public URLs:

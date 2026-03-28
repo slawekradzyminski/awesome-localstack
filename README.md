@@ -80,6 +80,12 @@ docker compose -f lightweight-docker-compose.yml logs -f backend gateway
 docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
 ```
 
+Stop it with:
+
+```bash
+docker compose -f lightweight-docker-compose.yml down
+```
+
 ## Full Profile
 
 Use this when you want the local app plus monitoring, DB, queueing, email testing, consumer, and real Ollama.
@@ -87,7 +93,7 @@ Use this when you want the local app plus monitoring, DB, queueing, email testin
 Start it with:
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml up -d
 ```
 
 Main app URL:
@@ -164,9 +170,15 @@ docker exec -it postgres psql -U postgres -d testdb
 Useful logs:
 
 ```bash
-docker compose logs -f backend
-docker compose logs -f gateway
-docker compose logs -f consumer
+docker compose -f docker-compose.yml logs -f backend
+docker compose -f docker-compose.yml logs -f gateway
+docker compose -f docker-compose.yml logs -f consumer
+```
+
+Stop it with:
+
+```bash
+docker compose -f docker-compose.yml down
 ```
 
 ## Server Profile
@@ -251,6 +263,13 @@ Tail gateway logs:
 ```bash
 cd /opt/awesome-localstack
 docker compose -f docker-compose.server.yml logs --tail=200 -f gateway
+```
+
+Stop the server stack on the VPS with:
+
+```bash
+cd /opt/awesome-localstack
+docker compose -f docker-compose.server.yml down
 ```
 
 ## Shared App Routes
