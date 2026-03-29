@@ -195,6 +195,7 @@ Recommended public URLs:
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
+- authenticated email events: `https://awesome.byst.re/api/v1/users/me/email-events`
 - images through gateway: `https://awesome.byst.re/images/iphone.png`
 
 Published host ports:
@@ -206,6 +207,7 @@ Published host ports:
 Not published on the host:
 
 - Postgres `5432`
+- Grafana `3000`
 - Mailhog UI `8025`
 - Mailhog SMTP `1025`
 - ActiveMQ console `8161`
@@ -217,6 +219,7 @@ Not published on the host:
 
 Special behavior:
 
+- Swagger and OpenAPI are intentionally public as part of the demo surface
 - `https://awesome.byst.re/mailhog/api/v2/messages` is blocked with `404`
 - `https://awesome.byst.re/mailhog/` is blocked with `404`
 - Mailhog remains available only through SSH tunnelling to remote `127.0.0.1:8025`

@@ -9,6 +9,8 @@ Current intended private UIs:
 - Grafana on remote `127.0.0.1:3000`
 - Mailhog UI and API on remote `127.0.0.1:8025`
 
+Mailhog is private on purpose. The public demo uses application-owned endpoints such as `GET /api/v1/users/me/email-events` instead of exposing the inbox API on the public hostname.
+
 ## Recommended usage
 
 Grafana only:

@@ -108,12 +108,12 @@ services:
   activemq:
     image: apache/activemq-artemis:2.31.2
     restart: unless-stopped
+    env_file:
+      - path: .env.runtime
+        required: false
     environment:
-      ARTEMIS_USER: admin
-      ARTEMIS_PASSWORD: admin
-      ANONYMOUS_LOGIN: "true"
+      ANONYMOUS_LOGIN: "false"
       EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
-      DISABLE_SECURITY: "true"
       BROKER_CONFIG_GLOBAL_MAX_SIZE: 256mb
     expose:
       - "61616"
@@ -136,6 +136,9 @@ services:
   consumer:
     image: slawekradzyminski/consumer:3.3.1
     restart: unless-stopped
+    env_file:
+      - path: .env.runtime
+        required: false
     expose:
       - "4002"
     hostname: consumer

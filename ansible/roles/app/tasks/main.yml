@@ -63,6 +63,71 @@
     wait: true
     wait_timeout: 120
 
+- name: Ensure Artemis service account exists in the broker instance
+  ansible.builtin.shell: |
+    docker compose -f {{ app_compose_file }} exec -T activemq sh -lc '
+      set -eu
+      users_file="etc/artemis-users.properties"
+      roles_file="etc/artemis-roles.properties"
+      changed=0
+
+      if grep -q "^{{ artemis_username }} =" "$users_file"; then
+        if ! grep -q "^{{ artemis_username }} = {{ artemis_password }}$" "$users_file"; then
+          sed -i "s|^{{ artemis_username }} =.*|{{ artemis_username }} = {{ artemis_password }}|" "$users_file"
+          changed=1
+        fi
+      else
+        printf "\n{{ artemis_username }} = {{ artemis_password }}\n" >> "$users_file"
+        changed=1
+      fi
+
+      if grep -q "^amq =" "$roles_file"; then
+        if ! grep -q "^amq = .*{{ artemis_username }}" "$roles_file"; then
+          sed -i "s/^amq = .*/&,{{ artemis_username }}/" "$roles_file"
+          changed=1
+        fi
+      else
+        printf "\namq = {{ artemis_username }}\n" >> "$roles_file"
+        changed=1
+      fi
+
+      if grep -q "^admin =" "$users_file"; then
+        sed -i "/^admin =/d" "$users_file"
+        changed=1
+      fi
+
+      if grep -q "^amq =" "$roles_file"; then
+        current_roles=$(sed -n "s/^amq = //p" "$roles_file")
+        normalized_roles=$(printf "%s" "$current_roles" | sed "s/admin,//g; s/,admin//g; s/^admin$//")
+        if [ "$normalized_roles" != "$current_roles" ]; then
+          if [ -n "$normalized_roles" ]; then
+            sed -i "s/^amq = .*/amq = $normalized_roles/" "$roles_file"
+          else
+            sed -i "/^amq =/d" "$roles_file"
+          fi
+          changed=1
+        fi
+      fi
+
+      if [ "$changed" -eq 1 ]; then
+        echo changed
+      fi
+    '
+  args:
+    chdir: "{{ app_dir }}"
+    executable: /bin/sh
+  register: artemis_service_user_result
+  changed_when: "'changed' in artemis_service_user_result.stdout"
+  when:
+    - (artemis_username | default('', true)) | length > 0
+    - (artemis_password | default('', true)) | length > 0
+
+- name: Restart Artemis and consumer when broker credentials change
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} restart activemq consumer
+    chdir: "{{ app_dir }}"
+  when: artemis_service_user_result is changed
+
 - name: Recreate gateway when nginx assets change
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"

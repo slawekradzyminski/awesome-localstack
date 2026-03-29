@@ -39,6 +39,12 @@ app_copy_paths:
 
 app_runtime_env:
   GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
+  ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
+  SPRING_ACTIVEMQ_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ACTIVEMQ_PASSWORD: "{{ artemis_password | default('', true) }}"
   APP_BOOTSTRAP_ADMIN_ENABLED: "{{ app_bootstrap_admin_enabled | default('', true) }}"
   APP_BOOTSTRAP_ADMIN_USERNAME: "{{ app_bootstrap_admin_username | default('', true) }}"
   APP_BOOTSTRAP_ADMIN_PASSWORD: "{{ app_bootstrap_admin_password | default('', true) }}"

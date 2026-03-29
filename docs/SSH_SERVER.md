@@ -118,7 +118,7 @@ cd /opt/awesome-localstack
 curl -sS http://127.0.0.1/v3/api-docs | jq '.servers'
 
 # Backend direct inside Docker network
-docker exec awesome-localstack-gateway-1 curl -sS http://backend:4001/actuator/health
+docker compose -f docker-compose.server.yml exec gateway curl -sS http://backend:4001/actuator/health
 
 # Mailhog API directly on the VPS loopback
 curl -sS http://127.0.0.1:8025/api/v2/messages
@@ -131,6 +131,13 @@ curl -sS https://awesome.byst.re/v3/api-docs | jq '.servers'
 curl -i https://awesome.byst.re/mailhog/api/v2/messages
 ```
 
+For an authenticated public-safe email visibility check, sign in first and then call:
+
+```bash
+curl -sS https://awesome.byst.re/api/v1/users/me/email-events \
+  -H "Authorization: Bearer <TOKEN>" | jq
+```
+
 ## Debugging tips
 
 - If the public domain returns `502`, check `docker compose -f docker-compose.server.yml ps` first. Most often the backend is still starting or was recreated during deploy.
@@ -139,3 +146,4 @@ curl -i https://awesome.byst.re/mailhog/api/v2/messages
 - If Swagger UI tries `http://` instead of `https://`, inspect `https://awesome.byst.re/v3/api-docs` and verify `.servers[0].url`.
 - Public Mailhog routes are intentionally blocked. Inspect Mailhog through the VPS loopback `127.0.0.1:8025` or through the SSH tunnel targets instead.
 - Postgres is intentionally not published on a host port in the server compose. Check it through Docker network access, not by expecting `localhost:5432` on the VPS.
+- `make ansible-reset-demo-state` is destructive for the server Postgres volume. It recreates the bootstrap admin and public product catalog, but it clears orders, email events, and any ad hoc demo users.

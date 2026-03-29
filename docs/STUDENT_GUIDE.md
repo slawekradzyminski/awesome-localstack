@@ -12,7 +12,7 @@ Its goal is to give you a fast local environment with:
 - static images served by the gateway
 - mocked LLM
 
-The lightweight profile still uses `ollama-mock`; the coordinated mock refresh will make `qwen3.5:2b` the expected request model there as well.
+The lightweight profile uses `ollama-mock` and expects the `qwen3.5:2b` request model.
 
 ## Main Idea
 

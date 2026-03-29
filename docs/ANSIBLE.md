@@ -154,6 +154,8 @@ The role checks:
 - `http://127.0.0.1/images/iphone.png`
 - `http://127.0.0.1/mailhog/api/v2/messages` returns `404`
 - `http://127.0.0.1/mailhog/` returns `404`
+- bootstrap admin sign-in succeeds
+- authenticated `GET /api/v1/products` returns a non-empty catalog
 
 ### Readiness retries
 
@@ -177,11 +179,14 @@ The local production Vault file stores values such as:
 - `production_ssh_user`
 - `production_ssh_key_path`
 - `grafana_admin_password`
+- `artemis_username`
+- `artemis_password`
 - `app_bootstrap_admin_enabled`
 - `app_bootstrap_admin_username`
 - `app_bootstrap_admin_password`
 - `app_bootstrap_admin_email`
-- `APP_BOOTSTRAP_PRODUCTS_ENABLED` is tracked in production vars so a clean reset recreates the public-safe catalog automatically
+
+`APP_BOOTSTRAP_PRODUCTS_ENABLED` is tracked in `production/main.yml` rather than Vault so a clean reset recreates the public-safe catalog automatically.
 
 To rotate or update them:
 
