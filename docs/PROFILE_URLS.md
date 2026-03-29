@@ -68,11 +68,10 @@ flowchart LR
     U[Browser] --> G[Gateway 80<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G --> MH[Mailhog API]
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]
     MQ --> C[Consumer internal]
-    C --> MH
+    C --> MH[Mailhog private]
     B --> O[Ollama Mock internal]
 ```
 
@@ -87,6 +86,8 @@ Start command:
 ```bash
 docker compose -f docker-compose.yml up -d
 ```
+
+This compose path intentionally runs the backend with `docker,demo`, so the local PostgreSQL-backed stack includes seeded demo users, products, and sample orders.
 
 Stop command:
 
@@ -195,7 +196,6 @@ Recommended public URLs:
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - images through gateway: `https://awesome.byst.re/images/iphone.png`
-- Mailhog API: `https://awesome.byst.re/mailhog/api/v2/messages`
 
 Published host ports:
 
@@ -217,8 +217,9 @@ Not published on the host:
 
 Special behavior:
 
-- `https://awesome.byst.re/mailhog/api/v2/messages` is exposed
-- `https://awesome.byst.re/mailhog/` is intentionally blocked with `404`
+- `https://awesome.byst.re/mailhog/api/v2/messages` is blocked with `404`
+- `https://awesome.byst.re/mailhog/` is blocked with `404`
+- Mailhog remains available only through SSH tunnelling to remote `127.0.0.1:8025`
 
 ## Gateway Route Map
 
@@ -244,8 +245,7 @@ Special behavior:
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
 - `/images/` -> gateway static files
-- `/mailhog/api/` -> Mailhog API
-- `/mailhog` and `/mailhog/` -> `404`
+- `/mailhog`, `/mailhog/`, and `/mailhog/api/` -> `404`
 - `/` -> frontend
 
 ## Verification Commands
@@ -295,6 +295,13 @@ curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailhog/api/v2/messages
 ```
+
+Expected:
+
+- `login` returns `200`
+- `v3/api-docs` returns `200`
+- the image request returns `200`
+- `mailhog/api/v2/messages` returns `404`
 
 Internal-only checks on the VPS:
 

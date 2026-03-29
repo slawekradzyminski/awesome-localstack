@@ -7,7 +7,7 @@ The recommended path is to use the Ansible-backed `make` targets. They resolve S
 Current intended private UIs:
 
 - Grafana on remote `127.0.0.1:3000`
-- Mailhog UI on remote `127.0.0.1:8025`
+- Mailhog UI and API on remote `127.0.0.1:8025`
 
 ## Recommended usage
 

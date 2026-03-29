@@ -43,14 +43,14 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   --network my-private-ntwk \
   --name backend \
-  -e SPRING_PROFILES_ACTIVE=docker \
+  -e SPRING_PROFILES_ACTIVE=docker,demo \
   -e SPRING_ARTEMIS_BROKER_URL=tcp://activemq:61616 \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testdb \
   -e SPRING_DATASOURCE_USERNAME=postgres \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
   -e PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:8081/reset \
   -e APP_CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081 \
-  slawekradzyminski/backend:3.5.0
+  slawekradzyminski/backend:3.6.2
 
 echo "Starting Frontend..."
 docker run -d \
@@ -58,7 +58,7 @@ docker run -d \
   --network my-private-ntwk \
   --name frontend \
   --expose 80 \
-  slawekradzyminski/frontend:3.5.0
+  slawekradzyminski/frontend:3.6.2
 
 echo "Starting Prometheus..."
 docker run -d \

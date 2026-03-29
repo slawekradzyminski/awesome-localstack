@@ -97,6 +97,8 @@ Start it with:
 docker compose -f docker-compose.yml up -d
 ```
 
+This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
+
 Main app URL:
 
 - `http://localhost:8081/login`
@@ -112,6 +114,13 @@ Other useful full-profile URLs:
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
 - Ollama: `http://localhost:11434/api/tags`
 - Postgres: `localhost:5432`
+
+If you need to refresh seeded PostgreSQL demo data after fixture or credential changes:
+
+```bash
+docker compose -f docker-compose.yml down -v
+docker compose -f docker-compose.yml up -d
+```
 
 The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
 
@@ -194,11 +203,13 @@ Server operations:
 make ansible-ssh
 make ansible-deploy
 make ansible-verify
+make ansible-reset-demo-state
 ```
 
 - `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
 - `make ansible-deploy`: converge the server stack and run post-deploy verification
 - `make ansible-verify`: run health checks without changing deployment state
+- `make ansible-reset-demo-state`: destructively reset Postgres and Mailhog-backed demo state, then redeploy
 
 Main public URL:
 
@@ -210,7 +221,6 @@ Other public server URLs:
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - image through gateway: `https://awesome.byst.re/images/iphone.png`
-- Mailhog API: `https://awesome.byst.re/mailhog/api/v2/messages`
 
 Architecture:
 
@@ -220,20 +230,19 @@ flowchart LR
     G[Gateway<br/>awesome.byst.re<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    MH[Mailhog API only]
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
     C[Consumer<br/>internal only]
+    M[Mailhog<br/>private only]
     O[Ollama Mock<br/>internal only]
 
     U --> G
     G --> F
     G --> B
-    G --> MH
     B --> DB
     B --> MQ
     MQ --> C
-    C --> MH
+    C --> M
     B --> O
 ```
 
@@ -243,6 +252,7 @@ Production hardening in this profile:
 - Postgres is not published
 - Mailhog UI is not published
 - Mailhog SMTP is not published
+- Mailhog API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
 - images are served directly by the gateway
@@ -255,6 +265,13 @@ curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailhog/api/v2/messages
 ```
+
+Expected:
+
+- `login` returns `200`
+- `v3/api-docs` returns `200`
+- the image request returns `200`
+- `/mailhog/api/v2/messages` returns `404`
 
 Server operations:
 

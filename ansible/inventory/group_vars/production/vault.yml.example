@@ -11,3 +11,9 @@ production_ssh_port: "22"
 production_ssh_user: root
 production_ssh_key_path: /absolute/path/to/private-key
 grafana_admin_password: change-this-to-a-strong-value
+app_bootstrap_admin_enabled: "true"
+app_bootstrap_admin_username: admin
+app_bootstrap_admin_password: replace-with-a-16-plus-character-secret
+app_bootstrap_admin_email: awesome@testing.com
+app_bootstrap_admin_first_name: Slawomir
+app_bootstrap_admin_last_name: Radzyminski

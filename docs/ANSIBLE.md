@@ -74,6 +74,12 @@ Run verification only:
 make ansible-verify
 ```
 
+Reset the public demo data store and redeploy from a clean baseline:
+
+```bash
+make ansible-reset-demo-state
+```
+
 Start SSH tunnels:
 
 ```bash
@@ -116,6 +122,14 @@ It does two things in order:
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
+`reset-demo-state.yml` is the destructive recovery path for the public demo host. It:
+
+1. Stops the deployed stack.
+2. Deletes the named Postgres volume for the server profile.
+3. Runs the normal `app` and `verify` roles to recreate the stack from a clean baseline.
+
+Because `mailhog` is recreated as part of the stack restart, its in-memory inbox is cleared too.
+
 ## Patterns Used
 
 ### Convergent deploys
@@ -135,8 +149,11 @@ The `verify` role remains separate so it can still be run on demand, but it is a
 The role checks:
 
 - `docker compose ps`
+- `http://127.0.0.1/login`
 - `http://127.0.0.1/v3/api-docs`
-- `http://127.0.0.1/mailhog/api/v2/messages`
+- `http://127.0.0.1/images/iphone.png`
+- `http://127.0.0.1/mailhog/api/v2/messages` returns `404`
+- `http://127.0.0.1/mailhog/` returns `404`
 
 ### Readiness retries
 
@@ -160,6 +177,11 @@ The local production Vault file stores values such as:
 - `production_ssh_user`
 - `production_ssh_key_path`
 - `grafana_admin_password`
+- `app_bootstrap_admin_enabled`
+- `app_bootstrap_admin_username`
+- `app_bootstrap_admin_password`
+- `app_bootstrap_admin_email`
+- `APP_BOOTSTRAP_PRODUCTS_ENABLED` is tracked in production vars so a clean reset recreates the public-safe catalog automatically
 
 To rotate or update them:
 

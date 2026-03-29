@@ -120,18 +120,15 @@ curl -sS http://127.0.0.1/v3/api-docs | jq '.servers'
 # Backend direct inside Docker network
 docker exec awesome-localstack-gateway-1 curl -sS http://backend:4001/actuator/health
 
-# Mailhog API through gateway
-curl -sS http://127.0.0.1/mailhog/api/v2/messages
+# Mailhog API directly on the VPS loopback
+curl -sS http://127.0.0.1:8025/api/v2/messages
 ```
 
 Run these from your local machine:
 
 ```bash
 curl -sS https://awesome.byst.re/v3/api-docs | jq '.servers'
-curl -sS https://awesome.byst.re/mailhog/api/v2/messages
-curl -sS -X POST https://awesome.byst.re/api/v1/users/signin \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin"}'
+curl -i https://awesome.byst.re/mailhog/api/v2/messages
 ```
 
 ## Debugging tips
@@ -140,5 +137,5 @@ curl -sS -X POST https://awesome.byst.re/api/v1/users/signin \
 - If backend is healthy but the public domain still fails, tail both `backend` and `gateway` logs together in two terminals. Gateway errors usually show `connect() failed (111: Connection refused)` when the backend is not ready yet.
 - If nginx config changes do not seem to apply, recreate the gateway container. This repo bind-mounts a single nginx config file, and a plain `up -d` may leave the old mounted inode in place.
 - If Swagger UI tries `http://` instead of `https://`, inspect `https://awesome.byst.re/v3/api-docs` and verify `.servers[0].url`.
-- For Mailhog, prefer `GET /mailhog/api/v2/messages`. `HEAD` may return a misleading non-200 even when the API works.
-- Postgres and Mailhog are intentionally not published on host ports in the server compose. Check them through Docker network access or gateway routes, not by expecting `localhost:5432` or `localhost:8025` on the VPS.
+- Public Mailhog routes are intentionally blocked. Inspect Mailhog through the VPS loopback `127.0.0.1:8025` or through the SSH tunnel targets instead.
+- Postgres is intentionally not published on a host port in the server compose. Check it through Docker network access, not by expecting `localhost:5432` on the VPS.

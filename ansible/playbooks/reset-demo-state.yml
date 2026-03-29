@@ -1,0 +1,24 @@
+- name: Reset public demo state
+  hosts: production
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Stop the deployed stack
+      ansible.builtin.command:
+        cmd: docker compose -f {{ app_compose_file }} down --remove-orphans
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Remove Postgres demo volume
+      ansible.builtin.command:
+        cmd: docker volume rm {{ reset_demo_postgres_volume_name }}
+      register: reset_demo_volume_rm
+      changed_when: reset_demo_volume_rm.rc == 0
+      failed_when:
+        - reset_demo_volume_rm.rc != 0
+        - "'no such volume' not in ((reset_demo_volume_rm.stderr | default('')) | lower)"
+
+  roles:
+    - app
+    - verify

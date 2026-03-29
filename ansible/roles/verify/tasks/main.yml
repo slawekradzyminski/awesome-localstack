@@ -19,3 +19,31 @@
   until: verify_http_result.status == item.status_code
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
+
+- name: Sign in with bootstrap admin for authenticated verification
+  ansible.builtin.uri:
+    url: http://127.0.0.1/api/v1/users/signin
+    method: POST
+    body_format: json
+    body:
+      username: "{{ app_bootstrap_admin_username }}"
+      password: "{{ app_bootstrap_admin_password }}"
+    status_code: 200
+    return_content: true
+  register: verify_admin_signin
+  until: verify_admin_signin.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify bootstrap product catalog is present
+  ansible.builtin.uri:
+    url: http://127.0.0.1/api/v1/products
+    method: GET
+    headers:
+      Authorization: "Bearer {{ (verify_admin_signin.content | from_json).token }}"
+    status_code: 200
+    return_content: true
+  register: verify_products_response
+  failed_when: >
+    verify_products_response.status != 200 or
+    ((verify_products_response.content | from_json) | length) == 0

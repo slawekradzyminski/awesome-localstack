@@ -22,6 +22,18 @@
     group: root
     mode: preserve
   loop: "{{ app_copy_paths }}"
+  register: app_copy_results
+
+- name: Detect whether nginx assets changed
+  ansible.builtin.set_fact:
+    gateway_config_changed: >-
+      {{
+        app_copy_results.results
+        | selectattr('item', 'equalto', 'nginx')
+        | selectattr('changed')
+        | list
+        | length > 0
+      }}
 
 - name: Render runtime environment file
   ansible.builtin.template:
@@ -50,3 +62,16 @@
     state: present
     wait: true
     wait_timeout: 120
+
+- name: Recreate gateway when nginx assets change
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    files:
+      - "{{ app_compose_file }}"
+    services:
+      - gateway
+    recreate: always
+    state: present
+    wait: true
+    wait_timeout: 60
+  when: gateway_config_changed | default(false)

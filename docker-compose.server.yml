@@ -2,9 +2,12 @@ name: awesome-server
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.5.0
+    image: slawekradzyminski/backend:3.6.2
     restart: unless-stopped
     hostname: backend
+    env_file:
+      - path: .env.runtime
+        required: false
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
@@ -31,7 +34,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.5.0
+    image: slawekradzyminski/frontend:3.6.2
     restart: unless-stopped
     expose:
       - "80"

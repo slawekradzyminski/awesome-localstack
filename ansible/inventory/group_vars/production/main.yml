@@ -6,6 +6,7 @@ ansible_ssh_private_key_file: "{{ production_ssh_key_path }}"
 app_dir: /opt/awesome-localstack
 app_compose_file: docker-compose.server.yml
 repo_root: "{{ playbook_dir | dirname | dirname }}"
+reset_demo_postgres_volume_name: awesome-server_postgres-data
 
 base_packages:
   - ca-certificates
@@ -38,12 +39,25 @@ app_copy_paths:
 
 app_runtime_env:
   GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_ENABLED: "{{ app_bootstrap_admin_enabled | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_USERNAME: "{{ app_bootstrap_admin_username | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_PASSWORD: "{{ app_bootstrap_admin_password | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_EMAIL: "{{ app_bootstrap_admin_email | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_FIRST_NAME: "{{ app_bootstrap_admin_first_name | default('', true) }}"
+  APP_BOOTSTRAP_ADMIN_LAST_NAME: "{{ app_bootstrap_admin_last_name | default('', true) }}"
+  APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
 verify_urls:
+  - url: http://127.0.0.1/login
+    status_code: 200
   - url: http://127.0.0.1/v3/api-docs
     status_code: 200
-  - url: http://127.0.0.1/mailhog/api/v2/messages
+  - url: http://127.0.0.1/images/iphone.png
     status_code: 200
+  - url: http://127.0.0.1/mailhog/api/v2/messages
+    status_code: 404
+  - url: http://127.0.0.1/mailhog/
+    status_code: 404
 
 verify_retries: 12
 verify_delay_seconds: 10
