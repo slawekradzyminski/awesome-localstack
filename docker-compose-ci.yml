@@ -2,7 +2,7 @@ name: awesome-ci
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.2
+    image: slawekradzyminski/backend:3.6.3
     restart: always
     expose:
       - "4001"
@@ -24,7 +24,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.4
+    image: slawekradzyminski/frontend:3.6.5
     restart: always
     expose:
       - "80"
