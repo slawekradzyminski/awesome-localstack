@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.4
+    image: slawekradzyminski/backend:3.6.5
     restart: always
     expose:
       - "4001"
