@@ -2,7 +2,7 @@ name: awesome-server
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.3
+    image: slawekradzyminski/backend:3.6.4
     restart: unless-stopped
     hostname: backend
     env_file:

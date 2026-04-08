@@ -50,7 +50,7 @@ docker run -d \
   -e SPRING_DATASOURCE_PASSWORD=postgres \
   -e PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:8081/reset \
   -e APP_CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081 \
-  slawekradzyminski/backend:3.6.3
+  slawekradzyminski/backend:3.6.4
 
 echo "Starting Frontend..."
 docker run -d \
