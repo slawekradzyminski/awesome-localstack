@@ -2,7 +2,7 @@ name: awesome-full
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.7
+    image: slawekradzyminski/backend:3.6.8
     restart: always
     expose:
       - "4001"
@@ -24,7 +24,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.5
+    image: slawekradzyminski/frontend:3.6.6
     restart: always
     expose:
       - "80"
