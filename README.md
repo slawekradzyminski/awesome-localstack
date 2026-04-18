@@ -35,7 +35,16 @@ Other useful lightweight URLs:
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - image through gateway: `http://localhost:8081/images/iphone.png`
+- Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
+
+The lightweight profile also starts Keycloak with the `awesome-testing` realm and these training users:
+
+- `sso-client` / `SsoClient123!`
+- `sso-admin` / `SsoAdmin123!`
+
+Keycloak Admin Console is available at `http://localhost:8082/admin/` with `admin` / `admin`.
+The local realm enables browser Authorization Code + PKCE for the frontend and direct access grants for Playwright training fixtures. Direct grants are included only so tests can obtain an ID token over HTTP, exchange it through the backend, and start UI tests already authenticated with app-issued tokens.
 
 Architecture:
 
@@ -111,6 +120,8 @@ Other useful full-profile URLs:
 - Grafana: `http://localhost:3000/login`
 - ActiveMQ console: `http://localhost:8161`
 - Mailhog UI: `http://localhost:8025/`
+- Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
+- Keycloak Admin Console: `http://localhost:8082/admin/` (`admin` / `admin`)
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
 - Ollama: `http://localhost:11434/api/tags`
 - Postgres: `localhost:5432`
@@ -123,6 +134,8 @@ docker compose -f docker-compose.yml up -d
 ```
 
 The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
+
+SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
 
 Architecture:
 

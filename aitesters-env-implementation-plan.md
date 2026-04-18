@@ -165,7 +165,7 @@ Add `aitesters-backend`:
 
 ```yaml
   aitesters-backend:
-    image: slawekradzyminski/backend:3.6.8
+    image: slawekradzyminski/backend:3.6.9
     restart: unless-stopped
     hostname: aitesters-backend
     environment:
@@ -190,7 +190,7 @@ Add `aitesters-frontend`:
 
 ```yaml
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.6
+    image: slawekradzyminski/frontend:3.6.7
     restart: unless-stopped
     expose:
       - "80"

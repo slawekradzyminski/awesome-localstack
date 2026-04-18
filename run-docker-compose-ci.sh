@@ -44,6 +44,7 @@ urls=(
     "http://localhost:8161/"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
+    "http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration"
 )
 names=(
     "Backend"
@@ -51,6 +52,7 @@ names=(
     "Active MQ"
     "Mailhog"
     "Email consumer"
+    "Keycloak"
 )
 
 for i in "${!urls[@]}"; do

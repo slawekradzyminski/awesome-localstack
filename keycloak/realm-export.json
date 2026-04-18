@@ -1,0 +1,79 @@
+{
+  "realm": "awesome-testing",
+  "enabled": true,
+  "sslRequired": "none",
+  "displayName": "Awesome Testing",
+  "clients": [
+    {
+      "clientId": "awesome-testing-frontend",
+      "name": "Awesome Testing Frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8081/auth/sso/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:8081"
+      ],
+      "rootUrl": "http://localhost:8081",
+      "baseUrl": "http://localhost:8081",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8081/login"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "client"
+      },
+      {
+        "name": "admin"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "sso-client",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sso",
+      "lastName": "Client",
+      "email": "sso-client@example.test",
+      "realmRoles": [
+        "client"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "SsoClient123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "sso-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sso",
+      "lastName": "Admin",
+      "email": "sso-admin@example.test",
+      "realmRoles": [
+        "client",
+        "admin"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "SsoAdmin123!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

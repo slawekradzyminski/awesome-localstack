@@ -89,7 +89,13 @@ Useful lightweight URLs:
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
+- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
+
+Training users:
+
+- `sso-client` / `SsoClient123!`
+- `sso-admin` / `SsoAdmin123!`
 
 For everyday work, prefer `8081`.
 

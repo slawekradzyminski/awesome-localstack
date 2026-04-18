@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.8
+    image: slawekradzyminski/backend:3.6.9
     restart: always
     expose:
       - "4001"
@@ -13,15 +13,37 @@ services:
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
+      APP_SSO_ENABLED: "true"
+      APP_SSO_ISSUER_URI: http://localhost:8082/realms/awesome-testing
+      APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
+      APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
+    depends_on:
+      - keycloak
     networks:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.6
+    image: slawekradzyminski/frontend:3.6.7
     restart: always
     expose:
       - "80"
+    networks:
+      - my-private-ntwk
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: always
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     networks:
       - my-private-ntwk
 
