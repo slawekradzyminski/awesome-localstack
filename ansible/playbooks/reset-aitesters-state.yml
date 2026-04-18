@@ -1,0 +1,40 @@
+- name: Reset aitesters sandbox state
+  hosts: production
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Recreate aitesters backend
+      ansible.builtin.command:
+        cmd: docker compose -f {{ app_compose_file }} up -d --force-recreate --no-deps aitesters-backend
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Wait for aitesters login route
+      ansible.builtin.uri:
+        url: http://127.0.0.1/login
+        headers:
+          Host: "{{ aitesters_hostname }}"
+        status_code: 200
+        return_content: false
+      register: reset_aitesters_login
+      until: reset_aitesters_login.status == 200
+      retries: "{{ verify_retries }}"
+      delay: "{{ verify_delay_seconds }}"
+
+    - name: Verify seeded aitesters admin after reset
+      ansible.builtin.uri:
+        url: http://127.0.0.1/api/v1/users/signin
+        method: POST
+        headers:
+          Host: "{{ aitesters_hostname }}"
+        body_format: json
+        body:
+          username: "{{ aitesters_admin_username }}"
+          password: "{{ aitesters_admin_password }}"
+        status_code: 200
+        return_content: false
+      register: reset_aitesters_admin_signin
+      until: reset_aitesters_admin_signin.status == 200
+      retries: "{{ verify_retries }}"
+      delay: "{{ verify_delay_seconds }}"

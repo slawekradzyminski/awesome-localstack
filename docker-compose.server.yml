@@ -53,12 +53,43 @@ services:
     networks:
       - my-private-ntwk
 
+  aitesters-backend:
+    image: slawekradzyminski/backend:3.6.8
+    restart: unless-stopped
+    hostname: aitesters-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      OLLAMA_BASE_URL: http://ollama-mock:11434
+      PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
+      SWAGGER_UI_OAUTH2_REDIRECT_URL: https://aitesters.byst.re/swagger-ui/oauth2-redirect.html
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20"
+    depends_on:
+      ollama-mock:
+        condition: service_started
+    expose:
+      - "4001"
+    mem_limit: 768m
+    networks:
+      - my-private-ntwk
+
+  aitesters-frontend:
+    image: slawekradzyminski/frontend:3.6.6
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - my-private-ntwk
+
   gateway:
     image: nginx:1.29.7-perl
     restart: unless-stopped
     depends_on:
       - frontend
       - backend
+      - aitesters-frontend
+      - aitesters-backend
     ports:
       - "80:80"
     volumes:

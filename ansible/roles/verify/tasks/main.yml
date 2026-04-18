@@ -47,3 +47,58 @@
   failed_when: >
     verify_products_response.status != 200 or
     ((verify_products_response.content | from_json) | length) == 0
+
+- name: Verify aitesters login route through gateway host routing
+  ansible.builtin.uri:
+    url: http://127.0.0.1/login
+    headers:
+      Host: "{{ aitesters_hostname }}"
+    status_code: 200
+    return_content: false
+  register: verify_aitesters_login
+  until: verify_aitesters_login.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify aitesters OpenAPI route through gateway host routing
+  ansible.builtin.uri:
+    url: http://127.0.0.1/v3/api-docs
+    headers:
+      Host: "{{ aitesters_hostname }}"
+    status_code: 200
+    return_content: true
+  register: verify_aitesters_openapi
+  until: verify_aitesters_openapi.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Sign in to aitesters with seeded local admin
+  ansible.builtin.uri:
+    url: http://127.0.0.1/api/v1/users/signin
+    method: POST
+    headers:
+      Host: "{{ aitesters_hostname }}"
+    body_format: json
+    body:
+      username: "{{ aitesters_admin_username }}"
+      password: "{{ aitesters_admin_password }}"
+    status_code: 200
+    return_content: true
+  register: verify_aitesters_admin_signin
+  until: verify_aitesters_admin_signin.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify aitesters product catalog is present
+  ansible.builtin.uri:
+    url: http://127.0.0.1/api/v1/products
+    method: GET
+    headers:
+      Host: "{{ aitesters_hostname }}"
+      Authorization: "Bearer {{ (verify_aitesters_admin_signin.content | from_json).token }}"
+    status_code: 200
+    return_content: true
+  register: verify_aitesters_products_response
+  failed_when: >
+    verify_aitesters_products_response.status != 200 or
+    ((verify_aitesters_products_response.content | from_json) | length) == 0

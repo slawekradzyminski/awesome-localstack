@@ -1,0 +1,11 @@
+[Unit]
+Description=Reset aitesters sandbox state
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory={{ app_dir }}
+ExecStart=/usr/bin/docker compose -f {{ app_compose_file }} up -d --force-recreate --no-deps aitesters-backend
+StandardOutput=append:{{ aitesters_reset_log_file }}
+StandardError=append:{{ aitesters_reset_log_file }}

@@ -140,3 +140,37 @@
     wait: true
     wait_timeout: 60
   when: gateway_config_changed | default(false)
+
+- name: Install aitesters reset service
+  ansible.builtin.template:
+    src: aitesters-reset.service.j2
+    dest: /etc/systemd/system/aitesters-reset.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: aitesters_reset_service_unit
+  when: aitesters_reset_enabled | bool
+
+- name: Install aitesters reset timer
+  ansible.builtin.template:
+    src: aitesters-reset.timer.j2
+    dest: /etc/systemd/system/aitesters-reset.timer
+    owner: root
+    group: root
+    mode: "0644"
+  register: aitesters_reset_timer_unit
+  when: aitesters_reset_enabled | bool
+
+- name: Reload systemd when aitesters reset unit changes
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when:
+    - aitesters_reset_enabled | bool
+    - aitesters_reset_service_unit is changed or aitesters_reset_timer_unit is changed
+
+- name: Enable aitesters daily reset timer
+  ansible.builtin.systemd_service:
+    name: aitesters-reset.timer
+    enabled: true
+    state: started
+  when: aitesters_reset_enabled | bool

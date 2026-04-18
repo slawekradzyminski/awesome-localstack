@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-verify ansible-reset-demo-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailhog ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailhog ansible-tunnel-kill-all
+.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-verify ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailhog ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailhog ansible-tunnel-kill-all
 
 ANSIBLE_VAULT_FILE := .vault_pass
 
@@ -24,6 +24,9 @@ ansible-verify:
 
 ansible-reset-demo-state:
 	cd ansible && ansible-playbook playbooks/reset-demo-state.yml --vault-password-file $(ANSIBLE_VAULT_FILE)
+
+ansible-reset-aitesters-state:
+	cd ansible && ansible-playbook playbooks/reset-aitesters-state.yml --vault-password-file $(ANSIBLE_VAULT_FILE)
 
 ansible-edit-vault:
 	cd ansible && ansible-vault edit inventory/group_vars/production/vault.yml --vault-password-file $(ANSIBLE_VAULT_FILE)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily reset for aitesters sandbox
+
+[Timer]
+OnCalendar={{ aitesters_reset_schedule }}
+Persistent=true
+Unit=aitesters-reset.service
+
+[Install]
+WantedBy=timers.target

@@ -65,14 +65,22 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 80<br/>serves frontend + /images]
-    G --> F[Frontend]
-    G --> B[Backend]
+    U[Browser] --> CF[DNS / CDN / TLS edge]
+    CF --> G[Gateway 80<br/>host-based routing]
+
+    G -->|awesome.byst.re| F[Frontend]
+    G -->|awesome.byst.re /api| B[Backend<br/>docker,server profile]
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]
     MQ --> C[Consumer internal]
     C --> MH[Mailhog private]
     B --> O[Ollama Mock internal]
+
+    G -->|aitesters.byst.re| AF[Aitesters Frontend]
+    G -->|aitesters.byst.re /api| AB[Aitesters Backend<br/>local profile]
+    AB --> H2[(H2 in-memory)]
+    AB --> LO[Local email outbox]
+    AB --> O
 ```
 
 ## Full Profile
@@ -191,12 +199,29 @@ docker compose -f docker-compose.server.yml down
 
 Recommended public URLs:
 
+Stable public playground:
+
 - frontend: `https://awesome.byst.re/login`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - authenticated email events: `https://awesome.byst.re/api/v1/users/me/email-events`
 - images through gateway: `https://awesome.byst.re/images/iphone.png`
+
+Disposable API/UI testing sandbox:
+
+- frontend: `https://aitesters.byst.re/login`
+- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html`
+- OpenAPI JSON: `https://aitesters.byst.re/v3/api-docs`
+- sign in API: `https://aitesters.byst.re/api/v1/users/signin`
+- local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
+- images through gateway: `https://aitesters.byst.re/images/iphone.png`
+
+Hostname notes:
+
+- `awesome.byst.re` is the stable production-like playground.
+- `aitesters.byst.re` is a disposable sandbox for admin and mutation-heavy tests.
+- `aitesters.awesome.byst.re` is accepted as an nginx alias, but it is not the recommended public URL because the current wildcard TLS certificate covers `*.byst.re`, not nested names such as `*.awesome.byst.re`.
 
 Published host ports:
 
@@ -215,6 +240,8 @@ Not published on the host:
 - consumer `4002`
 - backend `4001`
 - frontend `80`
+- aitesters-backend `4001`
+- aitesters-frontend `80`
 - ollama-mock `11434`
 
 Special behavior:
@@ -223,6 +250,10 @@ Special behavior:
 - `https://awesome.byst.re/mailhog/api/v2/messages` is blocked with `404`
 - `https://awesome.byst.re/mailhog/` is blocked with `404`
 - Mailhog remains available only through SSH tunnelling to remote `127.0.0.1:8025`
+- `aitesters.byst.re` runs an additional backend with the Spring `local` profile
+- `aitesters.byst.re` uses H2 in-memory data and seeded local demo users, including the demo admin
+- `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
+- `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 
 ## Gateway Route Map
 
@@ -242,6 +273,8 @@ Special behavior:
 
 `nginx/conf.d/app-gateway.conf` handles:
 
+For `awesome.byst.re`:
+
 - `/api/v1/ws-traffic` -> backend
 - `/api/v1/` -> backend
 - `/swagger-ui/` -> backend
@@ -250,6 +283,16 @@ Special behavior:
 - `/images/` -> gateway static files
 - `/mailhog`, `/mailhog/`, and `/mailhog/api/` -> `404`
 - `/` -> frontend
+
+For `aitesters.byst.re`:
+
+- `/api/v1/ws-traffic` -> aitesters-backend
+- `/api/v1/` -> aitesters-backend
+- `/swagger-ui/` -> aitesters-backend
+- `/v3/api-docs` -> aitesters-backend
+- `/actuator/` -> aitesters-backend
+- `/images/` -> gateway static files
+- `/` -> aitesters-frontend
 
 ## Verification Commands
 
@@ -297,14 +340,22 @@ curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailhog/api/v2/messages
+curl -i https://aitesters.byst.re/login
+curl -i https://aitesters.byst.re/v3/api-docs
+curl -i https://aitesters.byst.re/images/iphone.png
+curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
 
 Expected:
 
-- `login` returns `200`
-- `v3/api-docs` returns `200`
-- the image request returns `200`
-- `mailhog/api/v2/messages` returns `404`
+- `awesome.byst.re/login` returns `200`
+- `awesome.byst.re/v3/api-docs` returns `200`
+- `awesome.byst.re/images/iphone.png` returns `200`
+- `awesome.byst.re/mailhog/api/v2/messages` returns `404`
+- `aitesters.byst.re/login` returns `200`
+- `aitesters.byst.re/v3/api-docs` returns `200`
+- `aitesters.byst.re/images/iphone.png` returns `200`
+- `aitesters.byst.re/api/v1/local/email/outbox` returns `200`
 
 Internal-only checks on the VPS:
 

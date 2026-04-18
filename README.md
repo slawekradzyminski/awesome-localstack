@@ -204,32 +204,47 @@ make ansible-ssh
 make ansible-deploy
 make ansible-verify
 make ansible-reset-demo-state
+make ansible-reset-aitesters-state
 ```
 
 - `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
 - `make ansible-deploy`: converge the server stack and run post-deploy verification
 - `make ansible-verify`: run health checks without changing deployment state
 - `make ansible-reset-demo-state`: destructively reset Postgres and Mailhog-backed demo state, then redeploy
+- `make ansible-reset-aitesters-state`: recreate only the H2-backed aitesters backend and reseed local demo data
 
-Main public URL:
+Main public URLs:
 
-- `https://awesome.byst.re/login`
+- stable public playground: `https://awesome.byst.re/login`
+- disposable API/UI testing sandbox: `https://aitesters.byst.re/login`
 
-Other public server URLs:
+Other stable playground URLs:
 
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - image through gateway: `https://awesome.byst.re/images/iphone.png`
 
+Other aitesters sandbox URLs:
+
+- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html`
+- OpenAPI JSON: `https://aitesters.byst.re/v3/api-docs`
+- sign in API: `https://aitesters.byst.re/api/v1/users/signin`
+- local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
+- image through gateway: `https://aitesters.byst.re/images/iphone.png`
+
+For the long-lived domain and routing architecture, see [docs/PROFILE_URLS.md](docs/PROFILE_URLS.md).
+
 Architecture:
 
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>awesome.byst.re<br/>serves frontend + /images]
+    G[Gateway<br/>host-based routing<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
+    AF[Aitesters Frontend]
+    AB[Aitesters Backend<br/>local profile]
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
     C[Consumer<br/>internal only]
@@ -237,13 +252,16 @@ flowchart LR
     O[Ollama Mock<br/>internal only]
 
     U --> G
-    G --> F
-    G --> B
+    G -->|awesome.byst.re| F
+    G -->|awesome.byst.re /api| B
+    G -->|aitesters.byst.re| AF
+    G -->|aitesters.byst.re /api| AB
     B --> DB
     B --> MQ
     MQ --> C
     C --> M
     B --> O
+    AB --> O
 ```
 
 Production hardening in this profile:
@@ -255,6 +273,7 @@ Production hardening in this profile:
 - Mailhog API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
+- aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
 
 Quick public verification:
@@ -264,14 +283,22 @@ curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailhog/api/v2/messages
+curl -i https://aitesters.byst.re/login
+curl -i https://aitesters.byst.re/v3/api-docs
+curl -i https://aitesters.byst.re/images/iphone.png
+curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
 
 Expected:
 
-- `login` returns `200`
-- `v3/api-docs` returns `200`
-- the image request returns `200`
-- `/mailhog/api/v2/messages` returns `404`
+- `awesome.byst.re/login` returns `200`
+- `awesome.byst.re/v3/api-docs` returns `200`
+- `awesome.byst.re/images/iphone.png` returns `200`
+- `awesome.byst.re/mailhog/api/v2/messages` returns `404`
+- `aitesters.byst.re/login` returns `200`
+- `aitesters.byst.re/v3/api-docs` returns `200`
+- `aitesters.byst.re/images/iphone.png` returns `200`
+- `aitesters.byst.re/api/v1/local/email/outbox` returns `200`
 
 Server operations:
 

@@ -7,6 +7,13 @@ app_dir: /opt/awesome-localstack
 app_compose_file: docker-compose.server.yml
 repo_root: "{{ playbook_dir | dirname | dirname }}"
 reset_demo_postgres_volume_name: awesome-server_postgres-data
+aitesters_hostname: aitesters.byst.re
+aitesters_legacy_hostname: aitesters.awesome.byst.re
+aitesters_admin_username: admin
+aitesters_admin_password: LocalDemoAdmin123!
+aitesters_reset_enabled: true
+aitesters_reset_schedule: "*-*-* 03:00:00"
+aitesters_reset_log_file: /var/log/aitesters-reset.log
 
 base_packages:
   - ca-certificates
