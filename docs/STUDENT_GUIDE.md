@@ -94,8 +94,19 @@ Useful lightweight URLs:
 
 Training users:
 
+Application password login:
+
+- `admin` / `LocalDemoAdmin123!`
+- `client` / `client`
+- `client2` / `client2`
+- `client3` / `client3`
+
+Keycloak SSO login:
+
 - `sso-client` / `SsoClient123!`
 - `sso-admin` / `SsoAdmin123!`
+
+For the full SSO flow and the difference between password login and SSO, see [SSO_FLOW.md](SSO_FLOW.md).
 
 For everyday work, prefer `8081`.
 

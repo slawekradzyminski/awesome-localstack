@@ -109,6 +109,9 @@ Recommended app URLs:
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
+- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
+- Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
+- Keycloak Admin Console: `http://localhost:8082/admin/`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -127,6 +130,7 @@ Published host ports:
 | Consumer metrics | `http://localhost:4002/actuator/prometheus` | Direct metrics |
 | InfluxDB | `localhost:8086` | K6 / time-series |
 | Ollama | `http://localhost:11434/api/tags` | Raw model API |
+| Keycloak | `http://localhost:8082` | Local SSO identity provider |
 What is internal only:
 
 - backend raw port `4001`
@@ -156,6 +160,9 @@ Recommended app URLs:
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
+- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
+- Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
+- Keycloak Admin Console: `http://localhost:8082/admin/`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -164,6 +171,7 @@ Published host ports:
 | --- | --- | --- |
 | Gateway | `http://localhost:8081` | Main app entrypoint |
 | Ollama mock | `http://localhost:11434` | Mocked LLM API |
+| Keycloak | `http://localhost:8082` | Local SSO identity provider |
 What is not included:
 
 - Postgres
@@ -173,6 +181,32 @@ What is not included:
 - Prometheus
 - Grafana
 - InfluxDB
+
+## Local Login Credentials
+
+Application password-login users:
+
+| Role | Username | Password |
+| --- | --- | --- |
+| Admin | `admin` | `LocalDemoAdmin123!` |
+| Client | `client` | `client` |
+| Client | `client2` | `client2` |
+| Client | `client3` | `client3` |
+
+Keycloak SSO users:
+
+| Role | Username | Password |
+| --- | --- | --- |
+| Client | `sso-client` | `SsoClient123!` |
+| Admin | `sso-admin` | `SsoAdmin123!` |
+
+Keycloak Admin Console:
+
+| Username | Password |
+| --- | --- |
+| `admin` | `admin` |
+
+For the full SSO flow and the difference between password login and SSO, see [SSO_FLOW.md](SSO_FLOW.md).
 
 What is internal only:
 

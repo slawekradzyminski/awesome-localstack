@@ -12,6 +12,8 @@ For the detailed published-port matrix, see [docs/PROFILE_URLS.md](docs/PROFILE_
 
 For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
+For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
+
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
 This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081` and `11434`, so stop one profile before starting the other.
@@ -42,6 +44,13 @@ The lightweight profile also starts Keycloak with the `awesome-testing` realm an
 
 - `sso-client` / `SsoClient123!`
 - `sso-admin` / `SsoAdmin123!`
+
+Password-login demo users are still available through the application login:
+
+- `admin` / `LocalDemoAdmin123!`
+- `client` / `client`
+- `client2` / `client2`
+- `client3` / `client3`
 
 Keycloak Admin Console is available at `http://localhost:8082/admin/` with `admin` / `admin`.
 The local realm enables browser Authorization Code + PKCE for the frontend and direct access grants for Playwright training fixtures. Direct grants are included only so tests can obtain an ID token over HTTP, exchange it through the backend, and start UI tests already authenticated with app-issued tokens.
@@ -136,6 +145,8 @@ docker compose -f docker-compose.yml up -d
 The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
 
 SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
+
+See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the detailed browser redirect flow, backend exchange flow, and the difference between application password login and SSO login.
 
 Architecture:
 
