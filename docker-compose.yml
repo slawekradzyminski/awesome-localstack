@@ -67,6 +67,11 @@ services:
       - my-private-ntwk
 
   gateway:
+    image: nginx:1.29.7-perl
+    restart: always
+    depends_on:
+      - frontend
+      - backend
     ports:
       - "8081:80"
     volumes:
