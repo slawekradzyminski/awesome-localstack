@@ -19,6 +19,7 @@ No real Google or GitHub OAuth apps are needed. Everything runs on `localhost`.
 - [Backend Implementation](#backend-implementation)
 - [Playwright Test Strategy](#playwright-test-strategy)
 - [Upgrade Path to Real Providers](#upgrade-path-to-real-providers)
+- [Related: Direct Social Login Without SSO](#related-direct-social-login-without-sso)
 
 ## Overview
 
@@ -420,3 +421,9 @@ To switch from mock realms to real Google or GitHub OAuth:
 4. **No backend changes** — the `identity_provider` claim is set by Keycloak regardless of upstream provider
 
 This is the core value of identity brokering: **the application is completely decoupled from identity provider details**. The same code works with mock realms in development and real providers in production.
+
+## Related: Direct Social Login Without SSO
+
+This document describes brokered social login: the application trusts the `awesome-testing` realm, and Keycloak handles Google/GitHub as upstream identity providers.
+
+For the alternative architecture where the application integrates directly with Google or GitHub, stores provider OAuth client configuration, validates provider tokens itself, and maps provider identities to local users, see [DIRECT_SOCIAL_LOGIN.md](DIRECT_SOCIAL_LOGIN.md).
