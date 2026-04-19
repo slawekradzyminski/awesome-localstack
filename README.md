@@ -45,6 +45,13 @@ The lightweight profile also starts Keycloak with the `awesome-testing` realm an
 - `sso-client` / `SsoClient123!`
 - `sso-admin` / `SsoAdmin123!`
 
+Social login mock users (simulated Google and GitHub via Keycloak brokering):
+
+- Google: `google-user` / `GoogleUser123!` (email: `google-user@gmail.com`)
+- GitHub: `github-user` / `GitHubUser123!` (email: `github-user@github.test`)
+
+These mock social providers use additional Keycloak realms (`google-mock`, `github-mock`) on the same instance. See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the identity brokering flow.
+
 Password-login demo users are still available through the application login:
 
 - `admin` / `LocalDemoAdmin123!`
@@ -145,6 +152,13 @@ docker compose -f docker-compose.yml up -d
 The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
 
 SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
+
+Social login mock users (simulated Google and GitHub via Keycloak brokering):
+
+- Google: `google-user` / `GoogleUser123!` (email: `google-user@gmail.com`)
+- GitHub: `github-user` / `GitHubUser123!` (email: `github-user@github.test`)
+
+These mock social providers use additional Keycloak realms (`google-mock`, `github-mock`) on the same instance. See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the identity brokering flow.
 
 See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the detailed browser redirect flow, backend exchange flow, and the difference between application password login and SSO login.
 

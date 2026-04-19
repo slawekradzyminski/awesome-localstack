@@ -1,0 +1,49 @@
+{
+  "realm": "google-mock",
+  "enabled": true,
+  "sslRequired": "none",
+  "displayName": "Google (Mock)",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "clients": [
+    {
+      "clientId": "keycloak-broker",
+      "name": "Keycloak Broker Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "keycloak-broker-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8082/realms/awesome-testing/broker/google/endpoint"
+      ],
+      "webOrigins": [
+        "http://localhost:8082"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "google-user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Google",
+      "lastName": "User",
+      "email": "google-user@gmail.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "GoogleUser123!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

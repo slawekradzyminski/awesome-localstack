@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.9
+    image: slawekradzyminski/backend:3.6.10
     restart: always
     expose:
       - "4001"
@@ -24,7 +24,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.7
+    image: slawekradzyminski/frontend:3.6.8
     restart: always
     expose:
       - "80"
@@ -40,10 +40,24 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8082
     ports:
       - "8082:8080"
     volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - ./keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - my-private-ntwk
+
+  keycloak-init:
+    image: curlimages/curl:8.13.0
+    entrypoint: ["/bin/sh", "/init/init-mock-users.sh"]
+    volumes:
+      - ./keycloak/init-mock-users.sh:/init/init-mock-users.sh:ro
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+    depends_on:
+      - keycloak
+    restart: "no"
     networks:
       - my-private-ntwk
 

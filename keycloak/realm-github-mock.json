@@ -1,0 +1,49 @@
+{
+  "realm": "github-mock",
+  "enabled": true,
+  "sslRequired": "none",
+  "displayName": "GitHub (Mock)",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "clients": [
+    {
+      "clientId": "keycloak-broker",
+      "name": "Keycloak Broker Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "keycloak-broker-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8082/realms/awesome-testing/broker/github/endpoint"
+      ],
+      "webOrigins": [
+        "http://localhost:8082"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "github-user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "GitHub",
+      "lastName": "User",
+      "email": "github-user@github.test",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "GitHubUser123!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -87,6 +87,52 @@ Protected application APIs do not accept raw Keycloak tokens. Keycloak proves wh
 
 Both flows end in the same application session model. That is intentional: downstream app tests can exercise products, carts, orders, profiles, and admin screens without caring whether the user originally came from password login or SSO.
 
+## Social Login (Mock Providers)
+
+The same Keycloak instance hosts two additional realms that simulate external social identity providers:
+
+| Mock Provider | Realm | Login URL |
+| --- | --- | --- |
+| Google | `google-mock` | `http://localhost:8082/realms/google-mock` |
+| GitHub | `github-mock` | `http://localhost:8082/realms/github-mock` |
+
+Social login users:
+
+| Provider | Username | Password | Email |
+| --- | --- | --- | --- |
+| Google (mock) | `google-user` | `GoogleUser123!` | `google-user@gmail.com` |
+| GitHub (mock) | `github-user` | `GitHubUser123!` | `github-user@github.test` |
+
+### How It Works
+
+The `awesome-testing` realm has two OIDC identity providers configured (`google` and `github`). These broker to the mock realms on the same Keycloak instance.
+
+When the frontend adds `&kc_idp_hint=google` to the authorization URL, Keycloak skips its own login form and redirects the browser to the `google-mock` realm login page. The user authenticates there, and Keycloak brokers the identity back to `awesome-testing`, issuing its own token.
+
+The backend never sees Google or GitHub tokens directly. It always validates tokens from the `awesome-testing` realm.
+
+### Social Login Flow
+
+1. The user opens `http://localhost:8081/login`.
+2. The user clicks "Continue with Google" or "Continue with GitHub".
+3. The frontend starts the Authorization Code + PKCE flow with `&kc_idp_hint=google` (or `github`).
+4. Keycloak (`awesome-testing` realm) redirects the browser to the mock provider realm login page.
+5. The user signs in with mock provider credentials, for example `google-user` / `GoogleUser123!`.
+6. The mock realm redirects back to Keycloak's broker endpoint.
+7. Keycloak provisions a federated identity and redirects back to `http://localhost:8081/auth/sso/callback`.
+8. The frontend completes the code exchange and posts the ID token to `POST /api/v1/users/sso/exchange`.
+9. The backend validates the token (still issued by `awesome-testing` realm) and returns app tokens.
+
+### Upgrade Path to Real Providers
+
+To switch from mock realms to real Google or GitHub:
+
+1. Register an OAuth app at Google Cloud Console or GitHub Settings.
+2. Replace the identity provider config in `realm-export.json` with real OAuth endpoints.
+3. No changes needed in the backend or frontend code.
+
+This is the core value of identity brokering: the application is decoupled from the identity provider details.
+
 ## Quick Checks
 
 Start lightweight:

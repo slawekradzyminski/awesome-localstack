@@ -24,6 +24,73 @@
       "baseUrl": "http://localhost:8081",
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:8081/login"
+      },
+      "protocolMappers": [
+        {
+          "name": "identity-provider",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.session.note": "identity_provider",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "claim.name": "identity_provider",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "issuer": "http://localhost:8082/realms/google-mock",
+        "authorizationUrl": "http://localhost:8082/realms/google-mock/protocol/openid-connect/auth",
+        "tokenUrl": "http://localhost:8080/realms/google-mock/protocol/openid-connect/token",
+        "jwksUrl": "http://localhost:8080/realms/google-mock/protocol/openid-connect/certs",
+        "userInfoUrl": "http://localhost:8080/realms/google-mock/protocol/openid-connect/userinfo",
+        "logoutUrl": "http://localhost:8080/realms/google-mock/protocol/openid-connect/logout",
+        "clientId": "keycloak-broker",
+        "clientSecret": "keycloak-broker-secret",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid email profile",
+        "syncMode": "FORCE",
+        "validateSignature": "true",
+        "useJwksUrl": "true"
+      }
+    },
+    {
+      "alias": "github",
+      "displayName": "GitHub",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "issuer": "http://localhost:8082/realms/github-mock",
+        "authorizationUrl": "http://localhost:8082/realms/github-mock/protocol/openid-connect/auth",
+        "tokenUrl": "http://localhost:8080/realms/github-mock/protocol/openid-connect/token",
+        "jwksUrl": "http://localhost:8080/realms/github-mock/protocol/openid-connect/certs",
+        "userInfoUrl": "http://localhost:8080/realms/github-mock/protocol/openid-connect/userinfo",
+        "logoutUrl": "http://localhost:8080/realms/github-mock/protocol/openid-connect/logout",
+        "clientId": "keycloak-broker",
+        "clientSecret": "keycloak-broker-secret",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid email profile",
+        "syncMode": "FORCE",
+        "validateSignature": "true",
+        "useJwksUrl": "true"
       }
     }
   ],
