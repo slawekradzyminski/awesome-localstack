@@ -47,7 +47,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.7
+    image: slawekradzyminski/frontend:3.6.9
     restart: unless-stopped
     expose:
       - "80"
@@ -77,7 +77,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.7
+    image: slawekradzyminski/frontend:3.6.9
     restart: unless-stopped
     expose:
       - "80"
