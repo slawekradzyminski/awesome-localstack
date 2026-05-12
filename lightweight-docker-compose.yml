@@ -77,7 +77,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:local-qwen35-2b
+    image: slawekradzyminski/ollama-mock:1.0.2
     restart: always
     ports:
       - "11434:11434"
