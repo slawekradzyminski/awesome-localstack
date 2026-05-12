@@ -5,3 +5,4 @@
 .playwright-cli
 ansible/.vault_pass
 ansible/inventory/group_vars/production/vault.yml
+outputs

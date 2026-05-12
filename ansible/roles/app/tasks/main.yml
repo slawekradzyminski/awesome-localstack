@@ -51,6 +51,15 @@
     group: root
     recurse: true
 
+- name: Ensure gateway static assets are readable by nginx
+  ansible.builtin.file:
+    path: "{{ app_dir }}/images"
+    state: directory
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+    recurse: true
+
 - name: Deploy Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"

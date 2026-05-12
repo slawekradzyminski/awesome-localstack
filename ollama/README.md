@@ -11,16 +11,16 @@ This directory contains configuration for running Ollama with the `qwen3.5:2b` m
 
 ```bash
 # Build with the default model (qwen3.5:2b)
-docker build -t slawekradzyminski/ollama-qwen35-2b:0.18.3 .
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t slawekradzyminski/ollama-qwen35-2b:0.18.3-1 \
+  --push .
 
 # Build with explicit args (optional overrides)
-docker build \
+docker buildx build --platform linux/amd64,linux/arm64 \
   --build-arg OLLAMA_MODEL=qwen3.5:2b \
   --build-arg OLLAMA_EXTRA_MODELS="" \
-  -t slawekradzyminski/ollama-qwen35-2b:0.18.3 .
-
-# Push to Docker Hub
-docker push slawekradzyminski/ollama-qwen35-2b:0.18.3
+  -t slawekradzyminski/ollama-qwen35-2b:0.18.3-1 \
+  --push .
 ```
 
 ## Running the Container
@@ -29,7 +29,7 @@ docker push slawekradzyminski/ollama-qwen35-2b:0.18.3
 docker run -d --name ollama \
   -p 11434:11434 \
   -v ollama-cache:/root/.ollama \
-  slawekradzyminski/ollama-qwen35-2b:0.18.3
+  slawekradzyminski/ollama-qwen35-2b:0.18.3-1
 ```
 
 ## Querying the Model

@@ -132,7 +132,7 @@ docker run -d \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  slawekradzyminski/ollama-qwen35-2b:0.18.3
+  slawekradzyminski/ollama-qwen35-2b:0.18.3-1
 
 echo "Starting App Gateway..."
 docker run -d \
