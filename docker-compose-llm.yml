@@ -1,14 +1,13 @@
 services:
   ollama:
-    image: slawekradzyminski/ollama-qwen35-2b:0.18.3-1
-    container_name: ollama
+    image: slawekradzyminski/ollama-qwen35-2b:0.18.3-2
     restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
     environment:
-      - OLLAMA_MODELS_DIR=/root/.ollama
+      - OLLAMA_MODELS=/models
     networks:
       - my-private-ntwk
 

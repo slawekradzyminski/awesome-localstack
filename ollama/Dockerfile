@@ -1,6 +1,10 @@
 # ollama/Dockerfile
 FROM ollama/ollama:0.18.3
 
+# /root/.ollama is declared as a volume in the upstream image, so model files
+# written there during build are not committed into the final image layer.
+ENV OLLAMA_MODELS=/models
+
 # Declare the model as a build-arg so you can swap variants later.
 ARG OLLAMA_MODEL=qwen3.5:2b
 # Optional space-separated list of additional models to pre-pull.

@@ -128,11 +128,11 @@ echo "Starting Ollama..."
 docker run -d \
   -p 11434:11434 \
   -v ollama-data:/root/.ollama \
-  -e OLLAMA_MODELS_DIR=/root/.ollama \
+  -e OLLAMA_MODELS=/models \
   --restart unless-stopped \
   --network my-private-ntwk \
   --name ollama \
-  slawekradzyminski/ollama-qwen35-2b:0.18.3-1
+  slawekradzyminski/ollama-qwen35-2b:0.18.3-2
 
 echo "Starting App Gateway..."
 docker run -d \

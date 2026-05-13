@@ -21,9 +21,11 @@ services:
       APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
       APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
+      OLLAMA_BASE_URL: http://ollama:11434
     depends_on:
       - activemq
       - keycloak
+      - ollama
       - postgres
     networks:
       - my-private-ntwk
@@ -177,13 +179,12 @@ services:
       - my-private-ntwk
 
   ollama:
-    image: slawekradzyminski/ollama-qwen35-2b:0.18.3-1
-    container_name: ollama
+    image: slawekradzyminski/ollama-qwen35-2b:0.18.3-2
     restart: unless-stopped
     ports:
       - "11434:11434"
     environment:
-      - OLLAMA_MODELS_DIR=/root/.ollama
+      - OLLAMA_MODELS=/models
     networks:
       - my-private-ntwk
 

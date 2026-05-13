@@ -16,5 +16,8 @@ for MODEL in ${PRIMARY_MODEL} ${EXTRA_MODELS}; do
 done
 
 echo "Shutting server down…"
-kill -SIGINT "$SERVER_PID" && wait "$SERVER_PID"
-echo "✔  Models cached in /root/.ollama"
+if kill -0 "$SERVER_PID" 2>/dev/null; then
+  kill -SIGINT "$SERVER_PID"
+  wait "$SERVER_PID"
+fi
+echo "✔  Models cached in ${OLLAMA_MODELS:-/root/.ollama/models}"

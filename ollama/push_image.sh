@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "${1:-}" = "" ]; then
   echo "Usage: $0 <image-name-suffix>"
-  echo "Example: $0 ollama-qwen35-2b:0.18.3-1   # builds and pushes the qwen3.5:2b image"
+  echo "Example: $0 ollama-qwen35-2b:0.18.3-2   # builds and pushes the qwen3.5:2b image"
   exit 1
 fi
 
