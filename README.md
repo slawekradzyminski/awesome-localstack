@@ -151,6 +151,44 @@ docker compose -f docker-compose.yml up -d
 
 The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
 
+### Native Ollama on macOS
+
+Docker Desktop on macOS cannot pass the Apple GPU through to a Linux container. For faster local LLM demos on Apple Silicon, run Ollama natively on macOS and keep the rest of the stack in Docker.
+
+Start native Ollama:
+
+```bash
+ollama pull qwen3.5:2b
+OLLAMA_HOST=0.0.0.0:11434 ollama serve
+```
+
+In another terminal, start the full stack with the native Ollama override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.native-ollama.yml up -d --remove-orphans
+```
+
+Or use the helper script:
+
+```bash
+./run-docker-compose-native-ollama.sh
+```
+
+To test another local model, override `OLLAMA_MODEL`; the helper pulls it before starting the stack:
+
+```bash
+OLLAMA_MODEL=llama3.2:3b ./run-docker-compose-native-ollama.sh
+```
+
+The override points the backend to `http://host.docker.internal:11434` and disables the containerized Ollama service unless the `docker-ollama` profile is explicitly enabled.
+
+Verify Docker can reach the native Ollama server:
+
+```bash
+docker run --rm curlimages/curl:8.13.0 \
+  http://host.docker.internal:11434/api/tags
+```
+
 SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
 
 Social login mock users (simulated Google and GitHub via Keycloak brokering):

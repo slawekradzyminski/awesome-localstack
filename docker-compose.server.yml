@@ -2,7 +2,7 @@ name: awesome-server
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.9
+    image: slawekradzyminski/backend:3.6.11
     restart: unless-stopped
     hostname: backend
     env_file:
@@ -47,7 +47,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.9
+    image: slawekradzyminski/frontend:3.6.10
     restart: unless-stopped
     expose:
       - "80"
@@ -55,7 +55,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.6.9
+    image: slawekradzyminski/backend:3.6.11
     restart: unless-stopped
     hostname: aitesters-backend
     environment:
@@ -77,7 +77,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.9
+    image: slawekradzyminski/frontend:3.6.10
     restart: unless-stopped
     expose:
       - "80"
