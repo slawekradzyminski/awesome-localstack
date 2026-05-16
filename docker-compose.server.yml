@@ -1,10 +1,17 @@
 name: awesome-server
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   backend:
     image: slawekradzyminski/backend:3.6.11
     restart: unless-stopped
     hostname: backend
+    logging: *default-logging
     env_file:
       - path: .env.runtime
         required: false
@@ -49,6 +56,7 @@ services:
   frontend:
     image: slawekradzyminski/frontend:3.6.11
     restart: unless-stopped
+    logging: *default-logging
     expose:
       - "80"
     networks:
@@ -58,6 +66,7 @@ services:
     image: slawekradzyminski/backend:3.6.11
     restart: unless-stopped
     hostname: aitesters-backend
+    logging: *default-logging
     environment:
       SPRING_PROFILES_ACTIVE: local
       SERVER_FORWARD_HEADERS_STRATEGY: framework
@@ -79,6 +88,7 @@ services:
   aitesters-frontend:
     image: slawekradzyminski/frontend:3.6.11
     restart: unless-stopped
+    logging: *default-logging
     expose:
       - "80"
     networks:
@@ -87,6 +97,7 @@ services:
   gateway:
     image: nginx:1.29.7-perl
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       - frontend
       - backend
@@ -104,6 +115,7 @@ services:
   prometheus:
     image: prom/prometheus:v3.1.0
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./prometheus/:/etc/prometheus/:ro
     depends_on:
@@ -117,6 +129,7 @@ services:
   grafana:
     image: grafana/grafana:11.5.1
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - path: .env.runtime
         required: false
@@ -135,6 +148,7 @@ services:
   postgres:
     image: postgres:16.1
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: testdb
       POSTGRES_USER: postgres
@@ -153,6 +167,7 @@ services:
   activemq:
     image: apache/activemq-artemis:2.31.2
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - path: .env.runtime
         required: false
@@ -170,6 +185,7 @@ services:
   mailhog:
     image: mailhog/mailhog:v1.0.1
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "127.0.0.1:8025:8025"
     expose:
@@ -181,6 +197,7 @@ services:
   consumer:
     image: slawekradzyminski/consumer:3.3.1
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - path: .env.runtime
         required: false
@@ -200,6 +217,7 @@ services:
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.2
     restart: unless-stopped
+    logging: *default-logging
     expose:
       - "11434"
     networks:

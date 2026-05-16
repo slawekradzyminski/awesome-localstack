@@ -35,3 +35,42 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Ensure journald config override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure journald retention limits
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/99-awesome-localstack.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Journal]
+      SystemMaxUse={{ journald_system_max_use }}
+      MaxRetentionSec={{ journald_max_retention_sec }}
+  notify: Restart journald
+
+- name: Read current machine id
+  ansible.builtin.command: cat /etc/machine-id
+  register: current_machine_id
+  changed_when: false
+
+- name: Find stale journald machine directories
+  ansible.builtin.find:
+    paths: /var/log/journal
+    file_type: directory
+    recurse: false
+  register: journald_machine_dirs
+
+- name: Remove stale journald machine directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ journald_machine_dirs.files }}"
+  when: item.path | basename != current_machine_id.stdout

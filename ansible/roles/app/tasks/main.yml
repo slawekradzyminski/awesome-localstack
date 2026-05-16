@@ -60,6 +60,18 @@
     mode: "u=rwX,go=rX"
     recurse: true
 
+- name: Ensure mounted service config assets are readable by containers
+  ansible.builtin.file:
+    path: "{{ app_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+    recurse: true
+  loop:
+    - grafana
+    - prometheus
+
 - name: Deploy Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"

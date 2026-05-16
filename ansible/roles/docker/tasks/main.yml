@@ -26,6 +26,30 @@
     name: "{{ docker_packages }}"
     state: present
 
+- name: Ensure Docker config directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure Docker log rotation
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "{{ docker_log_max_size }}",
+          "max-file": "{{ docker_log_max_file }}"
+        }
+      }
+  notify: Restart Docker
+
 - name: Ensure Docker service is enabled and running
   ansible.builtin.service:
     name: docker
