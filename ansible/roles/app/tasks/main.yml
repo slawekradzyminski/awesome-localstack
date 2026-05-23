@@ -53,12 +53,15 @@
 
 - name: Ensure gateway static assets are readable by nginx
   ansible.builtin.file:
-    path: "{{ app_dir }}/images"
+    path: "{{ app_dir }}/{{ item }}"
     state: directory
     owner: root
     group: root
     mode: "u=rwX,go=rX"
     recurse: true
+  loop:
+    - images
+    - branding
 
 - name: Ensure mounted service config assets are readable by containers
   ansible.builtin.file:

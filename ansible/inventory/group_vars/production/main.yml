@@ -49,6 +49,7 @@ app_copy_paths:
   - grafana
   - prometheus
   - images
+  - branding
 
 app_runtime_env:
   GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
