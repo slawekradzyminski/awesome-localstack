@@ -24,7 +24,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.11
+    image: slawekradzyminski/frontend:3.6.13
     restart: always
     expose:
       - "80"
@@ -72,6 +72,7 @@ services:
     volumes:
       - ./nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./images:/usr/share/nginx/html/images:ro
+      - ./branding:/usr/share/nginx/html/branding:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
