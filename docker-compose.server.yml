@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.11
+    image: slawekradzyminski/backend:3.6.12
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -54,7 +54,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.13
+    image: slawekradzyminski/frontend:3.6.14
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.6.11
+    image: slawekradzyminski/backend:3.6.12
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -86,7 +86,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.13
+    image: slawekradzyminski/frontend:3.6.14
     restart: unless-stopped
     logging: *default-logging
     expose:
