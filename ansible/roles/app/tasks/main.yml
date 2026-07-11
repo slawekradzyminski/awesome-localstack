@@ -152,7 +152,7 @@
     chdir: "{{ app_dir }}"
   when: artemis_service_user_result is changed
 
-- name: Recreate gateway when nginx assets change
+- name: Recreate gateway to refresh Docker upstream addresses
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
     files:
@@ -163,7 +163,6 @@
     state: present
     wait: true
     wait_timeout: 60
-  when: gateway_config_changed | default(false)
 
 - name: Install aitesters reset service
   ansible.builtin.template:
