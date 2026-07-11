@@ -18,6 +18,11 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Ollama is pre-1.0, so semver-minor releases can contain runtime-breaking changes.
+      - dependency-name: ollama/ollama
+        update-types:
+          - version-update:semver-minor
   - package-ecosystem: github-actions
     directory: /
     schedule:
