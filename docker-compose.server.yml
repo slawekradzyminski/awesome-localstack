@@ -54,7 +54,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.14
+    image: slawekradzyminski/frontend:3.6.15
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -86,7 +86,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.14
+    image: slawekradzyminski/frontend:3.6.15
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -147,7 +147,7 @@ services:
       - my-private-ntwk
 
   postgres:
-    image: postgres:16.1
+    image: postgres:16.14-bookworm
     restart: unless-stopped
     logging: *default-logging
     environment:
@@ -196,7 +196,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.1
+    image: slawekradzyminski/consumer:3.3.2
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -216,7 +216,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.2
+    image: slawekradzyminski/ollama-mock:1.0.3
     restart: unless-stopped
     logging: *default-logging
     expose:

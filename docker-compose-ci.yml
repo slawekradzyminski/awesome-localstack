@@ -29,7 +29,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.14
+    image: slawekradzyminski/frontend:3.6.15
     restart: always
     expose:
       - "80"
@@ -55,7 +55,7 @@ services:
       - my-private-ntwk
 
   keycloak-init:
-    image: curlimages/curl:8.13.0
+    image: curlimages/curl:8.21.0
     entrypoint: ["/bin/sh", "/init/init-mock-users.sh"]
     volumes:
       - ./keycloak/init-mock-users.sh:/init/init-mock-users.sh:ro
@@ -84,7 +84,7 @@ services:
       - my-private-ntwk
 
   postgres:
-    image: postgres:16.1
+    image: postgres:16.14-bookworm
     restart: always
     environment:
       POSTGRES_DB: testdb
@@ -124,7 +124,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.1
+    image: slawekradzyminski/consumer:3.3.2
     restart: always
     ports:
       - "4002:4002"
