@@ -106,12 +106,13 @@
   },
   "users": [
     {
-      "username": "sso-client",
+      "id": "7d4cce02-024a-4fc8-bfbb-000000000001",
+      "username": "sso-e2e-client",
       "enabled": true,
       "emailVerified": true,
       "firstName": "Sso",
       "lastName": "Client",
-      "email": "sso-client@example.test",
+      "email": "sso-e2e-client@example.test",
       "realmRoles": [
         "client"
       ],
@@ -124,6 +125,7 @@
       ]
     },
     {
+      "id": "7d4cce02-024a-4fc8-bfbb-000000000002",
       "username": "sso-admin",
       "enabled": true,
       "emailVerified": true,
