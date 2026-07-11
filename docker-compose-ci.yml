@@ -2,7 +2,7 @@ name: awesome-ci
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.12
+    image: slawekradzyminski/backend:3.6.13
     restart: always
     expose:
       - "4001"
@@ -124,7 +124,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.2
+    image: slawekradzyminski/consumer:3.3.3
     restart: always
     ports:
       - "4002:4002"

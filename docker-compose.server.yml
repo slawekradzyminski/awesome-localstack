@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.12
+    image: slawekradzyminski/backend:3.6.13
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.6.12
+    image: slawekradzyminski/backend:3.6.13
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -196,7 +196,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.2
+    image: slawekradzyminski/consumer:3.3.3
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -216,7 +216,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.4
+    image: slawekradzyminski/ollama-mock:1.0.5
     restart: unless-stopped
     logging: *default-logging
     expose:
