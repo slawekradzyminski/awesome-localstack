@@ -4,10 +4,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      non-major-images:
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: docker
     directory: /ollama
     schedule:
       interval: weekly
+    groups:
+      non-major-ollama:
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: github-actions
     directory: /
     schedule:
