@@ -216,7 +216,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.3
+    image: slawekradzyminski/ollama-mock:1.0.4
     restart: unless-stopped
     logging: *default-logging
     expose:
