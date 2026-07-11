@@ -1,5 +1,5 @@
 # ollama/Dockerfile
-FROM ollama/ollama:0.18.3
+FROM ollama/ollama:0.31.2
 
 # /root/.ollama is declared as a volume in the upstream image, so model files
 # written there during build are not committed into the final image layer.
