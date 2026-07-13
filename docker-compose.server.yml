@@ -58,7 +58,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.0
+    image: slawekradzyminski/frontend:3.7.1
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -99,7 +99,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.0
+    image: slawekradzyminski/frontend:3.7.1
     restart: unless-stopped
     logging: *default-logging
     expose:
