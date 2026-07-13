@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.15
+    image: slawekradzyminski/backend:3.7.0
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -28,6 +28,9 @@ services:
       SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "400"
       SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "200"
       SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "100"
+      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
+      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
+      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
       SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IP_CAPACITY: "200"
       SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IDENTIFIER_CAPACITY: "60"
       SECURITY_RATE_LIMIT_PASSWORD_RESET_IP_CAPACITY: "200"
@@ -40,6 +43,7 @@ services:
       PASSWORD_RESET_FRONTEND_BASE_URL: https://awesome.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://awesome.byst.re/swagger-ui/oauth2-redirect.html
       APP_SSO_ENABLED: "false"
+      APP_MFA_REQUIRE_SECURE_ENCRYPTION: "true"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://awesome.byst.re,https://awesome.byst.re,http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
     depends_on:
       postgres:
@@ -54,7 +58,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.16
+    image: slawekradzyminski/frontend:3.7.0
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -63,10 +67,13 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.6.15
+    image: slawekradzyminski/backend:3.7.0
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
+    env_file:
+      - path: .env.runtime
+        required: false
     environment:
       SPRING_PROFILES_ACTIVE: local
       SERVER_FORWARD_HEADERS_STRATEGY: framework
@@ -74,6 +81,12 @@ services:
       PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://aitesters.byst.re/swagger-ui/oauth2-redirect.html
       APP_SSO_ENABLED: "false"
+      APP_MFA_REQUIRE_SECURE_ENCRYPTION: "true"
+      SECURITY_RATE_LIMIT_ENABLED: "true"
+      SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
+      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
+      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
+      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20"
     depends_on:
@@ -86,7 +99,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.6.16
+    image: slawekradzyminski/frontend:3.7.0
     restart: unless-stopped
     logging: *default-logging
     expose:
