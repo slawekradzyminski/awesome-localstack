@@ -83,6 +83,7 @@ services:
       PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://aitesters.byst.re/swagger-ui/oauth2-redirect.html
       APP_SSO_ENABLED: "false"
+      APP_BOOTSTRAP_ADMIN_ENABLED: "false"
       APP_MFA_REQUIRE_SECURE_ENCRYPTION: "true"
       JWT_REQUIRE_SECURE_KEY: "true"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
