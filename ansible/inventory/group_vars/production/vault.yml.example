@@ -21,3 +21,5 @@ app_bootstrap_admin_first_name: Slawomir
 app_bootstrap_admin_last_name: Radzyminski
 app_mfa_encryption_password: replace-with-at-least-32-random-characters
 app_mfa_encryption_salt: replace-with-at-least-16-random-bytes-in-hex
+# Rotating this value invalidates existing backend access tokens.
+jwt_secret_key: replace-with-at-least-32-random-bytes

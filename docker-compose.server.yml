@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.1
+    image: slawekradzyminski/backend:3.7.2
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -44,6 +44,8 @@ services:
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://awesome.byst.re/swagger-ui/oauth2-redirect.html
       APP_SSO_ENABLED: "false"
       APP_MFA_REQUIRE_SECURE_ENCRYPTION: "true"
+      JWT_REQUIRE_SECURE_KEY: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://awesome.byst.re,https://awesome.byst.re,http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
     depends_on:
       postgres:
@@ -67,7 +69,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.1
+    image: slawekradzyminski/backend:3.7.2
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -82,6 +84,8 @@ services:
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://aitesters.byst.re/swagger-ui/oauth2-redirect.html
       APP_SSO_ENABLED: "false"
       APP_MFA_REQUIRE_SECURE_ENCRYPTION: "true"
+      JWT_REQUIRE_SECURE_KEY: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
       SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"

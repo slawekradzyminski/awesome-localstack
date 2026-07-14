@@ -409,7 +409,7 @@ Across the main profiles, the gateway serves:
 - backend API under `/api/v1/...`
 - Swagger UI under `/swagger-ui/...`
 - OpenAPI under `/v3/api-docs`
-- actuator under `/actuator/...`
+- public health status at `/actuator/health`; other actuator routes are blocked by the gateway
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
 
