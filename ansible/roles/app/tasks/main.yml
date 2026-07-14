@@ -85,7 +85,7 @@
     remove_orphans: true
     state: present
     wait: true
-    wait_timeout: 120
+    wait_timeout: 300
 
 - name: Ensure Artemis service account exists in the broker instance
   ansible.builtin.shell: |
