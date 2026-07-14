@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.2
+    image: slawekradzyminski/backend:3.7.4
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -60,7 +60,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.1
+    image: slawekradzyminski/frontend:3.7.3
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -69,7 +69,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.2
+    image: slawekradzyminski/backend:3.7.4
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -77,7 +77,7 @@ services:
       - path: .env.runtime
         required: false
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: aitesters
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
@@ -103,7 +103,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.1
+    image: slawekradzyminski/frontend:3.7.3
     restart: unless-stopped
     logging: *default-logging
     expose:

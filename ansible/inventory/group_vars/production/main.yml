@@ -68,6 +68,7 @@ app_runtime_env:
   APP_MFA_ENCRYPTION_PASSWORD: "{{ app_mfa_encryption_password | default('', true) }}"
   APP_MFA_ENCRYPTION_SALT: "{{ app_mfa_encryption_salt | default('', true) }}"
   JWT_SECRET_KEY: "{{ jwt_secret_key | default('', true) }}"
+  LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
 verify_urls:
