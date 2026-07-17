@@ -1,4 +1,4 @@
-name: awesome-full
+name: awesome-full-native
 
 services:
   backend:
@@ -21,17 +21,21 @@ services:
       APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
       APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama-dmr-adapter:11434}
+      OLLAMA_BASE_URL: http://ollama-dmr-adapter:11434
       OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
     models:
       local_llm:
         endpoint_var: DMR_MODEL_ENDPOINT
         model_var: OLLAMA_MODEL
     depends_on:
-      - activemq
-      - keycloak
-      - ollama-dmr-adapter
-      - postgres
+      activemq:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      ollama-dmr-adapter:
+        condition: service_healthy
+      postgres:
+        condition: service_started
     networks:
       - my-private-ntwk
 
@@ -43,6 +47,18 @@ services:
     environment:
       UPSTREAM_HOST: model-runner.docker.internal
       UPSTREAM_PORT: "80"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://model-runner.docker.internal/api/tags', timeout=5).read()
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 5s
     networks:
       - my-private-ntwk
 

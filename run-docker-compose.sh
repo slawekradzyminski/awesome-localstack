@@ -6,16 +6,16 @@ COMPOSE_FILES=(-f docker-compose.yml)
 if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
     COMPOSE_FILES+=(-f docker-compose.model-mock.yml)
 fi
-docker compose "${COMPOSE_FILES[@]}" up -d
+docker compose "${COMPOSE_FILES[@]}" up -d --remove-orphans
 
 if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
     MODEL_URL="http://localhost:11434/api/generate"
     MODEL_NAME="Ollama mock"
     MODEL_CHECK=(curl -fsS -H "Content-Type: application/json" -d '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' "$MODEL_URL")
 else
-    MODEL_URL="http://ollama-dmr-adapter:11434/api/tags"
+    MODEL_URL="http://localhost:11434/api/tags"
     MODEL_NAME="Bonsai through the Docker Model Runner adapter"
-    MODEL_CHECK=(docker run --rm --network awesome-full_my-private-ntwk curlimages/curl:8.21.0 -fsS "$MODEL_URL")
+    MODEL_CHECK=(docker compose "${COMPOSE_FILES[@]}" exec -T ollama-dmr-adapter python -c "import urllib.request; urllib.request.urlopen('$MODEL_URL', timeout=5).read()")
 fi
 
 echo "Waiting for $MODEL_NAME to start..."

@@ -123,6 +123,18 @@ Start it with:
 docker compose up -d
 ```
 
+The full profile uses the isolated Compose project name `awesome-full-native`.
+This prevents an older checkout that still defines the legacy containerized
+Ollama stack (`awesome-full`) from silently replacing the native runtime. The
+backend transport is fixed to the Docker Model Runner adapter, while the model
+itself remains selectable with `OLLAMA_MODEL` or the model field in the UI.
+
+For a clean, verified startup that also removes obsolete services, use:
+
+```bash
+./run-docker-compose.sh
+```
+
 This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
 
 Main app URL:
