@@ -3,6 +3,7 @@
 .env
 .env.runtime
 .playwright-cli
+GTP56_SOL_AUDIT.md
 ansible/.vault_pass
 ansible/inventory/group_vars/production/vault.yml
 outputs

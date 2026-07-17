@@ -34,18 +34,6 @@ jobs:
     - name: Test Docker Model Runner adapter
       run: python3 -m unittest ollama-dmr-adapter/test_adapter.py
 
-  runDocker-CI:
-    runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:stable
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
-    steps:
-    - uses: actions/checkout@v7.0.0
-    - name: Build and run Docker Compose CI version
-      run: bash ./run-docker-compose-ci.sh
-
   runDocker-Jenkins:
     runs-on: ubuntu-latest
     services:

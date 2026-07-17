@@ -55,14 +55,14 @@ services:
       - my-private-ntwk
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.7.0
     restart: always
     command:
       - start-dev
       - --import-realm
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME: http://localhost:8082
     ports:
       - "8082:8080"
@@ -115,7 +115,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.13.0
     restart: always
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -127,11 +127,15 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:13.1.0
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
     volumes:
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./grafana/provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:/etc/grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:ro
+      - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
+      - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
     restart: always
     ports:
       - "3000:3000"
@@ -142,7 +146,7 @@ services:
       - my-private-ntwk
 
   activemq:
-    image: apache/activemq-artemis:2.31.2
+    image: apache/activemq-artemis:2.42.0
     restart: always
     environment:
       ARTEMIS_USER: admin
@@ -159,13 +163,15 @@ services:
     networks:
       - my-private-ntwk
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
+  mailpit:
+    image: axllent/mailpit:v1.30.0
     restart: always
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
     ports:
       - "8025:8025"
       - "1025:1025"
-    hostname: mailhog
+    hostname: mailpit
     networks:
       - my-private-ntwk
 
@@ -175,8 +181,14 @@ services:
     ports:
       - "4002:4002"
     hostname: consumer
+    environment:
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
     depends_on:
-      - activemq
+      activemq:
+        condition: service_started
+      mailpit:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

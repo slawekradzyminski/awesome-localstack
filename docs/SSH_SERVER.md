@@ -29,7 +29,7 @@ Grafana runtime configuration also comes from Vault-backed Ansible vars.
 
 ## SSH tunnels for local browser access
 
-The server profile binds Grafana and Mailhog UI only to `127.0.0.1` on the VPS. They are not public on the internet.
+The server profile binds Grafana and Mailpit UI only to `127.0.0.1` on the VPS. They are not public on the internet.
 
 Use the Ansible-backed `make` targets to access them from your browser.
 
@@ -45,17 +45,17 @@ Then open:
 
 Keep that terminal open while you use Grafana.
 
-### Mailhog UI only
+### Mailpit UI only
 
 ```bash
-make ansible-tunnel-mailhog
+make ansible-tunnel-mailpit
 ```
 
 Then open:
 
 - `http://localhost:8025`
 
-### Grafana and Mailhog UI in one tunnel
+### Grafana and Mailpit UI in one tunnel
 
 ```bash
 make ansible-tunnel-all
@@ -70,7 +70,7 @@ Kill helper targets:
 
 ```bash
 make ansible-tunnel-kill-grafana
-make ansible-tunnel-kill-mailhog
+make ansible-tunnel-kill-mailpit
 make ansible-tunnel-kill-all
 ```
 
@@ -120,15 +120,15 @@ curl -sS http://127.0.0.1/v3/api-docs | jq '.servers'
 # Backend direct inside Docker network
 docker compose -f docker-compose.server.yml exec gateway curl -sS http://backend:4001/actuator/health
 
-# Mailhog API directly on the VPS loopback
-curl -sS http://127.0.0.1:8025/api/v2/messages
+# Mailpit API directly on the VPS loopback
+curl -sS http://127.0.0.1:8025/api/v1/messages
 ```
 
 Run these from your local machine:
 
 ```bash
 curl -sS https://awesome.byst.re/v3/api-docs | jq '.servers'
-curl -i https://awesome.byst.re/mailhog/api/v2/messages
+curl -i https://awesome.byst.re/mailpit/api/v1/messages
 ```
 
 For an authenticated public-safe email visibility check, sign in first and then call:
@@ -144,6 +144,6 @@ curl -sS https://awesome.byst.re/api/v1/users/me/email-events \
 - If backend is healthy but the public domain still fails, tail both `backend` and `gateway` logs together in two terminals. Gateway errors usually show `connect() failed (111: Connection refused)` when the backend is not ready yet.
 - If nginx config changes do not seem to apply, recreate the gateway container. This repo bind-mounts a single nginx config file, and a plain `up -d` may leave the old mounted inode in place.
 - If Swagger UI tries `http://` instead of `https://`, inspect `https://awesome.byst.re/v3/api-docs` and verify `.servers[0].url`.
-- Public Mailhog routes are intentionally blocked. Inspect Mailhog through the VPS loopback `127.0.0.1:8025` or through the SSH tunnel targets instead.
+- Public Mailpit routes are intentionally blocked. Inspect Mailpit through the VPS loopback `127.0.0.1:8025` or through the SSH tunnel targets instead.
 - Postgres is intentionally not published on a host port in the server compose. Check it through Docker network access, not by expecting `localhost:5432` on the VPS.
 - `make ansible-reset-demo-state` is destructive for the server Postgres volume. It recreates the bootstrap admin and public product catalog, but it clears orders, email events, and any ad hoc demo users.

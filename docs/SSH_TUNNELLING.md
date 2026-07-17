@@ -7,9 +7,9 @@ The recommended path is to use the Ansible-backed `make` targets. They resolve S
 Current intended private UIs:
 
 - Grafana on remote `127.0.0.1:3000`
-- Mailhog UI and API on remote `127.0.0.1:8025`
+- Mailpit UI and API on remote `127.0.0.1:8025`
 
-Mailhog is private on purpose. The public demo uses application-owned endpoints such as `GET /api/v1/users/me/email-events` instead of exposing the inbox API on the public hostname.
+Mailpit is private on purpose. The public demo uses application-owned endpoints such as `GET /api/v1/users/me/email-events` instead of exposing the inbox API on the public hostname.
 
 ## Recommended usage
 
@@ -19,13 +19,13 @@ Grafana only:
 make ansible-tunnel-grafana
 ```
 
-Mailhog only:
+Mailpit only:
 
 ```bash
-make ansible-tunnel-mailhog
+make ansible-tunnel-mailpit
 ```
 
-Grafana and Mailhog together:
+Grafana and Mailpit together:
 
 ```bash
 make ansible-tunnel-all
@@ -68,13 +68,13 @@ Kill Grafana-only tunnels:
 make ansible-tunnel-kill-grafana
 ```
 
-Kill Mailhog-only tunnels:
+Kill Mailpit-only tunnels:
 
 ```bash
-make ansible-tunnel-kill-mailhog
+make ansible-tunnel-kill-mailpit
 ```
 
-Kill the combined Grafana + Mailhog tunnel:
+Kill the combined Grafana + Mailpit tunnel:
 
 ```bash
 make ansible-tunnel-kill-all
@@ -88,7 +88,7 @@ Kill Grafana-only tunnels:
 pkill -f 'ssh -N .*3000:127.0.0.1:3000'
 ```
 
-Kill Mailhog-only tunnels:
+Kill Mailpit-only tunnels:
 
 ```bash
 pkill -f 'ssh -N .*8025:127.0.0.1:8025'

@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-verify ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailhog ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailhog ansible-tunnel-kill-all
+.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-verify ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailpit ansible-tunnel-kill-all
 
 ANSIBLE_VAULT_FILE := .vault_pass
 
@@ -34,7 +34,7 @@ ansible-edit-vault:
 ansible-tunnel-grafana:
 	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 3000:127.0.0.1:3000 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
 
-ansible-tunnel-mailhog:
+ansible-tunnel-mailpit:
 	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 8025:127.0.0.1:8025 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
 
 ansible-tunnel-all:
@@ -43,7 +43,7 @@ ansible-tunnel-all:
 ansible-tunnel-kill-grafana:
 	pkill -f 'ssh .*3000:127.0.0.1:3000' || true
 
-ansible-tunnel-kill-mailhog:
+ansible-tunnel-kill-mailpit:
 	pkill -f 'ssh .*8025:127.0.0.1:8025' || true
 
 ansible-tunnel-kill-all:

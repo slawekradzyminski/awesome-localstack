@@ -1,6 +1,8 @@
 # Local SSO Flow
 
-This document explains the local SSO training setup used by the `lightweight`, `full`, and `ci` profiles. It covers both the theory behind the flow and the practical checks you can run when something does not behave as expected.
+This document explains the local SSO training setup used by the `lightweight`
+and `full` profiles. It covers both the theory behind the flow and the practical
+checks you can run when something does not behave as expected.
 
 The identity provider is Keycloak, exposed on `localhost:8082`. The application is still accessed through the gateway on `localhost:8081`.
 
@@ -300,7 +302,7 @@ The compose profiles wire the backend with these SSO settings:
 
 | Environment variable | Local value | Purpose |
 | --- | --- | --- |
-| `APP_SSO_ENABLED` | `true` in `lightweight`, `full`, and `ci` | Enables the exchange endpoint |
+| `APP_SSO_ENABLED` | `true` in `lightweight` and `full` | Enables the exchange endpoint |
 | `APP_SSO_ISSUER_URI` | `http://localhost:8082/realms/awesome-testing` | Expected token issuer |
 | `APP_SSO_JWK_SET_URI` | `http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs` | Backend-to-Keycloak signing key lookup inside Docker |
 | `APP_SSO_AUDIENCE` | `awesome-testing-frontend` | Expected client audience/authorized party |
@@ -395,7 +397,7 @@ Do not paste local demo tokens into external tools if they come from an environm
 | Browser shows `invalid_redirect_uri` | Callback URL does not match the Keycloak client | Check redirect URI in `keycloak/realm-export.json` |
 | Browser returns to callback but login fails | State mismatch, missing code, or failed token exchange | Check browser devtools network calls around `/auth/sso/callback` |
 | Backend returns `401 Invalid SSO token` | Bad signature, wrong issuer/audience, expired token, or malformed token | Decode claims and compare with discovery metadata |
-| Backend returns `404` for SSO exchange | SSO disabled in the active profile/config | Confirm you are running `lightweight`, `full`, or `ci` profile |
+| Backend returns `404` for SSO exchange | SSO disabled in the active profile/config | Confirm you are running the `lightweight` or `full` profile |
 | Backend returns `409` | Email already belongs to another auth method/provider | Check existing app users and provider mapping |
 | Keycloak discovery fails | Keycloak is not ready or container failed to import realm | Check `docker compose ps` and Keycloak logs |
 | Login works once but not after restart | Containers or imported realm state changed | Recreate the stack and confirm realm import logs |

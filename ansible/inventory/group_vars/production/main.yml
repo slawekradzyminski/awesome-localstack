@@ -93,6 +93,10 @@ verify_urls:
     status_code: 200
   - url: http://127.0.0.1/images/iphone.png
     status_code: 200
+  - url: http://127.0.0.1/mailpit/api/v1/messages
+    status_code: 404
+  - url: http://127.0.0.1/mailpit/
+    status_code: 404
   - url: http://127.0.0.1/mailhog/api/v2/messages
     status_code: 404
   - url: http://127.0.0.1/mailhog/

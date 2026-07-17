@@ -13,9 +13,9 @@ if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
     MODEL_NAME="Ollama mock"
     MODEL_CHECK=(curl -fsS -H "Content-Type: application/json" -d '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' "$MODEL_URL")
 else
-    MODEL_URL="http://model-runner.docker.internal/api/tags"
-    MODEL_NAME="Docker Model Runner"
-    MODEL_CHECK=(docker run --rm curlimages/curl:8.13.0 -fsS "$MODEL_URL")
+    MODEL_URL="http://ollama-dmr-adapter:11434/api/tags"
+    MODEL_NAME="Bonsai through the Docker Model Runner adapter"
+    MODEL_CHECK=(docker run --rm --network awesome-full_my-private-ntwk curlimages/curl:8.21.0 -fsS "$MODEL_URL")
 fi
 
 echo "Waiting for $MODEL_NAME to start..."
@@ -82,7 +82,7 @@ names=(
     "Prometheus"
     "Grafana"
     "Active MQ"
-    "Mailhog"
+    "Mailpit"
     "Email consumer"
     "Keycloak"
     "Gateway-served product image"
