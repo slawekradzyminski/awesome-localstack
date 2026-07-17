@@ -84,7 +84,7 @@ Start SSH tunnels:
 
 ```bash
 make ansible-tunnel-grafana
-make ansible-tunnel-mailhog
+make ansible-tunnel-mailpit
 make ansible-tunnel-all
 ```
 
@@ -92,7 +92,7 @@ Kill SSH tunnels:
 
 ```bash
 make ansible-tunnel-kill-grafana
-make ansible-tunnel-kill-mailhog
+make ansible-tunnel-kill-mailpit
 make ansible-tunnel-kill-all
 ```
 
@@ -128,7 +128,7 @@ This is intentional. In this project, a deploy that leaves the gateway returning
 2. Deletes the named Postgres volume for the server profile.
 3. Runs the normal `app` and `verify` roles to recreate the stack from a clean baseline.
 
-Because `mailhog` is recreated as part of the stack restart, its in-memory inbox is cleared too.
+Because `mailpit` is recreated as part of the stack restart, its in-memory inbox is cleared too.
 
 ## Patterns Used
 
@@ -152,8 +152,8 @@ The role checks:
 - `http://127.0.0.1/login`
 - `http://127.0.0.1/v3/api-docs`
 - `http://127.0.0.1/images/iphone.png`
-- `http://127.0.0.1/mailhog/api/v2/messages` returns `404`
-- `http://127.0.0.1/mailhog/` returns `404`
+- `http://127.0.0.1/mailpit/api/v1/messages` returns `404`
+- `http://127.0.0.1/mailpit/` returns `404`
 - bootstrap admin sign-in succeeds
 - authenticated `GET /api/v1/products` returns a non-empty catalog
 

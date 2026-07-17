@@ -136,7 +136,7 @@ Other useful full-profile URLs:
 - Prometheus: `http://localhost:9090/graph`
 - Grafana: `http://localhost:3000/login`
 - ActiveMQ console: `http://localhost:8161`
-- Mailhog UI: `http://localhost:8025/`
+- Mailpit UI: `http://localhost:8025/`
 - Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
 - Keycloak Admin Console: `http://localhost:8082/admin/` (`admin` / `admin`)
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
@@ -230,7 +230,7 @@ flowchart LR
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
-    M[Mailhog<br/>localhost:8025]
+    M[Mailpit<br/>localhost:8025]
     A[Ollama/DMR adapter<br/>local compatibility layer]
     O[Docker Model Runner<br/>Metal on Apple Silicon]
     P[Prometheus<br/>localhost:9090]
@@ -307,7 +307,7 @@ make ansible-reset-aitesters-state
 - `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
 - `make ansible-deploy`: converge the server stack and run post-deploy verification
 - `make ansible-verify`: run health checks without changing deployment state
-- `make ansible-reset-demo-state`: destructively reset Postgres and Mailhog-backed demo state, then redeploy
+- `make ansible-reset-demo-state`: destructively reset Postgres and Mailpit-backed demo state, then redeploy
 - `make ansible-reset-aitesters-state`: recreate only the H2-backed aitesters backend and reseed local demo data
 
 Main public URLs:
@@ -345,7 +345,7 @@ flowchart LR
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
     C[Consumer<br/>internal only]
-    M[Mailhog<br/>private only]
+    M[Mailpit<br/>private only]
     O[Ollama Mock<br/>internal only]
 
     U --> G
@@ -365,9 +365,9 @@ Production hardening in this profile:
 
 - only the gateway is published on the host
 - Postgres is not published
-- Mailhog UI is not published
-- Mailhog SMTP is not published
-- Mailhog API is not published
+- Mailpit UI is not published
+- Mailpit SMTP is not published
+- Mailpit API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
 - aitesters backend and frontend are internal-only behind the same gateway
@@ -379,7 +379,7 @@ Quick public verification:
 curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
-curl -i https://awesome.byst.re/mailhog/api/v2/messages
+curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
@@ -391,7 +391,7 @@ Expected:
 - `awesome.byst.re/login` returns `200`
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
-- `awesome.byst.re/mailhog/api/v2/messages` returns `404`
+- `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
 - `aitesters.byst.re/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`

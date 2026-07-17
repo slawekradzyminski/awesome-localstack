@@ -159,13 +159,15 @@ services:
     networks:
       - my-private-ntwk
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
+  mailpit:
+    image: axllent/mailpit:v1.30.0
     restart: always
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
     ports:
       - "8025:8025"
       - "1025:1025"
-    hostname: mailhog
+    hostname: mailpit
     networks:
       - my-private-ntwk
 
@@ -175,8 +177,14 @@ services:
     ports:
       - "4002:4002"
     hostname: consumer
+    environment:
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
     depends_on:
-      - activemq
+      activemq:
+        condition: service_started
+      mailpit:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

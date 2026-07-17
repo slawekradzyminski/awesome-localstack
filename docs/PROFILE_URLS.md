@@ -53,7 +53,7 @@ flowchart LR
     B --> DB[(Postgres 5432)]
     B --> MQ[ActiveMQ 8161/61616/5672]
     MQ --> C[Consumer 4002]
-    C --> M[Mailhog 8025/1025]
+    C --> M[Mailpit 8025/1025]
     B --> O[Ollama 11434]
     P[Prometheus 9090] --> B
     P --> C
@@ -73,7 +73,7 @@ flowchart LR
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]
     MQ --> C[Consumer internal]
-    C --> MH[Mailhog private]
+    C --> MH[Mailpit private]
     B --> O[Ollama Mock internal]
 
     G -->|aitesters.byst.re| AF[Aitesters Frontend]
@@ -125,8 +125,8 @@ Published host ports:
 | ActiveMQ console | `http://localhost:8161` | Admin console |
 | ActiveMQ JMS | `localhost:61616` | Broker port |
 | ActiveMQ AMQP | `localhost:5672` | AMQP port |
-| Mailhog UI | `http://localhost:8025/` | Dev inbox UI |
-| Mailhog SMTP | `localhost:1025` | SMTP sink |
+| Mailpit UI | `http://localhost:8025/` | Dev inbox UI |
+| Mailpit SMTP | `localhost:1025` | SMTP sink |
 | Consumer metrics | `http://localhost:4002/actuator/prometheus` | Direct metrics |
 | InfluxDB | `localhost:8086` | K6 / time-series |
 | Ollama | `http://localhost:11434/api/tags` | Raw model API |
@@ -176,7 +176,7 @@ What is not included:
 
 - Postgres
 - ActiveMQ
-- Mailhog
+- Mailpit
 - consumer
 - Prometheus
 - Grafana
@@ -267,8 +267,8 @@ Not published on the host:
 
 - Postgres `5432`
 - Grafana `3000`
-- Mailhog UI `8025`
-- Mailhog SMTP `1025`
+- Mailpit UI `8025`
+- Mailpit SMTP `1025`
 - ActiveMQ console `8161`
 - ActiveMQ JMS `61616`
 - consumer `4002`
@@ -281,9 +281,9 @@ Not published on the host:
 Special behavior:
 
 - Swagger and OpenAPI are intentionally public as part of the demo surface
-- `https://awesome.byst.re/mailhog/api/v2/messages` is blocked with `404`
-- `https://awesome.byst.re/mailhog/` is blocked with `404`
-- Mailhog remains available only through SSH tunnelling to remote `127.0.0.1:8025`
+- `https://awesome.byst.re/mailpit/api/v1/messages` is blocked with `404`
+- `https://awesome.byst.re/mailpit/` is blocked with `404`
+- Mailpit remains available only through SSH tunnelling to remote `127.0.0.1:8025`
 - `aitesters.byst.re` runs an additional backend with the Spring `local` profile
 - `aitesters.byst.re` uses H2 in-memory data and seeded local demo users, including the demo admin
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
@@ -315,7 +315,7 @@ For `awesome.byst.re`:
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
 - `/images/` -> gateway static files
-- `/mailhog`, `/mailhog/`, and `/mailhog/api/` -> `404`
+- `/mailpit`, `/mailpit/`, and `/mailpit/api/` -> `404`
 - `/` -> frontend
 
 For `aitesters.byst.re`:
@@ -373,7 +373,7 @@ Server:
 curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
-curl -i https://awesome.byst.re/mailhog/api/v2/messages
+curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
@@ -385,7 +385,7 @@ Expected:
 - `awesome.byst.re/login` returns `200`
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
-- `awesome.byst.re/mailhog/api/v2/messages` returns `404`
+- `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
 - `aitesters.byst.re/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`

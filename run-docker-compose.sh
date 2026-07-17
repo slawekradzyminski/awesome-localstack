@@ -82,7 +82,7 @@ names=(
     "Prometheus"
     "Grafana"
     "Active MQ"
-    "Mailhog"
+    "Mailpit"
     "Email consumer"
     "Keycloak"
     "Gateway-served product image"
