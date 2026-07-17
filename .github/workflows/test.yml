@@ -6,6 +6,13 @@ permissions:
   contents: read
 
 jobs:
+  verifyEdgeProxy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.0
+    - name: Verify trusted edge proxy sanitization
+      run: bash ./scripts/verify-edge-proxy.sh
+
   runDocker:
     runs-on: ubuntu-latest
     services:

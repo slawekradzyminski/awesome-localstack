@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily encrypted PostgreSQL backup for Awesome Testing
+
+[Timer]
+OnCalendar={{ postgres_backup_schedule }}
+Persistent=true
+RandomizedDelaySec=15min
+Unit=awesome-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,101 @@
+- name: Validate PostgreSQL backup encryption configuration
+  ansible.builtin.assert:
+    that:
+      - postgres_backup_encryption_passphrase | length >= 32
+    fail_msg: >-
+      Set backup_encryption_passphrase to at least 32 random characters in the
+      encrypted production vault before enabling PostgreSQL backups.
+    quiet: true
+  when: postgres_backup_enabled | bool
+
+- name: Ensure PostgreSQL backup directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ postgres_backup_root }}"
+    - "{{ postgres_backup_root }}/daily"
+    - "{{ postgres_backup_root }}/weekly"
+    - "{{ postgres_backup_environment_file | dirname }}"
+  when: postgres_backup_enabled | bool
+
+- name: Render PostgreSQL backup environment
+  ansible.builtin.template:
+    src: postgres-backup.env.j2
+    dest: "{{ postgres_backup_environment_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: postgres_backup_enabled | bool
+  no_log: true
+
+- name: Install PostgreSQL backup and restore verification scripts
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - src: postgres-backup.sh.j2
+      dest: /usr/local/sbin/awesome-postgres-backup
+    - src: postgres-restore-check.sh.j2
+      dest: /usr/local/sbin/awesome-postgres-restore-check
+  when: postgres_backup_enabled | bool
+
+- name: Install PostgreSQL backup systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - awesome-postgres-backup.service
+    - awesome-postgres-backup.timer
+    - awesome-postgres-restore-check.service
+    - awesome-postgres-restore-check.timer
+  register: postgres_backup_systemd_units
+  when: postgres_backup_enabled | bool
+
+- name: Reload systemd after installing PostgreSQL backup units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when:
+    - postgres_backup_enabled | bool
+    - postgres_backup_systemd_units is changed
+
+- name: Check whether the deployed PostgreSQL service is running
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} ps -q postgres
+    chdir: "{{ app_dir }}"
+  register: deployed_postgres_container
+  changed_when: false
+  failed_when: false
+  when:
+    - postgres_backup_enabled | bool
+    - postgres_backup_pre_deploy | bool
+
+- name: Create encrypted PostgreSQL backup before deployment
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/awesome-postgres-backup pre-deploy
+  register: postgres_pre_deploy_backup
+  changed_when: true
+  when:
+    - postgres_backup_enabled | bool
+    - postgres_backup_pre_deploy | bool
+    - deployed_postgres_container.rc == 0
+    - deployed_postgres_container.stdout | trim | length > 0
+
+- name: Enable PostgreSQL backup and restore verification timers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - awesome-postgres-backup.timer
+    - awesome-postgres-restore-check.timer
+  when: postgres_backup_enabled | bool

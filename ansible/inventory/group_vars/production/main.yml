@@ -19,6 +19,7 @@ base_packages:
   - ca-certificates
   - curl
   - gnupg
+  - openssl
   - rsync
 
 ssh_hardening_enabled: true
@@ -43,6 +44,20 @@ journald_system_max_use: 100M
 journald_max_retention_sec: 14day
 
 app_compose_src: docker-compose.server.yml
+
+postgres_backup_enabled: true
+postgres_backup_root: /var/backups/awesome-localstack/postgres
+postgres_backup_environment_file: /etc/awesome-localstack/postgres-backup.env
+postgres_backup_daily_retention: 7
+postgres_backup_weekly_retention: 4
+postgres_backup_schedule: "*-*-* 02:15:00"
+postgres_restore_check_schedule: "Sun *-*-* 04:15:00"
+postgres_backup_pre_deploy: true
+postgres_backup_remote_target: "{{ backup_remote_target | default('', true) }}"
+postgres_backup_encryption_passphrase: "{{ backup_encryption_passphrase | default('', true) }}"
+postgres_backup_database: testdb
+postgres_backup_user: postgres
+postgres_restore_image: postgres:16.14-bookworm
 
 app_copy_paths:
   - nginx

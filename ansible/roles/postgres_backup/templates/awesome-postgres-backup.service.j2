@@ -1,0 +1,14 @@
+[Unit]
+Description=Encrypted PostgreSQL backup for Awesome Testing
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock --nonblock /run/awesome-postgres-backup.lock /usr/local/sbin/awesome-postgres-backup scheduled
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=30min

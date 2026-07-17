@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly restore verification for Awesome Testing PostgreSQL backups
+
+[Timer]
+OnCalendar={{ postgres_restore_check_schedule }}
+Persistent=true
+RandomizedDelaySec=15min
+Unit=awesome-postgres-restore-check.service
+
+[Install]
+WantedBy=timers.target

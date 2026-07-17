@@ -1,3 +1,23 @@
+- name: Check for an existing deployed Compose file
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/{{ app_compose_file }}"
+  register: deployed_compose_file
+
+- name: Read the existing deployed Compose file
+  ansible.builtin.slurp:
+    path: "{{ app_dir }}/{{ app_compose_file }}"
+  register: deployed_compose_content
+  when: deployed_compose_file.stat.exists
+
+- name: Stop legacy public gateway before introducing the host-network edge
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} stop gateway
+    chdir: "{{ app_dir }}"
+  when:
+    - deployed_compose_file.stat.exists
+    - deployed_compose_content is defined
+    - "'\n  edge:' not in (deployed_compose_content.content | b64decode)"
+
 - name: Ensure application directory exists
   ansible.builtin.file:
     path: "{{ app_dir }}"
@@ -159,6 +179,7 @@
       - "{{ app_compose_file }}"
     services:
       - gateway
+      - edge
     recreate: always
     state: present
     wait: true

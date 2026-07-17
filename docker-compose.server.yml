@@ -60,7 +60,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.4
+    image: slawekradzyminski/frontend:3.7.5
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -104,7 +104,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.4
+    image: slawekradzyminski/frontend:3.7.5
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -113,7 +113,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.29.7-perl
+    image: nginx:1.31.2-trixie
     restart: unless-stopped
     logging: *default-logging
     depends_on:
@@ -122,7 +122,7 @@ services:
       - aitesters-frontend
       - aitesters-backend
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./nginx/conf.d/app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./images:/usr/share/nginx/html/images:ro
@@ -130,6 +130,17 @@ services:
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
     networks:
       - my-private-ntwk
+
+  edge:
+    image: nginx:1.31.2-trixie
+    restart: unless-stopped
+    network_mode: host
+    logging: *default-logging
+    depends_on:
+      - gateway
+    volumes:
+      - ./nginx/conf.d/edge-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
 
   prometheus:
     image: prom/prometheus:v3.1.0
