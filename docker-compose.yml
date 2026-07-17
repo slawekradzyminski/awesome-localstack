@@ -127,11 +127,15 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:13.1.0
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
     volumes:
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./grafana/provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:/etc/grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:ro
+      - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
+      - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
     restart: always
     ports:
       - "3000:3000"

@@ -157,7 +157,7 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:13.1.0
     restart: unless-stopped
     logging: *default-logging
     env_file:
