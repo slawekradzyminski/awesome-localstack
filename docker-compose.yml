@@ -21,12 +21,28 @@ services:
       APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
       APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama-dmr-adapter:11434}
+      OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
+    models:
+      local_llm:
+        endpoint_var: DMR_MODEL_ENDPOINT
+        model_var: OLLAMA_MODEL
     depends_on:
       - activemq
       - keycloak
-      - ollama
+      - ollama-dmr-adapter
       - postgres
+    networks:
+      - my-private-ntwk
+
+  ollama-dmr-adapter:
+    image: awesome-localstack/ollama-dmr-adapter:local
+    build:
+      context: ./ollama-dmr-adapter
+    restart: unless-stopped
+    environment:
+      UPSTREAM_HOST: model-runner.docker.internal
+      UPSTREAM_PORT: "80"
     networks:
       - my-private-ntwk
 
@@ -179,20 +195,14 @@ services:
     networks:
       - my-private-ntwk
 
-  ollama:
-    image: slawekradzyminski/ollama-qwen35-2b:0.18.3-2
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_MODELS=/models
-    networks:
-      - my-private-ntwk
-
 volumes:
   influxdb-storage:
   postgres-data:
-  ollama-data:
+
+models:
+  local_llm:
+    model: ${OLLAMA_MODEL:-hf.co/prism-ml/Bonsai-27B-gguf:Q1_0}
+    context_size: 8192
 
 networks:
   my-private-ntwk:
