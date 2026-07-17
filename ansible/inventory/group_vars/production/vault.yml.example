@@ -23,5 +23,14 @@ app_mfa_encryption_password: replace-with-at-least-32-random-characters
 app_mfa_encryption_salt: replace-with-at-least-16-random-bytes-in-hex
 # Rotating this value invalidates existing backend access tokens.
 jwt_secret_key: replace-with-at-least-32-random-bytes
+
+# Required when postgres_backup_enabled is true. Keep a separate offline copy:
+# losing this passphrase makes encrypted backups unrecoverable.
+backup_encryption_passphrase: replace-with-at-least-32-random-characters
+
+# Optional rsync destination for encrypted archives. The destination is expected
+# to exist and SSH host-key/authentication setup must already be configured.
+# Example: backup@example.net:/srv/backups/awesome-testing
+backup_remote_target: ""
 # Grants trusted E2E automation access to the protected aitesters email outbox.
 local_email_outbox_access_key: replace-with-at-least-32-random-bytes

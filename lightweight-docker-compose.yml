@@ -62,7 +62,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.29.7-perl
+    image: nginx:1.31.2-trixie
     restart: unless-stopped
     depends_on:
       - frontend

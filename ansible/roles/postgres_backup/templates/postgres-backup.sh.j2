@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+source {{ postgres_backup_environment_file }}
+export BACKUP_ENCRYPTION_PASSPHRASE
+
+backup_kind="${1:-scheduled}"
+if [[ ! "${backup_kind}" =~ ^[a-z0-9-]+$ ]]; then
+  echo "Backup kind must contain only lowercase letters, digits, and hyphens" >&2
+  exit 2
+fi
+daily_dir="${BACKUP_ROOT}/daily"
+weekly_dir="${BACKUP_ROOT}/weekly"
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+backup_name="awesome-${POSTGRES_DATABASE}-${timestamp}-${backup_kind}.sql.gz.enc"
+backup_path="${daily_dir}/${backup_name}"
+temporary_path="$(mktemp "${daily_dir}/.${backup_name}.tmp.XXXXXX")"
+
+cleanup() {
+  if [[ -f "${temporary_path}" ]]; then
+    rm -f -- "${temporary_path}"
+  fi
+}
+trap cleanup EXIT
+
+retain_newest() {
+  local directory="$1"
+  local keep="$2"
+  local index
+  local -a backups
+
+  backups=()
+  while IFS= read -r backup; do
+    backups+=("${backup}")
+  done < <(find "${directory}" -maxdepth 1 -type f -name '*.sql.gz.enc' -print | sort -r)
+
+  index="${keep}"
+  while [[ -n "${backups[index]:-}" ]]; do
+    rm -f -- "${backups[index]}" "${backups[index]}.sha256"
+    index=$((index + 1))
+  done
+}
+
+echo "Creating encrypted PostgreSQL backup ${backup_path}"
+docker compose -f "${APP_COMPOSE_FILE}" exec -T postgres \
+  pg_dump \
+    --clean \
+    --if-exists \
+    --no-owner \
+    --no-privileges \
+    --username "${POSTGRES_USER}" \
+    --dbname "${POSTGRES_DATABASE}" \
+  | gzip -9 \
+  | openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
+      -pass env:BACKUP_ENCRYPTION_PASSPHRASE \
+      -out "${temporary_path}"
+
+mv -- "${temporary_path}" "${backup_path}"
+(
+  cd "${daily_dir}"
+  sha256sum "${backup_name}" > "${backup_name}.sha256"
+)
+
+if [[ "$(date -u +%u)" == "7" ]]; then
+  weekly_path="${weekly_dir}/${backup_name}"
+  install -m 0600 "${backup_path}" "${weekly_path}"
+  (
+    cd "${weekly_dir}"
+    sha256sum "${backup_name}" > "${backup_name}.sha256"
+  )
+fi
+
+retain_newest "${daily_dir}" "${BACKUP_DAILY_RETENTION}"
+retain_newest "${weekly_dir}" "${BACKUP_WEEKLY_RETENTION}"
+
+if [[ -n "${BACKUP_REMOTE_TARGET}" ]]; then
+  rsync --archive --chmod=F600 \
+    "${backup_path}" "${backup_path}.sha256" \
+    "${BACKUP_REMOTE_TARGET%/}/"
+fi
+
+echo "PostgreSQL backup completed: ${backup_path}"

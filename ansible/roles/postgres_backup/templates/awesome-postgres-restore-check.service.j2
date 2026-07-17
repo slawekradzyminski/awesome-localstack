@@ -1,0 +1,14 @@
+[Unit]
+Description=Verify the latest Awesome Testing PostgreSQL backup
+Requires=docker.service
+After=docker.service awesome-postgres-backup.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock --nonblock /run/awesome-postgres-restore-check.lock /usr/local/sbin/awesome-postgres-restore-check
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=30min

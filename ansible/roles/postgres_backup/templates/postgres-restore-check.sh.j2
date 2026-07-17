@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+source {{ postgres_backup_environment_file }}
+export BACKUP_ENCRYPTION_PASSPHRASE
+
+daily_dir="${BACKUP_ROOT}/daily"
+container_name="awesome-postgres-restore-check-$$"
+latest_backup="$(find "${daily_dir}" -maxdepth 1 -type f -name '*.sql.gz.enc' -print | sort -r | sed -n '1p')"
+
+if [[ -z "${latest_backup}" ]]; then
+  echo "No PostgreSQL backup is available for restore verification" >&2
+  exit 1
+fi
+
+backup_name="$(basename "${latest_backup}")"
+(
+  cd "${daily_dir}"
+  sha256sum --check "${backup_name}.sha256"
+)
+
+cleanup() {
+  docker rm --force "${container_name}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+if ! docker image inspect "${POSTGRES_RESTORE_IMAGE}" >/dev/null 2>&1; then
+  docker pull "${POSTGRES_RESTORE_IMAGE}"
+fi
+
+docker run --detach --rm \
+  --name "${container_name}" \
+  --tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=1073741824 \
+  --env POSTGRES_PASSWORD=restore-check-only \
+  --env POSTGRES_DB=restorecheck \
+  "${POSTGRES_RESTORE_IMAGE}" >/dev/null
+
+for _ in $(seq 1 60); do
+  if docker exec "${container_name}" pg_isready --username postgres --dbname restorecheck >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+docker exec "${container_name}" pg_isready --username postgres --dbname restorecheck >/dev/null
+
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+    -pass env:BACKUP_ENCRYPTION_PASSPHRASE \
+    -in "${latest_backup}" \
+  | gzip -dc \
+  | docker exec -i "${container_name}" \
+      psql --set ON_ERROR_STOP=1 --username postgres --dbname restorecheck >/dev/null
+
+table_count="$(
+  docker exec "${container_name}" \
+    psql --tuples-only --no-align --username postgres --dbname restorecheck \
+      --command "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"
+)"
+
+if [[ ! "${table_count}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Restore verification completed but no public tables were found" >&2
+  exit 1
+fi
+
+echo "Restore verification passed for ${latest_backup} (${table_count} public tables)"
