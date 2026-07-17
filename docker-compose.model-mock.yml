@@ -1,0 +1,22 @@
+services:
+  backend:
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    models: !reset []
+    depends_on: !override
+      - activemq
+      - keycloak
+      - ollama
+      - postgres
+
+  ollama-dmr-adapter:
+    profiles:
+      - dmr
+
+  ollama:
+    image: slawekradzyminski/ollama-mock:1.0.5
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    networks:
+      - my-private-ntwk

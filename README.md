@@ -114,12 +114,13 @@ docker compose -f lightweight-docker-compose.yml down
 
 ## Full Profile
 
-Use this when you want the local app plus monitoring, DB, queueing, email testing, consumer, and real Ollama.
+Use this when you want the local app plus monitoring, DB, queueing, email testing,
+consumer, and a real GPU-accelerated local model.
 
 Start it with:
 
 ```bash
-docker compose -f docker-compose.yml up -d
+docker compose up -d
 ```
 
 This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
@@ -139,54 +140,61 @@ Other useful full-profile URLs:
 - Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
 - Keycloak Admin Console: `http://localhost:8082/admin/` (`admin` / `admin`)
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
-- Ollama: `http://localhost:11434/api/tags`
+- Docker Model Runner status: `docker model status`
 - Postgres: `localhost:5432`
 
 If you need to refresh seeded PostgreSQL demo data after fixture or credential changes:
 
 ```bash
-docker compose -f docker-compose.yml down -v
-docker compose -f docker-compose.yml up -d
+docker compose down -v
+docker compose up -d
 ```
 
-The Ollama container in this profile is expected to expose `qwen3.5:2b` from the published `ollama-qwen35-2b` image.
+The full profile declares Bonsai directly as a Compose model:
 
-### Native Ollama on macOS
+```text
+hf.co/prism-ml/Bonsai-27B-gguf:Q1_0
+```
 
-Docker Desktop on macOS cannot pass the Apple GPU through to a Linux container. For faster local LLM demos on Apple Silicon, run Ollama natively on macOS and keep the rest of the stack in Docker.
+Docker Desktop Model Runner downloads the GGUF once, caches it outside the
+application containers, and serves its Ollama-compatible API with the Metal
+llama.cpp backend on Apple Silicon. This avoids the large custom Ollama image
+and keeps normal startup to one command.
 
-Start native Ollama:
+Compose also builds a small, model-neutral `ollama-dmr-adapter` image locally.
+It normalizes the two wire-format differences needed by the current backend:
+null JSON-Schema members in requests and streamed/stringified tool arguments
+in responses. The adapter does not contain the model; its local image is about
+17 MB, while Docker Model Runner owns the cached GGUF.
+
+Enable Model Runner once on a new Mac:
 
 ```bash
-ollama pull qwen3.5:2b
-OLLAMA_HOST=0.0.0.0:11434 ollama serve
+docker desktop enable model-runner
+docker model status
 ```
 
-In another terminal, start the full stack with the native Ollama override:
+Then normal startup is always:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.native-ollama.yml up -d --remove-orphans
+docker compose up -d
 ```
 
-Or use the helper script:
+To use a different Docker Model Runner or Hugging Face GGUF artifact, override
+`OLLAMA_MODEL` without editing Compose:
 
 ```bash
-./run-docker-compose-native-ollama.sh
+OLLAMA_MODEL=hf.co/unsloth/Qwen3.5-2B-GGUF:Q4_K_M docker compose up -d
 ```
 
-To test another local model, override `OLLAMA_MODEL`; the helper pulls it before starting the stack:
+The model name sent from the frontend must match the selected artifact. The
+frontend model field remains user-editable, so it can be changed at runtime.
 
-```bash
-OLLAMA_MODEL=llama3.2:3b ./run-docker-compose-native-ollama.sh
-```
-
-The override points the backend to `http://host.docker.internal:11434` and disables the containerized Ollama service unless the `docker-ollama` profile is explicitly enabled.
-
-Verify Docker can reach the native Ollama server:
+Verify the Ollama-compatible endpoint from a container:
 
 ```bash
 docker run --rm curlimages/curl:8.13.0 \
-  http://host.docker.internal:11434/api/tags
+  http://model-runner.docker.internal/api/tags
 ```
 
 SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
@@ -212,7 +220,8 @@ flowchart LR
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
     M[Mailhog<br/>localhost:8025]
-    O[Ollama<br/>localhost:11434]
+    A[Ollama/DMR adapter<br/>local compatibility layer]
+    O[Docker Model Runner<br/>Metal on Apple Silicon]
     P[Prometheus<br/>localhost:9090]
     GR[Grafana<br/>localhost:3000]
     I[InfluxDB<br/>localhost:8086]
@@ -224,7 +233,8 @@ flowchart LR
     B --> MQ
     MQ --> C
     C --> M
-    B --> O
+    B --> A
+    A --> O
     P --> B
     P --> C
     GR --> P

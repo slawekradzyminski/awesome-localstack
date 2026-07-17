@@ -1,7 +1,35 @@
 #!/bin/bash
 
-# Start the full profile explicitly
-docker compose -f docker-compose.yml up -d
+# Start the full profile explicitly. CI opts into a deterministic mock because
+# hosted runners do not provide Docker Desktop Model Runner.
+COMPOSE_FILES=(-f docker-compose.yml)
+if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
+    COMPOSE_FILES+=(-f docker-compose.model-mock.yml)
+fi
+docker compose "${COMPOSE_FILES[@]}" up -d
+
+if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
+    MODEL_URL="http://localhost:11434/api/generate"
+    MODEL_NAME="Ollama mock"
+    MODEL_CHECK=(curl -fsS -H "Content-Type: application/json" -d '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' "$MODEL_URL")
+else
+    MODEL_URL="http://model-runner.docker.internal/api/tags"
+    MODEL_NAME="Docker Model Runner"
+    MODEL_CHECK=(docker run --rm curlimages/curl:8.13.0 -fsS "$MODEL_URL")
+fi
+
+echo "Waiting for $MODEL_NAME to start..."
+for attempt in {1..120}; do
+    if "${MODEL_CHECK[@]}" >/dev/null 2>&1; then
+        echo "$MODEL_NAME started successfully."
+        break
+    fi
+    if [ "$attempt" -eq 120 ]; then
+        echo "$MODEL_NAME did not start within 2 minutes. Exiting."
+        exit 1
+    fi
+    sleep 1
+done
 
 # Function to wait for an endpoint to return HTTP 200
 wait_for_http_200() {
@@ -45,7 +73,6 @@ urls=(
     "http://localhost:8161"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
-    "http://localhost:11434/api/tags"
     "http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration"
     "http://localhost:8081/images/applewatch.png"
 )
@@ -57,7 +84,6 @@ names=(
     "Active MQ"
     "Mailhog"
     "Email consumer"
-    "Ollama"
     "Keycloak"
     "Gateway-served product image"
 )

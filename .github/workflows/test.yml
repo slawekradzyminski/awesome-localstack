@@ -23,7 +23,16 @@ jobs:
     steps:
     - uses: actions/checkout@v7.0.0
     - name: Build and run Docker Compose
-      run: bash ./run-docker-compose.sh
+      run: USE_OLLAMA_MOCK=true bash ./run-docker-compose.sh
+
+  verifyOllamaConfig:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.0
+    - name: Verify Docker Model Runner and mock overrides
+      run: bash ./scripts/verify-ollama-config.sh
+    - name: Test Docker Model Runner adapter
+      run: python3 -m unittest ollama-dmr-adapter/test_adapter.py
 
   runDocker-CI:
     runs-on: ubuntu-latest
