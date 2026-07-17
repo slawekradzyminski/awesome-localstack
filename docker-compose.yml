@@ -115,7 +115,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.13.0
     restart: always
     volumes:
       - ./prometheus/:/etc/prometheus/
