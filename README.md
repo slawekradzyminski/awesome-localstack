@@ -190,14 +190,25 @@ OLLAMA_MODEL=hf.co/unsloth/Qwen3.5-2B-GGUF:Q4_K_M docker compose up -d
 The model name sent from the frontend must match the selected artifact. The
 frontend model field remains user-editable, so it can be changed at runtime.
 
-Verify the Ollama-compatible endpoint from a container:
+Verify the actual Compose path (backend -> adapter -> Docker Model Runner):
 
 ```bash
-docker run --rm curlimages/curl:8.13.0 \
-  http://model-runner.docker.internal/api/tags
+docker compose exec -T backend printenv OLLAMA_BASE_URL
+docker run --rm --network awesome-full_my-private-ntwk \
+  curlimages/curl:8.21.0 \
+  http://ollama-dmr-adapter:11434/api/tags
+docker model ps
 ```
 
-SSO is enabled in the local `lightweight`, `full`, and `ci` compose profiles. Those profiles all start Keycloak and configure the backend with the local issuer and JWK endpoint. The `server` profile should not use this local training realm by default; production/server SSO needs a real issuer, real redirect URLs, and managed credentials configured deliberately for that deployment.
+Docker Model Runner models are not containers, so Bonsai appears in
+`docker model ps`, not `docker compose ps`. Models are loaded lazily on the
+first inference request.
+
+SSO is enabled in the local `lightweight` and `full` compose profiles. Both
+profiles start Keycloak and configure the backend with the local issuer and JWK
+endpoint. The `server` profile should not use this local training realm by
+default; production/server SSO needs a real issuer, real redirect URLs, and
+managed credentials configured deliberately for that deployment.
 
 Social login mock users (simulated Google and GitHub via Keycloak brokering):
 
@@ -262,7 +273,7 @@ Database access:
 Connect with Docker:
 
 ```bash
-docker exec -it postgres psql -U postgres -d testdb
+docker compose exec postgres psql -U postgres -d testdb
 ```
 
 Useful logs:
