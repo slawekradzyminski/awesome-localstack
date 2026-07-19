@@ -62,13 +62,15 @@ The legacy `LLM` navigation entry should remain for now. It exercises existing g
 
 ## Immutable image and version strategy
 
-Every production release is a three-repository compatibility set, even when only one image changed. The initial standalone Lab release uses:
+Every production release selects a five-image first-party compatibility set, even when only one image changed. Application repositories own image publication; Awesome LocalStack owns the reviewed combination. The current standalone Lab release uses:
 
 | Component | Immutable release reference |
 | --- | --- |
 | backend | `slawekradzyminski/backend:3.7.10@sha256:2706213591b4cd94fcbb6f295ace9c5da6c55acca08fd2f7c63666803c6e9cd9` |
 | primary frontend | `slawekradzyminski/frontend:3.7.7@sha256:a2a6f65f8c94aba11e071374bc325533c746757bd6ad6bbe0924e19e93c21627` |
 | AI Lab | `slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc` |
+| JMS consumer | `slawekradzyminski/consumer:3.3.3@sha256:60d6dc40846c2437392c953d89c71bcd7fa5c63729bae9d887cc0501fac4d55f` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.5@sha256:2a1af2cbe85a838a6ce1febe00cac8f8bd63cc73f367468dc8c82772f2038e89` |
 
 These are registry-published multi-platform manifests. Do not deploy `latest`, a local-only tag, or a tag before its manifest can be pulled on the server architecture. A later release must replace the complete compatibility set intentionally and record its new digests.
 
@@ -85,7 +87,11 @@ Before changing Compose references, verify each artifact:
 docker buildx imagetools inspect slawekradzyminski/ai-learning-lab:<release-tag>
 docker buildx imagetools inspect slawekradzyminski/frontend:<release-tag>
 docker buildx imagetools inspect slawekradzyminski/backend:<release-tag>
+docker buildx imagetools inspect slawekradzyminski/consumer:<release-tag>
+docker buildx imagetools inspect slawekradzyminski/ollama-mock:<release-tag>
 ```
+
+Run `python3 scripts/verify-release-images.py --remote` to check the complete reviewed set. The general repository-owned publishing contract is documented in [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md).
 
 Record the selected tags, digests, Git commits, and course-test run in the release or pull-request description. The Compose file remains the reviewable source of the production compatibility set; `AI_LAB_IMAGE` is useful for candidate smoke tests, but production should converge to the reviewed immutable reference.
 
@@ -105,8 +111,8 @@ Keep course essays, diagrams, slide data, tests, and implementation plans in the
 
 ## Pre-deployment gates
 
-1. Merge green commits to the default branch in the backend, frontend, and AI Lab repositories.
-2. Publish the three candidate images and verify their registry manifests and digests.
+1. Merge green commits to the default branch in every changed first-party application repository.
+2. Publish the changed candidate images and verify the complete five-image registry set and digests.
 3. Update only the intended production image references in `docker-compose.server.yml`.
 4. Validate every Compose combination and nginx configuration.
 5. Run the adapter, inspector, and cross-repository gateway tests.
