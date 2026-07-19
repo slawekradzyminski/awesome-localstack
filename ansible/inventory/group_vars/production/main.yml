@@ -102,5 +102,13 @@ verify_urls:
   - url: http://127.0.0.1/mailhog/
     status_code: 404
 
+verify_ai_lab_urls:
+  - url: http://127.0.0.1/learn/
+    content_pattern: "<title>AI Learning Lab</title>"
+  - url: http://127.0.0.1/learn/how-llm-works/course/attention
+    content_pattern: "<title>AI Learning Lab</title>"
+  - url: http://127.0.0.1/learn/how-ai-agent-works/course/agent-loop
+    content_pattern: "<title>AI Learning Lab</title>"
+
 verify_retries: 12
 verify_delay_seconds: 10

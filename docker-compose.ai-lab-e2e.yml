@@ -1,0 +1,56 @@
+name: awesome-ai-lab-e2e
+
+services:
+  frontend:
+    image: awesome-localstack/frontend:e2e
+    build:
+      context: ${FRONTEND_BUILD_CONTEXT:-../vite-react-frontend}
+      dockerfile: Dockerfile
+    expose:
+      - "80"
+    networks:
+      - test-network
+
+  ai-learning-lab:
+    image: awesome-localstack/ai-learning-lab:e2e
+    build:
+      context: ${AI_LAB_BUILD_CONTEXT:-../ai-learning-lab}
+      dockerfile: Dockerfile
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks:
+      - test-network
+
+  backend:
+    image: nginx:1.31.2-trixie
+    expose:
+      - "80"
+    networks:
+      - test-network
+
+  gateway:
+    image: nginx:1.31.2-trixie
+    depends_on:
+      ai-learning-lab:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${AI_LAB_E2E_PORT:-18081}:80"
+    volumes:
+      - ./nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./images:/usr/share/nginx/html/images:ro
+      - ./branding:/usr/share/nginx/html/branding:ro
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

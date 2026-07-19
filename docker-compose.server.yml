@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.9
+    image: slawekradzyminski/backend:3.7.10@sha256:2706213591b4cd94fcbb6f295ace9c5da6c55acca08fd2f7c63666803c6e9cd9
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -60,11 +60,28 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.6
+    # Release independently from aitesters-frontend. Do not update both tags
+    # unless the AI Lab route is intentionally enabled on both hostnames.
+    image: slawekradzyminski/frontend:3.7.7@sha256:a2a6f65f8c94aba11e071374bc325533c746757bd6ad6bbe0924e19e93c21627
     restart: unless-stopped
     logging: *default-logging
     expose:
       - "80"
+    networks:
+      - my-private-ntwk
+
+  ai-learning-lab:
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc}
+    restart: unless-stopped
+    logging: *default-logging
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     networks:
       - my-private-ntwk
 
@@ -104,6 +121,8 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
+    # Kept on the recorded-course-compatible baseline until the aitesters host
+    # receives an explicit /learn routing decision.
     image: slawekradzyminski/frontend:3.7.6
     restart: unless-stopped
     logging: *default-logging
@@ -117,10 +136,16 @@ services:
     restart: unless-stopped
     logging: *default-logging
     depends_on:
-      - frontend
-      - backend
-      - aitesters-frontend
-      - aitesters-backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      ai-learning-lab:
+        condition: service_healthy
+      aitesters-frontend:
+        condition: service_started
+      aitesters-backend:
+        condition: service_started
     ports:
       - "127.0.0.1:8080:80"
     volumes:

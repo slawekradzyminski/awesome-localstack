@@ -93,11 +93,30 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(0.2, request["temperature"])
         self.assertEqual(10, request["max_tokens"])
 
-    def test_does_not_translate_raw_learning_request(self) -> None:
+    def test_translates_raw_logprob_request_to_text_completion(self) -> None:
+        payload = {
+            "model": "bonsai",
+            "prompt": "The capital of France is",
+            "stream": False,
+            "raw": True,
+            "logprobs": True,
+            "top_logprobs": 5,
+            "options": {"temperature": 1, "num_predict": 1},
+        }
+
+        self.assertTrue(adapter.should_translate_learning_request("/api/generate", payload))
+        request = adapter.translate_ollama_completion_request(payload)
+
+        self.assertEqual("The capital of France is", request["prompt"])
+        self.assertEqual(1, request["max_tokens"])
+        self.assertEqual(5, request["logprobs"])
+        self.assertNotIn("raw", request)
+
+    def test_keeps_raw_token_count_request_on_ollama_endpoint(self) -> None:
+        payload = {"think": False, "raw": True}
+        self.assertFalse(adapter.should_translate_learning_request("/api/generate", payload))
         self.assertFalse(
-            adapter.should_translate_thinking_request(
-                "/api/generate", {"think": False, "raw": True}
-            )
+            adapter.should_translate_thinking_request("/api/generate", payload)
         )
 
     def test_keeps_thinking_enabled_request_on_ollama_endpoint(self) -> None:
@@ -158,6 +177,43 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual("OK", result["response"])
         self.assertFalse(result["done"])
         self.assertNotIn("thinking", result)
+
+    def test_converts_openai_completion_logprobs_to_ollama(self) -> None:
+        line = json.dumps(
+            {
+                "choices": [
+                    {
+                        "text": " Paris",
+                        "finish_reason": "length",
+                        "logprobs": {
+                            "content": [
+                                {
+                                    "token": " Paris",
+                                    "logprob": -0.2,
+                                    "top_logprobs": [
+                                        {"token": " Paris", "logprob": -0.2},
+                                        {"token": " London", "logprob": -2.0},
+                                    ],
+                                }
+                            ]
+                        },
+                    }
+                ],
+                "created": 123,
+                "object": "text_completion",
+                "usage": {"prompt_tokens": 5, "completion_tokens": 1},
+            }
+        ).encode()
+
+        result = json.loads(
+            adapter.normalize_openai_response_line(line, "generate", "bonsai")
+        )
+
+        self.assertEqual(" Paris", result["response"])
+        self.assertEqual(" Paris", result["logprobs"][0]["token"])
+        self.assertEqual(" London", result["logprobs"][0]["top_logprobs"][1]["token"])
+        self.assertEqual(5, result["prompt_eval_count"])
+        self.assertEqual(1, result["eval_count"])
 
     def test_converts_streamed_openai_tool_arguments_to_ollama_object(self) -> None:
         states = {}

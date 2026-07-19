@@ -1,0 +1,60 @@
+services:
+  backend:
+    image: awesome-localstack/backend:local
+    pull_policy: build
+    build:
+      context: ${BACKEND_BUILD_CONTEXT:-../test-secure-backend}
+      dockerfile: Dockerfile
+    environment:
+      GPT2_INSPECTOR_BASE_URL: http://gpt2-inspector:8000
+    depends_on:
+      gpt2-inspector:
+        condition: service_healthy
+
+  frontend:
+    image: awesome-localstack/frontend:local
+    pull_policy: build
+    build:
+      context: ${FRONTEND_BUILD_CONTEXT:-../vite-react-frontend}
+      dockerfile: Dockerfile
+
+  ai-learning-lab:
+    image: awesome-localstack/ai-learning-lab:local
+    pull_policy: build
+    build:
+      context: ${AI_LAB_BUILD_CONTEXT:-../ai-learning-lab}
+      dockerfile: Dockerfile
+      args:
+        VITE_AI_LIVE_RUNTIME_ENABLED: "true"
+
+  gpt2-inspector:
+    image: awesome-localstack/gpt2-inspector:local
+    pull_policy: build
+    build:
+      context: ./gpt2-inspector
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      GPT2_MODEL_ID: openai-community/gpt2
+      GPT2_MODEL_REVISION: 607a30d783dfa663caf39e06633721c8d4cfcd7e
+      HF_HOME: /model-cache
+    volumes:
+      - gpt2-model-cache:/model-cache
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()
+      interval: 10s
+      timeout: 6s
+      retries: 60
+      start_period: 10s
+    networks:
+      - my-private-ntwk
+
+volumes:
+  gpt2-model-cache:

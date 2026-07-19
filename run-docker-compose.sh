@@ -6,6 +6,9 @@ COMPOSE_FILES=(-f docker-compose.yml)
 if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
     COMPOSE_FILES+=(-f docker-compose.model-mock.yml)
 fi
+if [ "${USE_AI_LAB_CI_STUB:-false}" = "true" ]; then
+    COMPOSE_FILES+=(-f docker-compose.ai-lab-ci.yml)
+fi
 docker compose "${COMPOSE_FILES[@]}" up -d --remove-orphans
 
 if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
@@ -68,6 +71,8 @@ wait_for_http_200() {
 urls=(
     "http://localhost:8081/swagger-ui/index.html"
     "http://localhost:8081/login"
+    "http://localhost:8081/learn/"
+    "http://localhost:8081/learn/how-llm-works/course/attention"
     "http://localhost:9090/graph"
     "http://localhost:3000/login"
     "http://localhost:8161"
@@ -79,6 +84,8 @@ urls=(
 names=(
     "Backend"
     "Frontend"
+    "AI Learning Lab"
+    "AI Learning Lab deep course route"
     "Prometheus"
     "Grafana"
     "Active MQ"

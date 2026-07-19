@@ -20,6 +20,19 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify AI Learning Lab shell and recorded deep course routes
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    status_code: 200
+    return_content: true
+  loop: "{{ verify_ai_lab_urls }}"
+  register: verify_ai_lab_http_result
+  until: >-
+    verify_ai_lab_http_result.status == 200 and
+    (verify_ai_lab_http_result.content is search(item.content_pattern))
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Sign in with bootstrap admin for authenticated verification
   ansible.builtin.uri:
     url: http://127.0.0.1/api/v1/users/signin
