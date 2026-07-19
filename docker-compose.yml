@@ -2,7 +2,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.10@sha256:2706213591b4cd94fcbb6f295ace9c5da6c55acca08fd2f7c63666803c6e9cd9
+    image: slawekradzyminski/backend:3.7.11@sha256:fb22a175b015a27b5d4f9a65784cf3bea59b35b33845f6c22a17a5cc2a9bfd68
     restart: always
     expose:
       - "4001"
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.7@sha256:a2a6f65f8c94aba11e071374bc325533c746757bd6ad6bbe0924e19e93c21627
+    image: slawekradzyminski/frontend:3.7.8@sha256:e76c0e6ec1febc78a944ead7043f37cdc8bb3aff2c2d8d50b010ad74e983ae7f
     restart: always
     expose:
       - "80"
@@ -71,7 +71,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.2@sha256:632eaefe25727c0cbbec606ec0a65bd077f902f5001fc4b1fc7119c0634d60dc}
     restart: always
     expose:
       - "80"
@@ -210,7 +210,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.3@sha256:60d6dc40846c2437392c953d89c71bcd7fa5c63729bae9d887cc0501fac4d55f
+    image: slawekradzyminski/consumer:3.3.4@sha256:fb3aa512dca5e216dac77b2445da2a194dbad9a6ca66f6fd6b595d854b991726
     restart: always
     ports:
       - "4002:4002"
