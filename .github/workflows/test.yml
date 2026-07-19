@@ -36,6 +36,13 @@ jobs:
     - name: Test Docker Model Runner adapter
       run: python3 -m unittest ollama-dmr-adapter/test_adapter.py
 
+  verifyReleaseImages:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.0
+    - name: Verify immutable first-party image set
+      run: python3 scripts/verify-release-images.py
+
   runDocker-Jenkins:
     runs-on: ubuntu-latest
     services:

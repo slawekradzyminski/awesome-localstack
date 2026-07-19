@@ -1,0 +1,19 @@
+name: Verify published release images
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: docker/setup-buildx-action@v4.2.0
+      - name: Verify immutable pins and multi-platform manifests
+        run: python3 scripts/verify-release-images.py --remote

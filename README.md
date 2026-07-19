@@ -1,6 +1,6 @@
 # Awesome LocalStack
 
-Docker orchestration for the training stack built from separate backend, frontend, and consumer repositories.
+Docker orchestration for the training stack built from separate backend, frontend, AI Learning Lab, JMS consumer, and model-mock repositories.
 
 The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the guided courses, exercises, diagrams, and recorded lesson routes from the commerce frontend. Lab course content requires a valid application session; a signed-out browser is sent to `/login` and returned to its requested Lab route after authentication.
 
@@ -16,7 +16,7 @@ For classroom or workshop use focused on the lightweight stack, see [docs/STUDEN
 
 For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
 
-For release gates, immutable image selection, recorded-course compatibility, and rollback, see [docs/AI_LAB_RELEASE.md](docs/AI_LAB_RELEASE.md).
+For repository-owned image publishing and the complete five-image compatibility set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md). For AI Lab-specific release gates, recorded-course compatibility, and rollback, see [docs/AI_LAB_RELEASE.md](docs/AI_LAB_RELEASE.md).
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
@@ -503,6 +503,7 @@ Across the main profiles, the gateway serves:
 - [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
 - [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
 - [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+- [ollama-mock](https://github.com/slawekradzyminski/ollama-mock)
 
 ## Troubleshooting
 

@@ -252,7 +252,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.3
+    image: slawekradzyminski/consumer:3.3.3@sha256:60d6dc40846c2437392c953d89c71bcd7fa5c63729bae9d887cc0501fac4d55f
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -275,7 +275,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.5
+    image: slawekradzyminski/ollama-mock:1.0.5@sha256:2a1af2cbe85a838a6ce1febe00cac8f8bd63cc73f367468dc8c82772f2038e89
     restart: unless-stopped
     logging: *default-logging
     expose:
