@@ -32,6 +32,8 @@ That gateway is the intended public surface for:
 - static images under `/images/...`
 - AI Learning Lab under `/learn/...`
 
+AI Learning Lab course content requires a valid application session in every profile. A signed-out browser is redirected to `/login` with the requested Lab path preserved in `returnTo`, then returned to that path after successful login. Raw `curl` checks below only prove that the static Lab shell is reachable through the gateway.
+
 ## Mermaid Diagrams
 
 ### Lightweight
@@ -110,7 +112,7 @@ docker compose -f docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- AI Learning Lab: `http://localhost:8081/learn/`
+- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -163,7 +165,7 @@ docker compose -f lightweight-docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- AI Learning Lab: `http://localhost:8081/learn/`
+- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -244,7 +246,7 @@ Recommended public URLs:
 Stable public playground:
 
 - frontend: `https://awesome.byst.re/login`
-- AI Learning Lab: `https://awesome.byst.re/learn/`
+- AI Learning Lab after sign-in: `https://awesome.byst.re/learn/`
 - recorded Attention lesson: `https://awesome.byst.re/learn/how-llm-works/course/attention`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
@@ -383,7 +385,7 @@ Expected:
 
 - all services are `Up`
 - `login` returns `200`
-- AI Learning Lab returns `200`
+- AI Learning Lab shell returns `200`; verify protected course access separately in an authenticated browser
 - `v3/api-docs` returns `200`
 - image request returns `200`
 - mock LLM generate request returns `200`
@@ -406,7 +408,7 @@ curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 Expected:
 
 - `awesome.byst.re/login` returns `200`
-- the AI Lab shell and recorded Attention route return `200`
+- the AI Lab shell and recorded Attention route return `200`; verify protected course access separately in an authenticated browser
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
