@@ -1,0 +1,7 @@
+services:
+  ai-learning-lab:
+    image: nginx:1.31.2-trixie
+    volumes:
+      - ./test-fixtures/ai-learning-lab/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1/healthz"]

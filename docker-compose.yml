@@ -2,7 +2,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.9
+    image: slawekradzyminski/backend:3.7.10@sha256:2706213591b4cd94fcbb6f295ace9c5da6c55acca08fd2f7c63666803c6e9cd9
     restart: always
     expose:
       - "4001"
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.6
+    image: slawekradzyminski/frontend:3.7.7@sha256:a2a6f65f8c94aba11e071374bc325533c746757bd6ad6bbe0924e19e93c21627
     restart: always
     expose:
       - "80"
@@ -71,7 +71,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc}
     restart: always
     expose:
       - "80"
@@ -118,9 +118,12 @@ services:
     image: nginx:1.31.2-trixie
     restart: always
     depends_on:
-      - frontend
-      - backend
-      - ai-learning-lab
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      ai-learning-lab:
+        condition: service_healthy
     ports:
       - "8081:80"
     volumes:

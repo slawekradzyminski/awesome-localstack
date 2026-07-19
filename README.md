@@ -2,7 +2,7 @@
 
 Docker orchestration for the training stack built from separate backend, frontend, and consumer repositories.
 
-The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the 19 labs, two course decks, and theory guides from the commerce frontend.
+The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the guided courses, exercises, diagrams, and recorded lesson routes from the commerce frontend.
 
 This README is organized by the three main profiles:
 
@@ -15,6 +15,8 @@ For the detailed published-port matrix, see [docs/PROFILE_URLS.md](docs/PROFILE_
 For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
 For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
+
+For release gates, immutable image selection, recorded-course compatibility, and rollback, see [docs/AI_LAB_RELEASE.md](docs/AI_LAB_RELEASE.md).
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
@@ -70,13 +72,15 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /learn + /images]
     F[Frontend]
+    L[AI Learning Lab]
     B[Backend]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
+    G -->|/learn/| L
     G --> B
     B --> O
 ```
@@ -129,9 +133,11 @@ Use the same override with the full profile when teaching model internals:
 docker compose -f docker-compose.yml -f docker-compose.ai-lab-local.yml up -d --build
 ```
 
-Only this full-local combination enables the private `gpt2-inspector` sidecar. It downloads the pinned GPT-2 small weights into the persistent `gpt2-model-cache` volume and exposes no host port. The authenticated Attention Lab can capture real Q/K/V and causal attention, while the residual-stream lesson can inspect every block's incoming state, attention update, MLP update, resulting state, and an explicitly labeled logit-lens projection. The embedding lesson can search the complete 50,257 × 768 GPT-2 input embedding table, starts with the selected token's local neighborhood, and lazily reveals a canvas-rendered global PCA projection of every row. Ollama does not expose Bonsai's embedding weight matrix, so the Lab never presents tokenizer IDs as if they were Bonsai embeddings. Published server profiles keep this feature disabled; Bonsai remains the live behavioral model in those profiles.
+Only this full-local combination passes `VITE_AI_LIVE_RUNTIME_ENABLED=true` to the Lab build and enables the private `gpt2-inspector` sidecar. It downloads the pinned GPT-2 small weights into the persistent `gpt2-model-cache` volume and exposes no host port. The authenticated Attention Lab can capture real Q/K/V and causal attention, while the residual-stream lesson can inspect every block's incoming state, attention update, MLP update, resulting state, and an explicitly labeled logit-lens projection. The embedding lesson can search the complete 50,257 × 768 GPT-2 input embedding table, starts with the selected token's local neighborhood, and lazily reveals a canvas-rendered global PCA projection of every row. Ollama does not expose Bonsai's embedding weight matrix, so the Lab never presents tokenizer IDs as if they were Bonsai embeddings. Lightweight, server, CI, and gateway E2E builds omit the opt-in and remain guided-only.
 
-Set `BACKEND_BUILD_CONTEXT`, `AI_LAB_BUILD_CONTEXT`, or `FRONTEND_BUILD_CONTEXT` if a repository is elsewhere. The override builds one compatible local stack from the checked-out backend, the commerce frontend without embedded Lab code, and the standalone AI Learning Lab. Deployment profiles use `AI_LAB_IMAGE` and default to `slawekradzyminski/ai-learning-lab:0.1.0`.
+The full-local runtime currently installs Bonsai only. Live next-token probabilities and token counts therefore work, while the separate semantic-embedding control reports its designed unavailable state until an embedding model such as `embeddinggemma` is explicitly installed and routed. The guided embedding exercise and the GPT-2 embedding inspector remain available.
+
+Set `BACKEND_BUILD_CONTEXT`, `AI_LAB_BUILD_CONTEXT`, or `FRONTEND_BUILD_CONTEXT` if a repository is elsewhere. The override builds one compatible local stack from the checked-out backend, the commerce frontend without embedded Lab code, and the standalone AI Learning Lab. Deployment profiles default to the immutable multi-platform `slawekradzyminski/ai-learning-lab:0.1.0` manifest and may override it with `AI_LAB_IMAGE`. Production image tags and digests must be selected as one tested compatibility set; see [the release runbook](docs/AI_LAB_RELEASE.md).
 
 Run the cross-repository gateway E2E check with:
 
@@ -269,8 +275,9 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /learn + /images]
     F[Frontend]
+    L[AI Learning Lab]
     B[Backend]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
@@ -284,6 +291,7 @@ flowchart LR
 
     U --> G
     G --> F
+    G -->|/learn/| L
     G --> B
     B --> DB
     B --> MQ
@@ -362,6 +370,8 @@ Main public URLs:
 
 Other stable playground URLs:
 
+- AI Learning Lab: `https://awesome.byst.re/learn/`
+- recorded Attention lesson: `https://awesome.byst.re/learn/how-llm-works/course/attention`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
@@ -384,6 +394,7 @@ flowchart LR
     U[Browser]
     G[Gateway<br/>host-based routing<br/>serves frontend + /images]
     F[Frontend]
+    L[AI Learning Lab]
     B[Backend]
     AF[Aitesters Frontend]
     AB[Aitesters Backend<br/>local profile]
@@ -395,6 +406,7 @@ flowchart LR
 
     U --> G
     G -->|awesome.byst.re| F
+    G -->|awesome.byst.re /learn/| L
     G -->|awesome.byst.re /api| B
     G -->|aitesters.byst.re| AF
     G -->|aitesters.byst.re /api| AB
@@ -417,11 +429,15 @@ Production hardening in this profile:
 - consumer metrics are internal-only
 - aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
+- the AI Lab is internal-only and exposed through `/learn/` on the stable hostname
+- the aitesters frontend remains independently versioned and does not route `/learn/`
 
 Quick public verification:
 
 ```bash
 curl -i https://awesome.byst.re/login
+curl -i https://awesome.byst.re/learn/
+curl -i https://awesome.byst.re/learn/how-llm-works/course/attention
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
@@ -434,6 +450,7 @@ curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 Expected:
 
 - `awesome.byst.re/login` returns `200`
+- the AI Lab shell and recorded Attention deep route return `200`
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
@@ -472,6 +489,7 @@ docker compose -f docker-compose.server.yml down
 Across the main profiles, the gateway serves:
 
 - frontend pages under `/`
+- AI Learning Lab pages under `/learn/`
 - backend API under `/api/v1/...`
 - Swagger UI under `/swagger-ui/...`
 - OpenAPI under `/v3/api-docs`
@@ -481,6 +499,7 @@ Across the main profiles, the gateway serves:
 
 ## Related Projects
 
+- [ai-learning-lab](https://github.com/slawekradzyminski/ai-learning-lab)
 - [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
 - [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
 - [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)

@@ -24,6 +24,8 @@ services:
     build:
       context: ${AI_LAB_BUILD_CONTEXT:-../ai-learning-lab}
       dockerfile: Dockerfile
+      args:
+        VITE_AI_LIVE_RUNTIME_ENABLED: "true"
 
   gpt2-inspector:
     image: awesome-localstack/gpt2-inspector:local

@@ -20,6 +20,20 @@ services:
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
     depends_on:
       - keycloak
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4001;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     networks:
       - my-private-ntwk
 
@@ -32,7 +46,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc}
     restart: always
     expose:
       - "80"
@@ -79,9 +93,12 @@ services:
     image: nginx:1.31.2-trixie
     restart: unless-stopped
     depends_on:
-      - frontend
-      - backend
-      - ai-learning-lab
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      ai-learning-lab:
+        condition: service_healthy
     ports:
       - "8081:80"
     volumes:
