@@ -2,7 +2,7 @@
 
 Docker orchestration for the training stack built from separate backend, frontend, and consumer repositories.
 
-The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the guided courses, exercises, diagrams, and recorded lesson routes from the commerce frontend.
+The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the guided courses, exercises, diagrams, and recorded lesson routes from the commerce frontend. Lab course content requires a valid application session; a signed-out browser is sent to `/login` and returned to its requested Lab route after authentication.
 
 This README is organized by the three main profiles:
 
@@ -35,7 +35,7 @@ docker compose -f lightweight-docker-compose.yml up -d
 Main app URL:
 
 - `http://localhost:8081/login`
-- AI Learning Lab: `http://localhost:8081/learn/`
+- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 
 Other useful lightweight URLs:
 
@@ -102,7 +102,7 @@ Expected:
 
 - all lightweight containers are `Up`
 - login page loads
-- the standalone AI Learning Lab responds through the same gateway
+- the standalone AI Learning Lab shell responds through the same gateway; authenticated course access must be checked in a browser after sign-in
 - Swagger and OpenAPI respond with `200`
 - product image responds with `200`
 - the mocked model path responds with the same `qwen3.5:2b` default used across the migration
@@ -175,7 +175,7 @@ This local full stack intentionally starts the backend with `docker,demo`, so Po
 Main app URL:
 
 - `http://localhost:8081/login`
-- AI Learning Lab: `http://localhost:8081/learn/`
+- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 
 Other useful full-profile URLs:
 
@@ -370,7 +370,7 @@ Main public URLs:
 
 Other stable playground URLs:
 
-- AI Learning Lab: `https://awesome.byst.re/learn/`
+- AI Learning Lab after sign-in: `https://awesome.byst.re/learn/`
 - recorded Attention lesson: `https://awesome.byst.re/learn/how-llm-works/course/attention`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
@@ -450,7 +450,7 @@ curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 Expected:
 
 - `awesome.byst.re/login` returns `200`
-- the AI Lab shell and recorded Attention deep route return `200`
+- the AI Lab shell and recorded Attention deep route return `200`; this curl check does not verify the application session required to view course content
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
