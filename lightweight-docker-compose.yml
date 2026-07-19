@@ -46,7 +46,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.2@sha256:632eaefe25727c0cbbec606ec0a65bd077f902f5001fc4b1fc7119c0634d60dc}
     restart: always
     expose:
       - "80"
@@ -110,7 +110,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.5@sha256:2a1af2cbe85a838a6ce1febe00cac8f8bd63cc73f367468dc8c82772f2038e89
+    image: slawekradzyminski/ollama-mock:1.0.6@sha256:bb34ad70c6673f2f384e43da2b0984bb832eee7d76ee992365a93e612133c81c
     restart: always
     ports:
       - "11434:11434"

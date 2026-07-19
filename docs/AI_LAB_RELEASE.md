@@ -46,7 +46,7 @@ The full-local model set currently contains Bonsai but no dedicated semantic-emb
 
 ## Production model capability boundary
 
-`slawekradzyminski/ollama-mock:1.0.5` supports the existing deterministic `/api/generate` scenarios. Direct verification of that image shows that it does not implement the learning-model contract:
+`slawekradzyminski/ollama-mock:1.0.6` supports the existing deterministic `/api/generate` scenarios. Direct verification of that image shows that it does not implement the learning-model contract:
 
 - a request with `logprobs: true` returns an ordinary canned generation without log probabilities;
 - `/api/embed` returns `404`;
@@ -66,11 +66,11 @@ Every production release selects a five-image first-party compatibility set, eve
 
 | Component | Immutable release reference |
 | --- | --- |
-| backend | `slawekradzyminski/backend:3.7.10@sha256:2706213591b4cd94fcbb6f295ace9c5da6c55acca08fd2f7c63666803c6e9cd9` |
-| primary frontend | `slawekradzyminski/frontend:3.7.7@sha256:a2a6f65f8c94aba11e071374bc325533c746757bd6ad6bbe0924e19e93c21627` |
-| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.0@sha256:b11d8a77e11b207f77d7cd9b506635f647cb3951d7eeb97ca5dafddce86b22dc` |
-| JMS consumer | `slawekradzyminski/consumer:3.3.3@sha256:60d6dc40846c2437392c953d89c71bcd7fa5c63729bae9d887cc0501fac4d55f` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.5@sha256:2a1af2cbe85a838a6ce1febe00cac8f8bd63cc73f367468dc8c82772f2038e89` |
+| backend | `slawekradzyminski/backend:3.7.11@sha256:fb22a175b015a27b5d4f9a65784cf3bea59b35b33845f6c22a17a5cc2a9bfd68` |
+| primary frontend | `slawekradzyminski/frontend:3.7.8@sha256:e76c0e6ec1febc78a944ead7043f37cdc8bb3aff2c2d8d50b010ad74e983ae7f` |
+| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.2@sha256:632eaefe25727c0cbbec606ec0a65bd077f902f5001fc4b1fc7119c0634d60dc` |
+| JMS consumer | `slawekradzyminski/consumer:3.3.4@sha256:fb3aa512dca5e216dac77b2445da2a194dbad9a6ca66f6fd6b595d854b991726` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.6@sha256:bb34ad70c6673f2f384e43da2b0984bb832eee7d76ee992365a93e612133c81c` |
 
 These are registry-published multi-platform manifests. Do not deploy `latest`, a local-only tag, or a tag before its manifest can be pulled on the server architecture. A later release must replace the complete compatibility set intentionally and record its new digests.
 
