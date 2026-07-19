@@ -1,0 +1,21 @@
+services:
+  backend:
+    image: awesome-localstack/backend:local
+    pull_policy: build
+    build:
+      context: ${BACKEND_BUILD_CONTEXT:-../test-secure-backend}
+      dockerfile: Dockerfile
+
+  frontend:
+    image: awesome-localstack/frontend:local
+    pull_policy: build
+    build:
+      context: ${FRONTEND_BUILD_CONTEXT:-../vite-react-frontend}
+      dockerfile: Dockerfile
+
+  ai-learning-lab:
+    image: awesome-localstack/ai-learning-lab:local
+    pull_policy: build
+    build:
+      context: ${AI_LAB_BUILD_CONTEXT:-../ai-learning-lab}
+      dockerfile: Dockerfile

@@ -68,6 +68,21 @@ services:
     networks:
       - my-private-ntwk
 
+  ai-learning-lab:
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.0}
+    restart: unless-stopped
+    logging: *default-logging
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - my-private-ntwk
+
   aitesters-backend:
     image: slawekradzyminski/backend:3.7.9
     restart: unless-stopped
@@ -119,6 +134,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - ai-learning-lab
       - aitesters-frontend
       - aitesters-backend
     ports:

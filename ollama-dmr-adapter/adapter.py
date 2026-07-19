@@ -14,6 +14,7 @@ from typing import Any
 UPSTREAM_HOST = os.environ.get("UPSTREAM_HOST", "model-runner.docker.internal")
 UPSTREAM_PORT = int(os.environ.get("UPSTREAM_PORT", "80"))
 OPENAI_CHAT_PATH = "/engines/llama.cpp/v1/chat/completions"
+OPENAI_COMPLETIONS_PATH = "/engines/llama.cpp/v1/completions"
 
 
 def without_nulls(value: Any) -> Any:
@@ -31,6 +32,33 @@ def should_translate_thinking_request(path: str, payload: dict[str, Any]) -> boo
         and payload.get("think") is False
         and payload.get("raw") is not True
     )
+
+
+def should_translate_learning_request(path: str, payload: dict[str, Any]) -> bool:
+    """Use native completions because DMR's Ollama route omits requested logprobs."""
+    return (
+        path == "/api/generate"
+        and payload.get("raw") is True
+        and payload.get("logprobs") is True
+    )
+
+
+def translate_ollama_completion_request(payload: dict[str, Any]) -> dict[str, Any]:
+    """Translate a raw Ollama generation into an OpenAI text completion."""
+    options = payload.get("options") or {}
+    translated: dict[str, Any] = {
+        "model": payload.get("model"),
+        "prompt": payload.get("prompt", ""),
+        "stream": payload.get("stream", True),
+        "max_tokens": options.get("num_predict"),
+        "temperature": options.get("temperature"),
+        "top_p": options.get("top_p"),
+        "stop": options.get("stop"),
+        "presence_penalty": options.get("presence_penalty"),
+        "frequency_penalty": options.get("frequency_penalty"),
+        "logprobs": payload.get("top_logprobs"),
+    }
+    return without_nulls(translated)
 
 
 def _openai_tool_call(tool_call: dict[str, Any]) -> dict[str, Any]:
@@ -162,7 +190,7 @@ def normalize_openai_response_line(
     message = choice.get("delta") or choice.get("message") or {}
     finish_reason = choice.get("finish_reason")
     done = finish_reason is not None or payload.get("object") == "chat.completion"
-    content = message.get("content")
+    content = choice.get("text") if "text" in choice else message.get("content")
     thinking = message.get("reasoning_content") or message.get("reasoning")
 
     result: dict[str, Any] = {
@@ -190,6 +218,10 @@ def normalize_openai_response_line(
         result["prompt_eval_count"] = usage["prompt_tokens"]
     if usage.get("completion_tokens") is not None:
         result["eval_count"] = usage["completion_tokens"]
+
+    choice_logprobs = choice.get("logprobs") or {}
+    if isinstance(choice_logprobs.get("content"), list):
+        result["logprobs"] = choice_logprobs["content"]
 
     normalized = json.dumps(result, separators=(",", ":")).encode() + b"\n"
     if response_kind == "chat":
@@ -275,7 +307,11 @@ class AdapterHandler(BaseHTTPRequestHandler):
         if self.headers.get_content_type() == "application/json" and body:
             payload = without_nulls(json.loads(body))
             request_model = payload.get("model", "")
-            if should_translate_thinking_request(self.path, payload):
+            if should_translate_learning_request(self.path, payload):
+                response_kind = "generate"
+                payload = translate_ollama_completion_request(payload)
+                upstream_path = OPENAI_COMPLETIONS_PATH
+            elif should_translate_thinking_request(self.path, payload):
                 response_kind = "generate" if self.path == "/api/generate" else "chat"
                 payload = translate_ollama_request(self.path, payload)
                 upstream_path = OPENAI_CHAT_PATH
