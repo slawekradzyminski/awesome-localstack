@@ -32,7 +32,7 @@ That gateway is the intended public surface for:
 - static images under `/images/...`
 - AI Learning Lab under `/learn/...`
 
-AI Learning Lab course content requires a valid application session in every profile. A signed-out browser is redirected to `/login` with the requested Lab path preserved in `returnTo`, then returned to that path after successful login. Raw `curl` checks below only prove that the static Lab shell is reachable through the gateway.
+AI Learning Lab course content requires a valid application session in every profile. A signed-out browser is redirected to `/login` with the requested Lab path preserved in `returnTo`. The current full-local and server frontends return to that path after successful login. The lightweight profile intentionally keeps the recorded-course `3.6.16` frontend, which lands on `/` after login; reopen the requested Lab URL to continue. Raw `curl` checks below only prove that the static Lab shell is reachable through the gateway.
 
 ## Mermaid Diagrams
 
