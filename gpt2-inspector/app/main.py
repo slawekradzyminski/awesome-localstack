@@ -46,6 +46,11 @@ def _sample(tensor: torch.Tensor, dimensions: torch.Tensor) -> list[float]:
     return _numbers(tensor.index_select(-1, dimensions))
 
 
+def _primary_tensor(output: torch.Tensor | tuple[torch.Tensor, ...]) -> torch.Tensor:
+    """Normalize Transformer module outputs across supported library majors."""
+    return output if isinstance(output, torch.Tensor) else output[0]
+
+
 def _prediction_rows(tokenizer: AutoTokenizer, logits: torch.Tensor, count: int = 5) -> list[dict[str, Any]]:
     probabilities = torch.softmax(logits, dim=-1)
     top_probabilities, top_ids = torch.topk(probabilities, k=count)
@@ -191,14 +196,22 @@ class Gpt2Inspector:
         def capture_qkv(_module: torch.nn.Module, _args: tuple[Any, ...], output: torch.Tensor) -> None:
             captures["qkv"] = output.detach()
 
-        def capture_attention(_module: torch.nn.Module, _args: tuple[Any, ...], output: tuple[Any, ...]) -> None:
-            captures["attention_output"] = output[0].detach()
+        def capture_attention(
+            _module: torch.nn.Module,
+            _args: tuple[Any, ...],
+            output: torch.Tensor | tuple[torch.Tensor, ...],
+        ) -> None:
+            captures["attention_output"] = _primary_tensor(output).detach()
 
         def capture_mlp(_module: torch.nn.Module, _args: tuple[Any, ...], output: torch.Tensor) -> None:
             captures["mlp_output"] = output.detach()
 
-        def capture_block(_module: torch.nn.Module, _args: tuple[Any, ...], output: tuple[Any, ...]) -> None:
-            captures["residual_post"] = output[0].detach()
+        def capture_block(
+            _module: torch.nn.Module,
+            _args: tuple[Any, ...],
+            output: torch.Tensor | tuple[torch.Tensor, ...],
+        ) -> None:
+            captures["residual_post"] = _primary_tensor(output).detach()
 
         handles = [
             block.register_forward_pre_hook(capture_pre),

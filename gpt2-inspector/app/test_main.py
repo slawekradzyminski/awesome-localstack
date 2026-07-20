@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from app.main import _global_pca, _local_pca, _matrix, _numbers, _prediction_rows, _sample
+from app.main import _global_pca, _local_pca, _matrix, _numbers, _prediction_rows, _primary_tensor, _sample
 
 
 class FakeTokenizer:
@@ -11,6 +11,12 @@ class FakeTokenizer:
 
 
 class TensorSerializerTest(unittest.TestCase):
+    def test_primary_tensor_accepts_tensor_and_tuple_module_outputs(self):
+        tensor = torch.arange(6).reshape(1, 2, 3)
+
+        self.assertIs(_primary_tensor(tensor), tensor)
+        self.assertIs(_primary_tensor((tensor, torch.ones(1))), tensor)
+
     def test_tensor_serializers_are_stable_and_rounded(self):
         tensor = torch.tensor([[1.0, 1.0 / 3.0], [-0.0, 4.0]])
 
