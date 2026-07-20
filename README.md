@@ -139,7 +139,7 @@ Only this full-local combination passes `VITE_AI_LIVE_RUNTIME_ENABLED=true` to t
 
 The full-local runtime currently installs Bonsai only. Live next-token probabilities and token counts therefore work, while the separate semantic-embedding control reports its designed unavailable state until an embedding model such as `embeddinggemma` is explicitly installed and routed. The guided embedding exercise and the GPT-2 embedding inspector remain available.
 
-Set `BACKEND_BUILD_CONTEXT`, `AI_LAB_BUILD_CONTEXT`, or `FRONTEND_BUILD_CONTEXT` if a repository is elsewhere. The override builds one compatible local stack from the checked-out backend, the commerce frontend without embedded Lab code, and the standalone AI Learning Lab. Deployment profiles default to the immutable multi-platform `slawekradzyminski/ai-learning-lab:0.1.3` manifest and may override it with `AI_LAB_IMAGE`. Production image tags and digests must be selected as one tested compatibility set; see [the release runbook](docs/AI_LAB_RELEASE.md).
+Set `BACKEND_BUILD_CONTEXT`, `AI_LAB_BUILD_CONTEXT`, or `FRONTEND_BUILD_CONTEXT` if a repository is elsewhere. The override builds one compatible local stack from the checked-out backend, the commerce frontend without embedded Lab code, and the standalone AI Learning Lab. Deployment profiles default to the immutable multi-platform `slawekradzyminski/ai-learning-lab:0.1.4` manifest and may override it with `AI_LAB_IMAGE`. Production image tags and digests must be selected as one tested compatibility set; see [the release runbook](docs/AI_LAB_RELEASE.md).
 
 Run the cross-repository gateway E2E check with:
 
