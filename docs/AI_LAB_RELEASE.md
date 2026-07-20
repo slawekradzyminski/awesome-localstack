@@ -29,9 +29,9 @@ The gateway waits for the backend and AI Lab health checks before starting where
 
 ## Profile behavior
 
-| Profile | Lab artifact | Model behavior | GPT-2 inspector | Intended use |
+| Profile | Application artifact strategy | Model behavior | GPT-2 inspector | Intended use |
 | --- | --- | --- | --- | --- |
-| `lightweight` | pulled `AI_LAB_IMAGE` | `ollama-mock`; deterministic legacy demos only | no | quick local app and course-shell work |
+| `lightweight` | pulled backend, frontend, `AI_LAB_IMAGE`, and model-mock compatibility set | `ollama-mock`; deterministic legacy demos only | no | quick local commerce and guided-course work |
 | `lightweight` + `docker-compose.ai-lab-build.yml` | built from sibling checkout | same lightweight mock | no | cross-repository frontend work |
 | `full` | pulled `AI_LAB_IMAGE` | Bonsai through Docker Model Runner adapter | no | normal full stack on the author's Mac |
 | `full` + `docker-compose.ai-lab-local.yml` | built from sibling checkout | Bonsai through adapter | yes, private and cached | model-internals teaching and development |

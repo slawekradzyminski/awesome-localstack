@@ -26,6 +26,8 @@ This does not mean the profiles can run side by side on the same machine. `light
 
 Use this most of the time for local work.
 
+It uses the same immutable backend, frontend, AI Lab, and model-mock releases as the reviewed server compatibility set. The authenticated commerce navigation therefore includes **AI Lab**, and signed-out deep lesson URLs return to the requested lesson after login.
+
 Start it with:
 
 ```bash

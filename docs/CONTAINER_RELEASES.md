@@ -48,7 +48,9 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 The production compatibility set is the five first-party services above. `scripts/verify-release-images.py` checks that:
 
 - each production service uses a `tag@sha256` reference;
-- the full, lightweight, model-mock, and server profiles agree on shared mock and consumer releases;
+- full and server agree on backend, frontend, AI Lab, and consumer releases;
+- lightweight and server agree on backend, frontend, AI Lab, and model-mock releases;
+- the model-mock override agrees with the server model-mock release;
 - the AI Lab release runbook records the exact selected references;
 - with `--remote`, every manifest exists and contains both `linux/amd64` and `linux/arm64`.
 

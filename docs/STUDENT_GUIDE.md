@@ -114,7 +114,7 @@ Keycloak SSO login:
 
 For the full SSO flow and the difference between password login and SSO, see [SSO_FLOW.md](SSO_FLOW.md).
 
-The AI Learning Lab requires a valid application session. If you open `/learn/` or a deep lesson URL while signed out, the Lab sends the browser to `/login` with a `returnTo` parameter. The full-local and server frontends return you to the requested Lab route after a successful application-password or SSO login. The lightweight profile intentionally retains the recorded-course `3.6.16` frontend; after signing in there, reopen the requested Lab route from the address bar.
+The AI Learning Lab requires a valid application session. If you open `/learn/` or a deep lesson URL while signed out, the Lab sends the browser to `/login` with a `returnTo` parameter. After a successful application-password or SSO login, every current profile returns you to the requested Lab route.
 
 For everyday work, prefer `8081`.
 
