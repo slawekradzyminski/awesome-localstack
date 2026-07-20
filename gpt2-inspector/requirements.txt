@@ -5,4 +5,4 @@ numpy==2.3.5
 pydantic==2.12.5
 torch==2.13.0+cpu
 transformers==5.5.0
-uvicorn==0.38.0
+uvicorn==0.51.0
