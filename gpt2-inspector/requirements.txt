@@ -4,5 +4,5 @@ fastapi==0.123.10
 numpy==2.5.1
 pydantic==2.12.5
 torch==2.13.0+cpu
-transformers==5.5.0
+transformers==5.14.1
 uvicorn==0.38.0
