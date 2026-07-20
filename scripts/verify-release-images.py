@@ -88,16 +88,18 @@ def main() -> int:
         )
         release_images[service] = image
 
-    require(
-        full.get("consumer") == release_images["consumer"],
-        "full and server profiles must use the same consumer release",
-        failures,
-    )
-    require(
-        lightweight.get("ollama-mock") == release_images["ollama-mock"],
-        "lightweight and server profiles must use the same Ollama mock release",
-        failures,
-    )
+    for service in ("backend", "frontend", "ai-learning-lab", "consumer"):
+        require(
+            full.get(service) == release_images[service],
+            f"full and server profiles must use the same {service} release",
+            failures,
+        )
+    for service in ("backend", "frontend", "ai-learning-lab", "ollama-mock"):
+        require(
+            lightweight.get(service) == release_images[service],
+            f"lightweight and server profiles must use the same {service} release",
+            failures,
+        )
     require(
         model_mock.get("ollama") == release_images["ollama-mock"],
         "the model-mock override must use the production Ollama mock release",

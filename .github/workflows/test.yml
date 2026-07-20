@@ -43,6 +43,38 @@ jobs:
     - name: Verify immutable first-party image set
       run: python3 scripts/verify-release-images.py
 
+  verifyLightweight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7.0.0
+    - name: Run published lightweight compatibility set
+      shell: bash
+      run: |
+        set -Eeuo pipefail
+        cleanup() {
+          result=$?
+          if [[ $result -ne 0 ]]; then
+            docker compose -f lightweight-docker-compose.yml ps --all
+            docker compose -f lightweight-docker-compose.yml logs --no-color --tail=200
+          fi
+          docker compose -f lightweight-docker-compose.yml down --volumes --remove-orphans
+          exit "$result"
+        }
+        trap cleanup EXIT
+
+        docker compose -f lightweight-docker-compose.yml config --quiet
+        docker compose -f lightweight-docker-compose.yml up -d --wait --wait-timeout 300 --pull always
+        curl --fail --silent --show-error http://127.0.0.1:8081/login >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/learn/ | grep -F '<title>AI Learning Lab</title>' >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/learn/how-llm-works/course/attention | grep -F '<title>AI Learning Lab</title>' >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/learn/how-ai-agent-works/course/agent-loop | grep -F '<title>AI Learning Lab</title>' >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/v3/api-docs >/dev/null
+        curl --fail --silent --show-error --request POST http://127.0.0.1:11434/api/generate \
+          --header 'Content-Type: application/json' \
+          --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \
+          | grep -F '"done":true' >/dev/null
+
   runDocker-Jenkins:
     runs-on: ubuntu-latest
     services:

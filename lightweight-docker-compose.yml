@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.6.15
+    image: slawekradzyminski/backend:3.7.11@sha256:fb22a175b015a27b5d4f9a65784cf3bea59b35b33845f6c22a17a5cc2a9bfd68
     restart: always
     expose:
       - "4001"
@@ -38,7 +38,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.6.16
+    image: slawekradzyminski/frontend:3.7.8@sha256:e76c0e6ec1febc78a944ead7043f37cdc8bb3aff2c2d8d50b010ad74e983ae7f
     restart: always
     expose:
       - "80"
