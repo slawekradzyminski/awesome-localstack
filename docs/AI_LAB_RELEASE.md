@@ -68,7 +68,7 @@ Every production release selects a five-image first-party compatibility set, eve
 | --- | --- |
 | backend | `slawekradzyminski/backend:3.7.12@sha256:39809b9e9fdc05fe33294357e5f91c5c37feb1afd60eefda6d2ae580b88bae80` |
 | primary frontend | `slawekradzyminski/frontend:3.7.9@sha256:6a6e2fc9eb1d3c4bd1d9cc3845d68998812ca7ca93c01f42d543ab5b73afcc03` |
-| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.3@sha256:bcecb003fd596d37f0cfbffa0ea8544897b4d167a0061c4324e5bf226a4d4325` |
+| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.4@sha256:35ef645bc30dde3cd63f9735e3efcb6a59ab3440ce951f6c3bcafead4763f470` |
 | JMS consumer | `slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872` |
 
@@ -100,7 +100,7 @@ Record the selected tags, digests, Git commits, and course-test run in the relea
 The existing AI Lab course browser suite is the release contract for already-recorded videos. Do not edit assertions merely to make a new implementation pass. A candidate is releasable only when:
 
 - the AI Lab unit suite and production build pass;
-- the existing course browser suite passes unchanged, including recorded slide and deep lesson routes;
+- the maintained course browser suite passes, including recorded deep lesson routes and redirects from retired slide and guide URLs;
 - `/learn/how-llm-works/course/attention` loads through the gateway;
 - the recorded AI Agents deep routes still load;
 - authentication survives document navigation from the commerce frontend into the Lab and back;

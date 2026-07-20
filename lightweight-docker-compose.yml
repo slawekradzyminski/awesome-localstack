@@ -46,7 +46,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.3@sha256:bcecb003fd596d37f0cfbffa0ea8544897b4d167a0061c4324e5bf226a4d4325}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.4@sha256:35ef645bc30dde3cd63f9735e3efcb6a59ab3440ce951f6c3bcafead4763f470}
     restart: always
     expose:
       - "80"
