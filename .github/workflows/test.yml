@@ -36,6 +36,15 @@ jobs:
     - name: Test Docker Model Runner adapter
       run: python3 -m unittest ollama-dmr-adapter/test_adapter.py
 
+  verifyGpt2Inspector:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.0
+    - name: Build the CPU-only GPT-2 inspector
+      run: docker build --tag gpt2-inspector:ci gpt2-inspector
+    - name: Test inspector tensor and projection contracts
+      run: docker run --rm --entrypoint python gpt2-inspector:ci -m unittest app.test_main
+
   verifyReleaseImages:
     runs-on: ubuntu-latest
     steps:
