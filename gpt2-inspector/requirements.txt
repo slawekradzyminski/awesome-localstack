@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-fastapi==0.139.2
+fastapi==0.140.0
 numpy==2.5.1
 pydantic==2.13.4
 torch==2.13.0+cpu
