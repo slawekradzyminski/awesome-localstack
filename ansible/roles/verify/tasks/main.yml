@@ -9,6 +9,151 @@
   ansible.builtin.debug:
     var: compose_ps.stdout_lines
 
+- name: Verify internal monitoring endpoints
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop:
+    - http://node-exporter:9100/metrics
+    - http://cadvisor:8080/metrics
+    - http://prometheus:9090/-/ready
+  register: verify_monitoring_endpoint
+  changed_when: false
+  until: verify_monitoring_endpoint.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Read active Prometheus targets
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - http://prometheus:9090/api/v1/targets
+    chdir: "{{ app_dir }}"
+  register: prometheus_targets_response
+  changed_when: false
+  vars:
+    expected_prometheus_jobs:
+      - spring_backend_micrometer
+      - spring_consumer_micrometer
+      - node
+      - cadvisor
+  until:
+    - prometheus_targets_response.rc == 0
+    - >-
+      (
+        expected_prometheus_jobs
+        | difference(
+            (prometheus_targets_response.stdout | from_json).data.activeTargets
+            | selectattr('health', 'equalto', 'up')
+            | map(attribute='labels.job')
+            | list
+          )
+        | length
+      ) == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Record healthy Prometheus target jobs
+  ansible.builtin.set_fact:
+    prometheus_healthy_target_jobs: >-
+      {{
+        (prometheus_targets_response.stdout | from_json).data.activeTargets
+        | selectattr('health', 'equalto', 'up')
+        | map(attribute='labels.job')
+        | list
+      }}
+
+- name: Verify all expected Prometheus jobs are healthy
+  ansible.builtin.assert:
+    that:
+      - item in prometheus_healthy_target_jobs
+    fail_msg: "Prometheus job {{ item }} is not healthy"
+  loop:
+    - spring_backend_micrometer
+    - spring_consumer_micrometer
+    - node
+    - cadvisor
+
+- name: Query effective Spring JVM maximum heaps
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -G
+      - --data-urlencode
+      - "query=sum(jvm_memory_max_bytes{area=\"heap\",job=\"{{ item.job }}\"})"
+      - http://prometheus:9090/api/v1/query
+    chdir: "{{ app_dir }}"
+  loop:
+    - job: spring_backend_micrometer
+      maximum_bytes: 939524096
+    - job: spring_consumer_micrometer
+      maximum_bytes: 805306368
+  loop_control:
+    label: "{{ item.job }}"
+  register: jvm_maximum_heap_responses
+  changed_when: false
+  until:
+    - jvm_maximum_heap_responses.rc == 0
+    - ((jvm_maximum_heap_responses.stdout | from_json).data.result | length) == 1
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify Spring JVM maximum heaps are bounded
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ((item.stdout | from_json).data.result[0].value[1] | float) <= (item.item.maximum_bytes | float)
+    fail_msg: >-
+      Effective maximum heap for {{ item.item.job }} exceeds
+      {{ item.item.maximum_bytes }} bytes
+  loop: "{{ jvm_maximum_heap_responses.results }}"
+  loop_control:
+    label: "{{ item.item.job }}"
+
+- name: Verify the production resource dashboard is provisioned
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - grafana
+      - test
+      - -r
+      - /etc/grafana/provisioning/dashboards/production_resources.json
+    chdir: "{{ app_dir }}"
+  changed_when: false
+
 - name: Verify local HTTP endpoints
   ansible.builtin.uri:
     url: "{{ item.url }}"

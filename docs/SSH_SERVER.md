@@ -45,6 +45,10 @@ Then open:
 
 Keep that terminal open while you use Grafana.
 
+The server profile provisions a **Production Resources** dashboard with host
+memory and pressure, disk capacity, CPU, per-container memory and CPU, JVM heap,
+load, and Prometheus target health.
+
 ### Mailpit UI only
 
 ```bash
@@ -105,6 +109,11 @@ docker compose -f docker-compose.server.yml logs --tail=200 -f consumer
 
 # Show service status
 docker compose -f docker-compose.server.yml ps
+
+# Verify private monitoring endpoints through the Docker network
+docker compose -f docker-compose.server.yml exec gateway curl -fsS -o /dev/null http://node-exporter:9100/metrics
+docker compose -f docker-compose.server.yml exec gateway curl -fsS -o /dev/null http://cadvisor:8080/metrics
+docker compose -f docker-compose.server.yml exec gateway curl -fsS http://prometheus:9090/-/ready
 ```
 
 ## Fast production checks

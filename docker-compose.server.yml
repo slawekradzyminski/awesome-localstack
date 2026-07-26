@@ -16,6 +16,7 @@ services:
       - path: .env.runtime
         required: false
     environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx896m"
       SPRING_PROFILES_ACTIVE: docker,server
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
@@ -56,6 +57,7 @@ services:
         condition: service_started
     expose:
       - "4001"
+    mem_limit: 1536m
     networks:
       - my-private-ntwk
 
@@ -167,22 +169,73 @@ services:
       - ./nginx/conf.d/edge-gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
 
-  prometheus:
-    image: prom/prometheus:v3.13.0
+  node-exporter:
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    restart: unless-stopped
+    hostname: awesome-server
+    logging: *default-logging
+    command:
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/credentials/.+|var/lib/docker/.+)($|/)
+    pid: host
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /:/host:ro,rslave
+    expose:
+      - "9100"
+    mem_limit: 64m
+    networks:
+      - my-private-ntwk
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5@sha256:763aecf1c32c2be8a1a75f9abfc2fc461005c9dbbaa39cb356b354aac1296dbe
     restart: unless-stopped
     logging: *default-logging
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    expose:
+      - "8080"
+    mem_limit: 256m
+    networks:
+      - my-private-ntwk
+
+  prometheus:
+    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - --config.file=/etc/prometheus/prometheus.server.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=5GB
     volumes:
       - ./prometheus/:/etc/prometheus/:ro
+      - prometheus-data:/prometheus
     depends_on:
       - backend
       - consumer
+      - node-exporter
+      - cadvisor
     expose:
       - "9090"
+    mem_limit: 512m
     networks:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:13.1.0
+    image: grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -193,6 +246,7 @@ services:
       - ./grafana/server-provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
       - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
       - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
+      - ./grafana/provisioning/dashboards/production_resources.json:/etc/grafana/provisioning/dashboards/production_resources.json:ro
     depends_on:
       - prometheus
     ports:
@@ -259,6 +313,7 @@ services:
       - path: .env.runtime
         required: false
     environment:
+      JAVA_TOOL_OPTIONS: "-Xms192m -Xmx768m"
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
     expose:
@@ -271,6 +326,7 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    mem_limit: 1152m
     networks:
       - my-private-ntwk
 
@@ -285,6 +341,7 @@ services:
 
 volumes:
   postgres-data:
+  prometheus-data:
 
 networks:
   my-private-ntwk:

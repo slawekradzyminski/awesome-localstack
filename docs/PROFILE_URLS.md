@@ -285,6 +285,9 @@ Not published on the host:
 - ActiveMQ JMS `61616`
 - consumer `4002`
 - backend `4001`
+- Prometheus `9090`
+- Node Exporter `9100`
+- cAdvisor `8080`
 - frontend `80`
 - AI Learning Lab `80`
 - aitesters-backend `4001`
@@ -301,6 +304,9 @@ Special behavior:
 - `aitesters.byst.re` uses H2 in-memory data and seeded local demo users, including the demo admin
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
+- Node Exporter and cAdvisor provide private host and container metrics to Prometheus
+- Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
+- Grafana provisions the private `Production Resources` dashboard from the repository
 
 ## Gateway Route Map
 
@@ -423,6 +429,9 @@ Internal-only checks on the VPS:
 cd /opt/awesome-localstack
 docker compose -f docker-compose.server.yml exec backend curl -i http://backend:4001/actuator/health
 docker compose -f docker-compose.server.yml exec consumer curl -i http://consumer:4002/actuator/prometheus
+docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
+docker compose -f docker-compose.server.yml exec gateway curl -i http://cadvisor:8080/metrics
+docker compose -f docker-compose.server.yml exec gateway curl -i http://prometheus:9090/-/ready
 docker compose -f docker-compose.server.yml exec gateway curl -i http://localhost/images/iphone.png
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```

@@ -26,6 +26,20 @@
     group: root
     mode: "0755"
 
+- name: Read the deployed Prometheus configuration checksum
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/prometheus/prometheus.server.yml"
+    checksum_algorithm: sha256
+  register: deployed_prometheus_config
+
+- name: Read the source Prometheus configuration checksum
+  ansible.builtin.stat:
+    path: "{{ repo_root }}/prometheus/prometheus.server.yml"
+    checksum_algorithm: sha256
+  delegate_to: localhost
+  become: false
+  register: source_prometheus_config
+
 - name: Copy Docker Compose file
   ansible.builtin.copy:
     src: "{{ repo_root }}/{{ app_compose_src }}"
@@ -53,6 +67,15 @@
         | selectattr('changed')
         | list
         | length > 0
+      }}
+
+- name: Detect whether Prometheus assets changed
+  ansible.builtin.set_fact:
+    prometheus_config_changed: >-
+      {{
+        not deployed_prometheus_config.stat.exists
+        or deployed_prometheus_config.stat.checksum
+          != source_prometheus_config.stat.checksum
       }}
 
 - name: Render runtime environment file
@@ -106,6 +129,12 @@
     state: present
     wait: true
     wait_timeout: 300
+
+- name: Restart Prometheus when its configuration assets change
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} restart prometheus
+    chdir: "{{ app_dir }}"
+  when: prometheus_config_changed
 
 - name: Ensure Artemis service account exists in the broker instance
   ansible.builtin.shell: |

@@ -405,6 +405,10 @@ flowchart LR
     C[Consumer<br/>internal only]
     M[Mailpit<br/>private only]
     O[Ollama Mock<br/>internal only]
+    N[Node Exporter<br/>host metrics]
+    CA[cAdvisor<br/>container metrics]
+    P[Prometheus<br/>30 days / 5 GB]
+    GR[Grafana<br/>private dashboard]
 
     U --> G
     G -->|awesome.byst.re| F
@@ -418,6 +422,11 @@ flowchart LR
     C --> M
     B --> O
     AB --> O
+    N --> P
+    CA --> P
+    B --> P
+    C --> P
+    P --> GR
 ```
 
 Production hardening in this profile:
@@ -429,10 +438,16 @@ Production hardening in this profile:
 - Mailpit API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
+- Node Exporter, cAdvisor, and Prometheus are internal-only
+- Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
+- the main backend and consumer have explicit JVM heap and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
 - the AI Lab is internal-only and exposed through `/learn/` on the stable hostname
 - the aitesters frontend remains independently versioned and does not route `/learn/`
+
+Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
+the provisioned **Production Resources** dashboard.
 
 Quick public verification:
 

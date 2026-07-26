@@ -154,6 +154,10 @@ The role checks:
 - `http://127.0.0.1/images/iphone.png`
 - `http://127.0.0.1/mailpit/api/v1/messages` returns `404`
 - `http://127.0.0.1/mailpit/` returns `404`
+- private Node Exporter, cAdvisor, and Prometheus endpoints are reachable
+- all expected Prometheus scrape jobs are healthy
+- the main backend and consumer expose bounded JVM maximum heaps
+- the `Production Resources` Grafana dashboard is mounted
 - bootstrap admin sign-in succeeds
 - authenticated `GET /api/v1/products` returns a non-empty catalog
 
