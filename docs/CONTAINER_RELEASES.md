@@ -47,7 +47,7 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.7.12@sha256:39809b9e9fdc05fe33294357e5f91c5c37feb1afd60eefda6d2ae580b88bae80` |
-| Frontend | `slawekradzyminski/frontend:3.7.9@sha256:6a6e2fc9eb1d3c4bd1d9cc3845d68998812ca7ca93c01f42d543ab5b73afcc03` |
+| Frontend | `slawekradzyminski/frontend:3.7.10@sha256:62ac2049cb928a62cc2f45221dc04b8510d1239793866c5ef19f29525e219bf1` |
 | Consumer | `slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872` |
 
