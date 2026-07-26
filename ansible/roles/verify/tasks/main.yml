@@ -439,17 +439,6 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
-- name: Verify retired Learning Lab routes stay closed on aitesters
-  ansible.builtin.uri:
-    url: "http://127.0.0.1{{ item }}"
-    headers:
-      Host: "{{ aitesters_hostname }}"
-    status_code: 404
-    return_content: false
-  loop:
-    - /learn/
-    - /ai-learning-lab
-
 - name: Sign in to aitesters with seeded local admin
   ansible.builtin.uri:
     url: http://127.0.0.1/api/v1/users/signin

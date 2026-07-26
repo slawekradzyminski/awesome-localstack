@@ -9,7 +9,7 @@ jobs:
   verifyEdgeProxy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Verify trusted edge proxy sanitization
       run: bash ./scripts/verify-edge-proxy.sh
 
@@ -21,14 +21,14 @@ jobs:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Build and run Docker Compose
       run: USE_OLLAMA_MOCK=true bash ./run-docker-compose.sh
 
   verifyOllamaConfig:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Verify Docker Model Runner and mock overrides
       run: bash ./scripts/verify-ollama-config.sh
     - name: Test Docker Model Runner adapter
@@ -37,7 +37,7 @@ jobs:
   verifyReleaseImages:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Verify immutable first-party image set
       run: python3 scripts/verify-release-images.py
 
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Run published lightweight compatibility set
       shell: bash
       run: |
@@ -78,6 +78,6 @@ jobs:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - name: Build and run Docker Compose CI version
       run: bash ./run-docker-compose-jenkins.sh
