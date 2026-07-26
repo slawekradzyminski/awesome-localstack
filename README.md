@@ -1,8 +1,7 @@
 # Awesome LocalStack
 
-Docker orchestration for the training stack built from separate backend, frontend, AI Learning Lab, JMS consumer, and model-mock repositories.
-
-The standalone AI Learning Lab is served by its own container at `/learn/`. The gateway keeps the existing public URL while isolating the guided courses, exercises, diagrams, and recorded lesson routes from the commerce frontend. Lab course content requires a valid application session; a signed-out browser is sent to `/login` and returned to its requested Lab route after authentication.
+Docker orchestration for the training stack built from separate backend,
+frontend, JMS consumer, and model-mock repositories.
 
 This README is organized by the three main profiles:
 
@@ -16,7 +15,8 @@ For classroom or workshop use focused on the lightweight stack, see [docs/STUDEN
 
 For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
 
-For repository-owned image publishing and the complete five-image compatibility set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md). For AI Lab-specific release gates, recorded-course compatibility, and rollback, see [docs/AI_LAB_RELEASE.md](docs/AI_LAB_RELEASE.md).
+For repository-owned image publishing and the complete four-image compatibility
+set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
@@ -26,7 +26,8 @@ This does not mean the profiles can run side by side on the same machine. `light
 
 Use this most of the time for local work.
 
-It uses the same immutable backend, frontend, AI Lab, and model-mock releases as the reviewed server compatibility set. The authenticated commerce navigation therefore includes **AI Lab**, and signed-out deep lesson URLs return to the requested lesson after login.
+It uses the same immutable backend, frontend, and model-mock releases as the
+reviewed server compatibility set.
 
 Start it with:
 
@@ -37,7 +38,6 @@ docker compose -f lightweight-docker-compose.yml up -d
 Main app URL:
 
 - `http://localhost:8081/login`
-- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 
 Other useful lightweight URLs:
 
@@ -74,15 +74,13 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /learn + /images]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
-    L[AI Learning Lab]
     B[Backend]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
-    G -->|/learn/| L
     G --> B
     B --> O
 ```
@@ -92,7 +90,6 @@ What students should verify:
 ```bash
 docker compose -f lightweight-docker-compose.yml ps
 curl -i http://localhost:8081/login
-curl -i http://localhost:8081/learn/
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
@@ -104,7 +101,6 @@ Expected:
 
 - all lightweight containers are `Up`
 - login page loads
-- the standalone AI Learning Lab shell responds through the same gateway; authenticated course access must be checked in a browser after sign-in
 - Swagger and OpenAPI respond with `200`
 - product image responds with `200`
 - the mocked model path responds with the same `qwen3.5:2b` default used across the migration
@@ -122,32 +118,6 @@ Stop it with:
 ```bash
 docker compose -f lightweight-docker-compose.yml down
 ```
-
-To build the sibling backend and both frontend checkouts instead of pulling the published images, add the local override:
-
-```bash
-docker compose -f lightweight-docker-compose.yml -f docker-compose.ai-lab-build.yml up -d --build
-```
-
-Use the same override with the full profile when teaching model internals:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.ai-lab-local.yml up -d --build
-```
-
-Only this full-local combination passes `VITE_AI_LIVE_RUNTIME_ENABLED=true` to the Lab build and enables the private `gpt2-inspector` sidecar. It downloads the pinned GPT-2 small weights into the persistent `gpt2-model-cache` volume and exposes no host port. The inspector deliberately installs the patched CPU-only PyTorch wheel; installing the default Linux wheel would add unused CUDA libraries to this CPU service. The authenticated Attention Lab can capture real Q/K/V and causal attention, while the residual-stream lesson can inspect every block's incoming state, attention update, MLP update, resulting state, and an explicitly labeled logit-lens projection. The embedding lesson can search the complete 50,257 × 768 GPT-2 input embedding table, starts with the selected token's local neighborhood, and lazily reveals a canvas-rendered global PCA projection of every row. Ollama does not expose Bonsai's embedding weight matrix, so the Lab never presents tokenizer IDs as if they were Bonsai embeddings. Lightweight, server, CI, and gateway E2E builds omit the opt-in and remain guided-only.
-
-The full-local runtime currently installs Bonsai only. Live next-token probabilities and token counts therefore work, while the separate semantic-embedding control reports its designed unavailable state until an embedding model such as `embeddinggemma` is explicitly installed and routed. The guided embedding exercise and the GPT-2 embedding inspector remain available.
-
-Set `BACKEND_BUILD_CONTEXT`, `AI_LAB_BUILD_CONTEXT`, or `FRONTEND_BUILD_CONTEXT` if a repository is elsewhere. The override builds one compatible local stack from the checked-out backend, the commerce frontend without embedded Lab code, and the standalone AI Learning Lab. Deployment profiles default to the immutable multi-platform `slawekradzyminski/ai-learning-lab:0.1.5` manifest and may override it with `AI_LAB_IMAGE`. Production image tags and digests must be selected as one tested compatibility set; see [the release runbook](docs/AI_LAB_RELEASE.md).
-
-Run the cross-repository gateway E2E check with:
-
-```bash
-./scripts/test-ai-learning-lab-e2e.sh
-```
-
-The check builds both frontend repositories, routes them through the real lightweight gateway configuration, opens `/learn/`, returns to the main frontend with a document navigation, and verifies a deep Lab route.
 
 ## Full Profile
 
@@ -177,7 +147,6 @@ This local full stack intentionally starts the backend with `docker,demo`, so Po
 Main app URL:
 
 - `http://localhost:8081/login`
-- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 
 Other useful full-profile URLs:
 
@@ -213,12 +182,9 @@ and keeps normal startup to one command.
 
 Compose also builds a small, model-neutral `ollama-dmr-adapter` image locally.
 It normalizes the wire-format differences needed by the current backend:
-null JSON-Schema members, streamed/stringified tool arguments, and raw
-next-token log probabilities for the Learning Lab. The latter is translated to
-Docker Model Runner's native text-completions endpoint because its
-Ollama-compatible endpoint omits logprobs. The adapter does not contain the
-model; its local image is about 17 MB, while Docker Model Runner owns the cached
-GGUF.
+null JSON-Schema members and streamed/stringified tool arguments. The adapter
+does not contain the model; its local image is about 17 MB, while Docker Model
+Runner owns the cached GGUF.
 
 Enable Model Runner once on a new Mac:
 
@@ -277,9 +243,8 @@ Architecture:
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /learn + /images]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
-    L[AI Learning Lab]
     B[Backend]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
@@ -293,7 +258,6 @@ flowchart LR
 
     U --> G
     G --> F
-    G -->|/learn/| L
     G --> B
     B --> DB
     B --> MQ
@@ -372,8 +336,6 @@ Main public URLs:
 
 Other stable playground URLs:
 
-- AI Learning Lab after sign-in: `https://awesome.byst.re/learn/`
-- recorded Attention lesson: `https://awesome.byst.re/learn/how-llm-works/course/attention`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
@@ -396,7 +358,6 @@ flowchart LR
     U[Browser]
     G[Gateway<br/>host-based routing<br/>serves frontend + /images]
     F[Frontend]
-    L[AI Learning Lab]
     B[Backend]
     AF[Aitesters Frontend]
     AB[Aitesters Backend<br/>local profile]
@@ -407,12 +368,14 @@ flowchart LR
     O[Ollama Mock<br/>internal only]
     N[Node Exporter<br/>host metrics]
     CA[cAdvisor<br/>container metrics]
+    BB[Blackbox Exporter<br/>public HTTPS probes]
     P[Prometheus<br/>30 days / 5 GB]
+    AM[Alertmanager<br/>private]
+    T[Telegram<br/>operator alerts]
     GR[Grafana<br/>private dashboard]
 
     U --> G
     G -->|awesome.byst.re| F
-    G -->|awesome.byst.re /learn/| L
     G -->|awesome.byst.re /api| B
     G -->|aitesters.byst.re| AF
     G -->|aitesters.byst.re /api| AB
@@ -424,9 +387,13 @@ flowchart LR
     AB --> O
     N --> P
     CA --> P
+    BB -->|public DNS + TLS| G
+    BB --> P
     B --> P
     C --> P
     P --> GR
+    P --> AM
+    AM --> T
 ```
 
 Production hardening in this profile:
@@ -438,24 +405,33 @@ Production hardening in this profile:
 - Mailpit API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
-- Node Exporter, cAdvisor, and Prometheus are internal-only
+- Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and Alertmanager are internal-only
 - Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
+- Blackbox Exporter checks the public login and OpenAPI routes every 30 seconds,
+  including DNS, TLS, HTTP status, and latency
+- Alertmanager sends grouped warning, critical, and resolved notifications to
+  a Vault-configured private Telegram chat
+- the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
+  but swap remains disabled on the current MIKR.US LXC host because its
+  virtualization layer rejects `swapon`
 - the main backend and consumer have explicit JVM heap and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
-- the AI Lab is internal-only and exposed through `/learn/` on the stable hostname
-- the aitesters frontend remains independently versioned and does not route `/learn/`
+- the aitesters frontend remains independently versioned
 
 Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
-the provisioned **Production Resources** dashboard.
+the provisioned **Production Resources** and
+**Production Availability & Safeguards** dashboards.
+
+The public probes run on the VPS, so they detect application, gateway, DNS, TLS,
+and public routing failures while the monitoring stack is alive. They cannot
+detect loss of the entire VPS. A separate off-server heartbeat monitor remains
+required for that failure mode.
 
 Quick public verification:
 
 ```bash
 curl -i https://awesome.byst.re/login
-curl -i https://awesome.byst.re/learn/
-curl -i https://awesome.byst.re/learn/how-machines-learn/course/learning-from-mistakes
-curl -i https://awesome.byst.re/learn/how-llm-works/course/attention
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
@@ -507,7 +483,6 @@ docker compose -f docker-compose.server.yml down
 Across the main profiles, the gateway serves:
 
 - frontend pages under `/`
-- AI Learning Lab pages under `/learn/`
 - backend API under `/api/v1/...`
 - Swagger UI under `/swagger-ui/...`
 - OpenAPI under `/v3/api-docs`
@@ -517,7 +492,6 @@ Across the main profiles, the gateway serves:
 
 ## Related Projects
 
-- [ai-learning-lab](https://github.com/slawekradzyminski/ai-learning-lab)
 - [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
 - [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
 - [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)

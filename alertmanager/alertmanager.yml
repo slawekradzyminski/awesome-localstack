@@ -1,0 +1,36 @@
+global:
+  resolve_timeout: 5m
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+route:
+  receiver: production-telegram
+  group_by:
+    - alertname
+    - severity
+    - job
+    - service
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - job
+      - service
+      - instance
+
+receivers:
+  - name: production-telegram
+    telegram_configs:
+      - bot_token_file: /etc/alertmanager/secrets/telegram_bot_token
+        chat_id_file: /etc/alertmanager/secrets/telegram_chat_id
+        send_resolved: true
+        parse_mode: ""
+        message: '{{ template "telegram.awesome.message" . }}'

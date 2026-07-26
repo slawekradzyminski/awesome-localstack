@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7.0.0
     - name: Build and run Docker Compose
-      run: USE_OLLAMA_MOCK=true USE_AI_LAB_CI_STUB=true bash ./run-docker-compose.sh
+      run: USE_OLLAMA_MOCK=true bash ./run-docker-compose.sh
 
   verifyOllamaConfig:
     runs-on: ubuntu-latest
@@ -31,19 +31,8 @@ jobs:
     - uses: actions/checkout@v7.0.0
     - name: Verify Docker Model Runner and mock overrides
       run: bash ./scripts/verify-ollama-config.sh
-    - name: Verify AI Learning Lab profile capabilities
-      run: bash ./scripts/verify-ai-lab-config.sh
     - name: Test Docker Model Runner adapter
       run: python3 -m unittest ollama-dmr-adapter/test_adapter.py
-
-  verifyGpt2Inspector:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v7.0.0
-    - name: Build the CPU-only GPT-2 inspector
-      run: docker build --tag gpt2-inspector:ci gpt2-inspector
-    - name: Test inspector tensor and projection contracts
-      run: docker run --rm --entrypoint python gpt2-inspector:ci -m unittest app.test_main
 
   verifyReleaseImages:
     runs-on: ubuntu-latest
@@ -75,9 +64,6 @@ jobs:
         docker compose -f lightweight-docker-compose.yml config --quiet
         docker compose -f lightweight-docker-compose.yml up -d --wait --wait-timeout 300 --pull always
         curl --fail --silent --show-error http://127.0.0.1:8081/login >/dev/null
-        curl --fail --silent --show-error http://127.0.0.1:8081/learn/ | grep -F '<title>AI Learning Lab</title>' >/dev/null
-        curl --fail --silent --show-error http://127.0.0.1:8081/learn/how-llm-works/course/attention | grep -F '<title>AI Learning Lab</title>' >/dev/null
-        curl --fail --silent --show-error http://127.0.0.1:8081/learn/how-ai-agent-works/course/agent-loop | grep -F '<title>AI Learning Lab</title>' >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/v3/api-docs >/dev/null
         curl --fail --silent --show-error --request POST http://127.0.0.1:11434/api/generate \
           --header 'Content-Type: application/json' \

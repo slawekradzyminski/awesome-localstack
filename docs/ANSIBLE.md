@@ -30,6 +30,8 @@ ansible/
   roles/
     base/
     docker/
+    swap/
+    postgres_backup/
     app/
     verify/
   requirements.yml
@@ -115,10 +117,16 @@ ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password
 
 `deploy.yml` is the normal operational entrypoint.
 
-It does two things in order:
+It performs four steps in order:
 
-1. Runs the `app` role to converge files and Docker Compose state in `/opt/awesome-localstack`.
-2. Runs the `verify` role to make sure the deployed stack is actually reachable.
+1. Runs the guarded `swap` role. It can converge a 1 GiB emergency swap file
+   and low swappiness on capable hosts; it reports a tracked reason and makes no
+   swap changes on the current MIKR.US LXC host.
+2. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
+3. Runs the `app` role to converge files and Docker Compose state in
+   `/opt/awesome-localstack`.
+4. Runs the `verify` role to make sure the deployed stack is actually
+   reachable.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
@@ -154,10 +162,14 @@ The role checks:
 - `http://127.0.0.1/images/iphone.png`
 - `http://127.0.0.1/mailpit/api/v1/messages` returns `404`
 - `http://127.0.0.1/mailpit/` returns `404`
-- private Node Exporter, cAdvisor, and Prometheus endpoints are reachable
+- private Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and
+  Alertmanager endpoints are reachable
 - all expected Prometheus scrape jobs are healthy
+- both public Blackbox probes currently succeed
+- the emergency swap file and swappiness when `swap_enabled` is true
 - the main backend and consumer expose bounded JVM maximum heaps
-- the `Production Resources` Grafana dashboard is mounted
+- the `Production Resources` and `Production Availability & Safeguards`
+  Grafana dashboards are mounted
 - bootstrap admin sign-in succeeds
 - authenticated `GET /api/v1/products` returns a non-empty catalog
 
@@ -171,6 +183,9 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 
 - `base`: baseline packages, app directory, SSH daemon hardening for key-only root login
 - `docker`: Docker apt repository, engine, Compose plugin, daemon state
+- `swap`: guarded emergency-swap convergence; disabled on the current LXC host
+  because the provider rejects `swapon`
+- `postgres_backup`: encrypted backups, restore checks, and the pre-deploy backup
 - `app`: file sync, runtime env rendering, Compose convergence
 - `verify`: operational checks after deploy
 
@@ -183,6 +198,8 @@ The local production Vault file stores values such as:
 - `production_ssh_user`
 - `production_ssh_key_path`
 - `grafana_admin_password`
+- `alertmanager_telegram_bot_token`
+- `alertmanager_telegram_chat_id`
 - `artemis_username`
 - `artemis_password`
 - `app_bootstrap_admin_enabled`

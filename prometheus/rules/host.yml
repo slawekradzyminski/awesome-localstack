@@ -1,0 +1,165 @@
+groups:
+  - name: host-memory
+    rules:
+      - alert: HostAvailableMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Host available memory is below 15%
+          description: Linux MemAvailable has remained below 15% for 10 minutes.
+
+      - alert: HostAvailableMemoryCritical
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.08
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Host available memory is below 8%
+          description: Linux MemAvailable has remained below 8% for 3 minutes.
+
+      - alert: HostAbsoluteAvailableMemoryLow
+        expr: node_memory_MemAvailable_bytes < 600 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Host available memory is below 600 MiB
+          description: Linux MemAvailable has remained below 600 MiB for 10 minutes.
+
+      - alert: HostAbsoluteAvailableMemoryCritical
+        expr: node_memory_MemAvailable_bytes < 300 * 1024 * 1024
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Host available memory is below 300 MiB
+          description: Linux MemAvailable has remained below 300 MiB for 3 minutes.
+
+      - alert: HostMemoryPressureWaiting
+        expr: rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Tasks are waiting on memory pressure
+          description: Memory PSI waiting time has exceeded 10% for 10 minutes.
+
+      - alert: HostMemoryPressureWaitingCritical
+        expr: rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.20
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Severe task waiting caused by memory pressure
+          description: Memory PSI waiting time has exceeded 20% for 3 minutes.
+
+      - alert: HostMemoryFullStalls
+        expr: rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Host is experiencing full memory stalls
+          description: Full memory PSI stalls have exceeded 2% for 5 minutes.
+
+      - alert: HostMemoryFullStallsCritical
+        expr: rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Host is experiencing severe full memory stalls
+          description: Full memory PSI stalls have exceeded 5% for 3 minutes.
+
+      - alert: HostKernelOOMKill
+        expr: increase(node_vmstat_oom_kill[5m]) > 0
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: The Linux kernel killed a process due to memory exhaustion
+          description: At least one kernel OOM kill occurred during the last 5 minutes.
+
+  - name: host-swap
+    rules:
+      - alert: HostSwapUsageHigh
+        expr: node_memory_SwapTotal_bytes > 0 and (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) > 128 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: More than 128 MiB of emergency swap is in use
+          description: Swap use has exceeded 128 MiB for 10 minutes; inspect memory growth and pressure.
+
+      - alert: HostSwapUsageCritical
+        expr: node_memory_SwapTotal_bytes > 0 and (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes > 0.50
+        for: 5m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: More than half of the emergency swap is in use
+          description: Swap use has exceeded 50% for 5 minutes and the memory safety buffer is nearly exhausted.
+
+      - alert: HostSwapThrashing
+        expr: rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 50
+        for: 5m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: The host is continuously paging
+          description: Combined swap-in and swap-out activity has exceeded 50 pages per second for 5 minutes.
+
+  - name: host-disk
+    rules:
+      - alert: HostRootDiskSpaceLow
+        expr: node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""} < 0.20
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Root filesystem has less than 20% available
+          description: Available root filesystem capacity has remained below 20% for 10 minutes.
+
+      - alert: HostRootDiskSpaceCritical
+        expr: node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""} < 0.10
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Root filesystem has less than 10% available
+          description: Available root filesystem capacity has remained below 10% for 3 minutes.
+
+      - alert: HostRootInodesLow
+        expr: node_filesystem_files_free{mountpoint="/",fstype!=""} / node_filesystem_files{mountpoint="/",fstype!=""} < 0.15
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: Root filesystem has less than 15% free inodes
+          description: Free root filesystem inodes have remained below 15% for 10 minutes.
+
+      - alert: HostRootInodesCritical
+        expr: node_filesystem_files_free{mountpoint="/",fstype!=""} / node_filesystem_files{mountpoint="/",fstype!=""} < 0.08
+        for: 3m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: Root filesystem has less than 8% free inodes
+          description: Free root filesystem inodes have remained below 8% for 3 minutes.

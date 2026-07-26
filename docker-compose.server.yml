@@ -62,28 +62,12 @@ services:
       - my-private-ntwk
 
   frontend:
-    # Release independently from aitesters-frontend. Do not update both tags
-    # unless the AI Lab route is intentionally enabled on both hostnames.
-    image: slawekradzyminski/frontend:3.7.9@sha256:6a6e2fc9eb1d3c4bd1d9cc3845d68998812ca7ca93c01f42d543ab5b73afcc03
+    # Release independently from aitesters-frontend.
+    image: slawekradzyminski/frontend:3.7.10@sha256:62ac2049cb928a62cc2f45221dc04b8510d1239793866c5ef19f29525e219bf1
     restart: unless-stopped
     logging: *default-logging
     expose:
       - "80"
-    networks:
-      - my-private-ntwk
-
-  ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.5@sha256:8b51f5443ed1fd610b5b924851b1e4047c95fbccf2b16297715cd9ccff698d2b}
-    restart: unless-stopped
-    logging: *default-logging
-    expose:
-      - "80"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
     networks:
       - my-private-ntwk
 
@@ -108,6 +92,10 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
+      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "200"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "400"
+      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "200"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "100"
       SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
       SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
       SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
@@ -123,8 +111,6 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    # Kept on the recorded-course-compatible baseline until the aitesters host
-    # receives an explicit /learn routing decision.
     image: slawekradzyminski/frontend:3.7.6
     restart: unless-stopped
     logging: *default-logging
@@ -141,8 +127,6 @@ services:
       frontend:
         condition: service_started
       backend:
-        condition: service_healthy
-      ai-learning-lab:
         condition: service_healthy
       aitesters-frontend:
         condition: service_started
@@ -211,6 +195,46 @@ services:
     networks:
       - my-private-ntwk
 
+  alertmanager:
+    image: prom/alertmanager:v0.32.1@sha256:51a825c2a40acc3e338fdd00d622e01ec090f72be2b3ea46be0839cd47a4d286
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+      - --enable-feature=utf8-strict-mode
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/:ro
+      - alertmanager-data:/alertmanager
+    expose:
+      - "9093"
+    mem_limit: 128m
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - my-private-ntwk
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+      - --log.prober=warn
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+    expose:
+      - "9115"
+    mem_limit: 64m
+    read_only: true
+    user: "65534:65534"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - my-private-ntwk
+
   prometheus:
     image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
     restart: unless-stopped
@@ -228,6 +252,8 @@ services:
       - consumer
       - node-exporter
       - cadvisor
+      - alertmanager
+      - blackbox-exporter
     expose:
       - "9090"
     mem_limit: 512m
@@ -247,6 +273,7 @@ services:
       - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
       - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
       - ./grafana/provisioning/dashboards/production_resources.json:/etc/grafana/provisioning/dashboards/production_resources.json:ro
+      - ./grafana/provisioning/dashboards/production_safeguards.json:/etc/grafana/provisioning/dashboards/production_safeguards.json:ro
     depends_on:
       - prometheus
     ports:
@@ -342,6 +369,7 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+  alertmanager-data:
 
 networks:
   my-private-ntwk:

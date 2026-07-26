@@ -1,0 +1,19 @@
+{{ define "telegram.awesome.message" -}}
+[{{ .Status | toUpper }}] Awesome Server
+
+{{ range .Alerts -}}
+Alert: {{ .Labels.alertname }}
+Severity: {{ .Labels.severity }}
+{{ with .Labels.service }}Service: {{ . }}
+{{ end -}}
+{{ with .Labels.job }}Job: {{ . }}
+{{ end -}}
+{{ with .Annotations.summary }}Summary: {{ . }}
+{{ end -}}
+{{ with .Annotations.description }}Details: {{ . }}
+{{ end -}}
+Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if eq .Status "resolved" }}Resolved: {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ end }}
+{{ end -}}
+{{ end }}

@@ -11,6 +11,8 @@ production_ssh_port: "22"
 production_ssh_user: root
 production_ssh_key_path: /absolute/path/to/private-key
 grafana_admin_password: change-this-to-a-strong-value
+alertmanager_telegram_bot_token: replace-with-the-botfather-token
+alertmanager_telegram_chat_id: "123456789"
 artemis_username: awesome-broker
 artemis_password: replace-with-a-strong-broker-secret
 app_bootstrap_admin_enabled: "true"

@@ -4,6 +4,7 @@
   gather_facts: true
 
   roles:
+    - swap
     - postgres_backup
     - app
     - verify

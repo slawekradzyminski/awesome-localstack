@@ -30,9 +30,6 @@ That gateway is the intended public surface for:
 - actuator under `/actuator/...`
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
-- AI Learning Lab under `/learn/...`
-
-AI Learning Lab course content requires a valid application session in every profile. A signed-out browser is redirected to `/login` with the requested Lab path preserved in `returnTo`, then returned to that path after successful login. Raw `curl` checks below only prove that the static Lab shell is reachable through the gateway.
 
 ## Mermaid Diagrams
 
@@ -40,9 +37,8 @@ AI Learning Lab course content requires a valid application session in every pro
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 8081<br/>serves frontend + /learn + /images]
+    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
-    G -->|/learn/| L[AI Learning Lab]
     G --> B[Backend]
     B --> O[Ollama Mock 11434]
 ```
@@ -51,9 +47,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U[Browser] --> G[Gateway 8081<br/>serves frontend + /learn + /images]
+    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
-    G -->|/learn/| L[AI Learning Lab]
     G --> B[Backend]
     B --> DB[(Postgres 5432)]
     B --> MQ[ActiveMQ 8161/61616/5672]
@@ -74,7 +69,6 @@ flowchart LR
     CF --> G[Gateway 80<br/>host-based routing]
 
     G -->|awesome.byst.re| F[Frontend]
-    G -->|awesome.byst.re /learn/| L[AI Learning Lab]
     G -->|awesome.byst.re /api| B[Backend<br/>docker,server profile]
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]
@@ -112,7 +106,6 @@ docker compose -f docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -142,7 +135,6 @@ What is internal only:
 
 - backend raw port `4001`
 - frontend raw port `80`
-- AI Learning Lab raw port `80`
 
 ## Lightweight Profile
 
@@ -165,7 +157,6 @@ docker compose -f lightweight-docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -221,7 +212,6 @@ What is internal only:
 
 - backend raw port `4001`
 - frontend raw port `80`
-- AI Learning Lab raw port `80`
 
 ## Server Profile
 
@@ -246,8 +236,6 @@ Recommended public URLs:
 Stable public playground:
 
 - frontend: `https://awesome.byst.re/login`
-- AI Learning Lab after sign-in: `https://awesome.byst.re/learn/`
-- recorded Attention lesson: `https://awesome.byst.re/learn/how-llm-works/course/attention`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
@@ -286,10 +274,11 @@ Not published on the host:
 - consumer `4002`
 - backend `4001`
 - Prometheus `9090`
+- Alertmanager `9093`
+- Blackbox Exporter `9115`
 - Node Exporter `9100`
 - cAdvisor `8080`
 - frontend `80`
-- AI Learning Lab `80`
 - aitesters-backend `4001`
 - aitesters-frontend `80`
 - ollama-mock `11434`
@@ -305,8 +294,15 @@ Special behavior:
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus
+- Blackbox Exporter probes the public login and OpenAPI URLs every 30 seconds
+  through public DNS and validated TLS
 - Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
-- Grafana provisions the private `Production Resources` dashboard from the repository
+- Alertmanager stores silences and notification state in a named volume and
+  sends grouped notifications to a Vault-configured Telegram chat
+- Grafana provisions the private `Production Resources` and
+  `Production Availability & Safeguards` dashboards from the repository
+- Blackbox checks, alert delivery, and dashboards are server-profile-only;
+  the full and lightweight local profiles are unchanged
 
 ## Gateway Route Map
 
@@ -320,7 +316,6 @@ Special behavior:
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
 - `/images/` -> gateway static files
-- `/learn/` -> AI Learning Lab
 - `/` -> frontend
 
 ### Server Gateway
@@ -335,7 +330,6 @@ For `awesome.byst.re`:
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
 - `/images/` -> gateway static files
-- `/learn/` -> AI Learning Lab
 - `/mailpit`, `/mailpit/`, and `/mailpit/api/` -> `404`
 - `/` -> frontend
 
@@ -355,7 +349,6 @@ Full local:
 
 ```bash
 curl -i http://localhost:8081/login
-curl -i http://localhost:8081/learn/
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i http://localhost:8025/
@@ -365,7 +358,6 @@ Lightweight local:
 
 ```bash
 curl -i http://localhost:8081/login
-curl -i http://localhost:8081/learn/
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
@@ -379,7 +371,6 @@ Student-oriented lightweight smoke test:
 docker compose -f lightweight-docker-compose.yml up -d
 docker compose -f lightweight-docker-compose.yml ps
 curl -i http://localhost:8081/login
-curl -i http://localhost:8081/learn/
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
@@ -391,7 +382,6 @@ Expected:
 
 - all services are `Up`
 - `login` returns `200`
-- AI Learning Lab shell returns `200`; verify protected course access separately in an authenticated browser
 - `v3/api-docs` returns `200`
 - image request returns `200`
 - mock LLM generate request returns `200`
@@ -400,8 +390,6 @@ Server:
 
 ```bash
 curl -i https://awesome.byst.re/login
-curl -i https://awesome.byst.re/learn/
-curl -i https://awesome.byst.re/learn/how-llm-works/course/attention
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
@@ -414,7 +402,6 @@ curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 Expected:
 
 - `awesome.byst.re/login` returns `200`
-- the AI Lab shell and recorded Attention route return `200`; verify protected course access separately in an authenticated browser
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
@@ -432,6 +419,8 @@ docker compose -f docker-compose.server.yml exec consumer curl -i http://consume
 docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://cadvisor:8080/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://prometheus:9090/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -i http://alertmanager:9093/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -i http://blackbox-exporter:9115/-/healthy
 docker compose -f docker-compose.server.yml exec gateway curl -i http://localhost/images/iphone.png
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```

@@ -1,0 +1,146 @@
+- name: Explain why emergency swap is disabled
+  ansible.builtin.debug:
+    msg: "{{ swap_disabled_reason | default('Emergency swap is disabled for this host.') }}"
+  when: not swap_enabled | bool
+
+- name: Validate emergency swap configuration
+  ansible.builtin.assert:
+    that:
+      - swap_file_path is match('^/[^*?\\[\\]]+$')
+      - swap_file_path not in ['/', '/home', '/root']
+      - swap_file_size_mb | int >= 512
+      - swap_file_size_mb | int <= 4096
+      - swap_swappiness | int >= 0
+      - swap_swappiness | int <= 100
+    fail_msg: Emergency swap settings must use a safe absolute file path, 512-4096 MiB, and swappiness 0-100.
+  when: swap_enabled | bool
+
+- name: Inspect emergency swap file
+  ansible.builtin.stat:
+    path: "{{ swap_file_path }}"
+    follow: false
+  register: swap_file
+  when: swap_enabled | bool
+
+- name: Read existing emergency swap file type
+  ansible.builtin.command:
+    argv:
+      - blkid
+      - -p
+      - -s
+      - TYPE
+      - -o
+      - value
+      - "{{ swap_file_path }}"
+  register: swap_file_type
+  changed_when: false
+  failed_when: false
+  when:
+    - swap_enabled | bool
+    - swap_file.stat.exists
+
+- name: Refuse to overwrite an unmanaged emergency swap path
+  ansible.builtin.assert:
+    that:
+      - not swap_file.stat.exists or not swap_file.stat.islnk
+      - not swap_file.stat.exists or swap_file.stat.isreg
+      - not swap_file.stat.exists or swap_file_type.stdout == 'swap'
+    fail_msg: >-
+      {{ swap_file_path }} already exists but is not a regular Linux swap file.
+      Refusing to overwrite it.
+  when: swap_enabled | bool
+
+- name: Check available space for emergency swap
+  ansible.builtin.command:
+    argv:
+      - df
+      - --output=avail
+      - --block-size=1M
+      - "{{ swap_file_path | dirname }}"
+  register: swap_available_space
+  changed_when: false
+  when:
+    - swap_enabled | bool
+    - not swap_file.stat.exists
+
+- name: Verify sufficient space remains after allocating emergency swap
+  ansible.builtin.assert:
+    that:
+      - (swap_available_space.stdout_lines[-1] | trim | int) >= (swap_file_size_mb | int) + 1024
+    fail_msg: At least 1 GiB of free space must remain after creating the emergency swap file.
+  when:
+    - swap_enabled | bool
+    - not swap_file.stat.exists
+
+- name: Allocate emergency swap file
+  ansible.builtin.command:
+    argv:
+      - fallocate
+      - --length
+      - "{{ swap_file_size_mb }}M"
+      - "{{ swap_file_path }}"
+  register: swap_file_allocation
+  when:
+    - swap_enabled | bool
+    - not swap_file.stat.exists
+
+- name: Secure emergency swap file permissions
+  ansible.builtin.file:
+    path: "{{ swap_file_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: swap_enabled | bool
+
+- name: Format emergency swap file
+  ansible.builtin.command:
+    argv:
+      - mkswap
+      - "{{ swap_file_path }}"
+  when:
+    - swap_enabled | bool
+    - swap_file_allocation is defined
+    - swap_file_allocation is changed
+
+- name: Persist emergency swap mount
+  ansible.posix.mount:
+    path: none
+    src: "{{ swap_file_path }}"
+    fstype: swap
+    opts: sw
+    dump: "0"
+    passno: "0"
+    state: present
+  when: swap_enabled | bool
+
+- name: Read active swap devices
+  ansible.builtin.command:
+    argv:
+      - swapon
+      - --show
+      - --noheadings
+      - --raw
+      - --output
+      - NAME
+  register: active_swap_devices
+  changed_when: false
+  when: swap_enabled | bool
+
+- name: Activate emergency swap
+  ansible.builtin.command:
+    argv:
+      - swapon
+      - "{{ swap_file_path }}"
+  when:
+    - swap_enabled | bool
+    - swap_file_path not in active_swap_devices.stdout_lines
+
+- name: Configure low swap tendency
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: "{{ swap_swappiness }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-awesome-localstack-swap.conf
+    sysctl_set: true
+    reload: true
+  when: swap_enabled | bool

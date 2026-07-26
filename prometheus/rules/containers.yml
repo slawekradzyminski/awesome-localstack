@@ -1,0 +1,102 @@
+groups:
+  - name: containers
+    rules:
+      - alert: ContainerMemoryNearLimit
+        expr: |
+          (
+            container_memory_working_set_bytes{name=~".*awesome-server-.+"}
+            /
+            container_spec_memory_limit_bytes{name=~".*awesome-server-.+"}
+          ) > 0.85
+          and
+          container_spec_memory_limit_bytes{name=~".*awesome-server-.+"} > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Container memory working set is above 85% of its limit
+          description: Container {{ $labels.name }} has remained above 85% of its configured memory limit for 10 minutes.
+
+      - alert: ContainerMemoryLimitCritical
+        expr: |
+          (
+            container_memory_working_set_bytes{name=~".*awesome-server-.+"}
+            /
+            container_spec_memory_limit_bytes{name=~".*awesome-server-.+"}
+          ) > 0.95
+          and
+          container_spec_memory_limit_bytes{name=~".*awesome-server-.+"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Container memory working set is above 95% of its limit
+          description: Container {{ $labels.name }} has remained above 95% of its configured memory limit for 2 minutes.
+
+      - alert: ContainerOOMEvent
+        expr: increase(container_oom_events_total{name=~".*awesome-server-.+"}[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: A production container experienced an OOM event
+          description: Container {{ $labels.name }} reported an OOM event during the last 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-backend-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: Critical backend container is missing
+          description: cAdvisor has not reported the backend container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-consumer-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: consumer
+        annotations:
+          summary: Critical consumer container is missing
+          description: cAdvisor has not reported the consumer container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-gateway-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: gateway
+        annotations:
+          summary: Critical gateway container is missing
+          description: cAdvisor has not reported the gateway container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-edge-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: edge
+        annotations:
+          summary: Critical edge container is missing
+          description: cAdvisor has not reported the edge container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-postgres-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: Critical PostgreSQL container is missing
+          description: cAdvisor has not reported the PostgreSQL container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-activemq-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: activemq
+        annotations:
+          summary: Critical ActiveMQ container is missing
+          description: cAdvisor has not reported the ActiveMQ container for at least 5 minutes.

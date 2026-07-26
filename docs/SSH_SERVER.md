@@ -42,12 +42,49 @@ make ansible-tunnel-grafana
 Then open:
 
 - `http://localhost:3000`
+- direct safeguards dashboard:
+  `http://localhost:3000/d/awesome-prod-safeguards/production-availability-safeguards?orgId=1`
 
 Keep that terminal open while you use Grafana.
 
-The server profile provisions a **Production Resources** dashboard with host
-memory and pressure, disk capacity, CPU, per-container memory and CPU, JVM heap,
-load, and Prometheus target health.
+The server profile provisions:
+
+- **Production Resources** for host memory and pressure, disk capacity, CPU,
+  per-container memory and CPU, JVM heap, load, and Prometheus target health;
+- **Production Availability & Safeguards** for public HTTPS status and latency,
+  TLS lifetime, emergency swap use, paging, and memory PSI.
+
+Alertmanager is not published on the VPS host. It receives Prometheus alerts
+through the private Docker network and sends warning, critical, and resolved
+notifications to the Telegram chat configured in Ansible Vault.
+
+The HTTPS checks originate from the VPS through public DNS. They cover the
+public gateway and certificate, but not a complete VPS or provider-network
+failure. That final failure mode requires a separate off-server monitor.
+
+### Phase 4/5 alert response
+
+For `PublicEndpointProbeFailedCritical`:
+
+1. Check both URLs from a separate network or phone, because the alerting probe
+   originates on the VPS.
+2. Check `docker compose -f docker-compose.server.yml ps` and the `edge`,
+   `gateway`, and `backend` logs.
+3. Compare the direct `http://127.0.0.1` route with the public HTTPS route to
+   isolate application, proxy, DNS, and TLS failures.
+4. Keep the alert active until both `probe_success` series return `1`.
+
+For `PublicEndpointTLSExpiringCritical`, inspect the certificate served for
+`awesome.byst.re`, repair or renew it at the public TLS edge, and confirm that
+the TLS-lifetime panel rises above 21 days.
+
+`HostSwapUsageCritical` and `HostSwapThrashing` can fire only on a future
+swap-capable host. Treat them as memory-exhaustion incidents: identify the
+growing container, preserve logs, stop only a pre-approved non-critical
+workload if necessary, and increase capacity if the pressure is sustained.
+Never automatically stop PostgreSQL or the main backend. On the current LXC
+host, use the memory-availability and PSI alerts because provider-level swap is
+unavailable.
 
 ### Mailpit UI only
 
@@ -114,6 +151,13 @@ docker compose -f docker-compose.server.yml ps
 docker compose -f docker-compose.server.yml exec gateway curl -fsS -o /dev/null http://node-exporter:9100/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -fsS -o /dev/null http://cadvisor:8080/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -fsS http://prometheus:9090/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -fsS http://alertmanager:9093/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -fsS http://blackbox-exporter:9115/-/healthy
+docker compose -f docker-compose.server.yml exec gateway curl -fsS -G \
+  --data-urlencode 'query=probe_success{job="public_https"}' \
+  http://prometheus:9090/api/v1/query
+swapon --show
+sysctl vm.swappiness
 ```
 
 ## Fast production checks
