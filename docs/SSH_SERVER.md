@@ -49,7 +49,8 @@ Keep that terminal open while you use Grafana.
 
 The server profile provisions:
 
-- **Production Resources** for host memory and pressure, disk capacity, CPU,
+- **Production Resources** for VPS memory and cgroup pressure, provider-host
+  pressure context, disk capacity, CPU,
   per-container memory and CPU, JVM heap, load, and Prometheus target health;
 - **Production Availability & Safeguards** for public HTTPS status and latency,
   TLS lifetime, emergency swap use, paging, and memory PSI.
@@ -83,8 +84,10 @@ swap-capable host. Treat them as memory-exhaustion incidents: identify the
 growing container, preserve logs, stop only a pre-approved non-critical
 workload if necessary, and increase capacity if the pressure is sustained.
 Never automatically stop PostgreSQL or the main backend. On the current LXC
-host, use the memory-availability and PSI alerts because provider-level swap is
-unavailable.
+host, use the LXCFS memory-availability and cAdvisor VPS-root cgroup PSI alerts
+because provider-level swap is unavailable. Node Exporter's PSI and VM OOM
+counters cover the shared physical provider host and are diagnostic context,
+not VPS-local paging signals.
 
 ### Mailpit UI only
 

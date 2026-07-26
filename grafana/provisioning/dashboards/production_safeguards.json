@@ -448,13 +448,13 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "rate(node_pressure_memory_waiting_seconds_total[5m])",
-          "legendFormat": "some",
+          "expr": "rate(container_pressure_memory_waiting_seconds_total{job=\"cadvisor\", id=\"/\"}[5m])",
+          "legendFormat": "VPS root cgroup",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Memory PSI waiting",
+      "title": "VPS memory PSI waiting",
       "type": "stat"
     },
     {

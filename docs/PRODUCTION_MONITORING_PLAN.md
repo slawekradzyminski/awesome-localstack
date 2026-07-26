@@ -49,6 +49,25 @@ stack; the newly created swap file and live `/etc/fstab` entry were removed.
 The successful retry then skipped swap explicitly and deployed all remaining
 phase 4/5 observability changes.
 
+On 2026-07-26, `HostMemoryFullStallsCritical` exposed an LXC metric-scope
+problem. Node Exporter's `/proc/pressure/memory` and `/proc/vmstat` counters
+belong to the shared physical provider host, while `MemAvailable` is
+virtualized by LXCFS for the VPS. At the incident peak, provider-host full PSI
+reached approximately 19.6%, but VPS-root cgroup PSI remained effectively zero,
+available VPS memory stayed above 42%, no local OOM occurred, and both public
+probes remained healthy. Host memory PSI and OOM rules now use cAdvisor's
+VPS-root cgroup series (`id="/"`). Provider-host PSI remains visible only as
+diagnostic context in Grafana.
+
+The follow-up resource-protection deployment completed with 69 successful
+Ansible tasks and no failures. Every production container now has an explicit
+memory limit. ActiveMQ started with a 512 MiB maximum heap instead of 2 GiB,
+and Ollama Mock started with a 256 MiB maximum heap instead of approximately
+29 GiB. Immediately after the stack settled, `MemAvailable` was approximately
+2.3 GiB, aggregate container working sets were approximately 2.1 GiB,
+VPS-root PSI was zero, all VPS-local memory rules were inactive, and the direct,
+local-gateway, and public HTTPS routes returned HTTP 200.
+
 The remaining program-level acceptance gaps are the deliberately off-server
 items: an independent public-route check, a missed-heartbeat notification, and
 the isolated disposable-container OOM alert test. The on-VPS probes and
@@ -91,6 +110,7 @@ Protect the production VPS from memory and disk exhaustion by:
 
 The production VPS was inspected on 2026-07-26.
 
+- MIKR.US plan: Mikrus 3.5 LXC with 4,352 MiB RAM and 45 GB disk.
 - Installed RAM: approximately 4.25 GiB.
 - Linux `MemAvailable`: approximately 1.0 GiB, or 23%.
 - Availability-based memory use: approximately 77%.
@@ -98,8 +118,8 @@ The production VPS was inspected on 2026-07-26.
 - Filesystem cache: approximately 845 MiB.
 - Swap: not configured.
 - Root filesystem: approximately 48% used, with 23 GiB available.
-- Recent Linux memory pressure: zero at the time of inspection.
-- Kernel and container OOM events: none observed.
+- Recent VPS-root cgroup memory pressure: zero at the time of inspection.
+- VPS-root and container OOM events: none observed.
 - All production containers were running and the direct and public backend
   checks returned HTTP 200.
 
@@ -162,11 +182,14 @@ port.
 Node Exporter collects:
 
 - `MemAvailable` and total RAM;
-- Linux PSI memory pressure;
 - swap use and paging;
-- kernel OOM counters;
 - filesystem capacity and inode availability;
 - CPU, load, network, and host uptime.
+
+On MIKR.US LXC, Node Exporter's pressure and VM OOM counters describe the
+shared provider host rather than this VPS. They must not drive VPS paging
+alerts. The provider-host PSI series may be retained for noisy-neighbor
+diagnostics only.
 
 ### cAdvisor
 
@@ -175,6 +198,7 @@ cAdvisor collects:
 - per-container working-set memory;
 - configured container memory limits;
 - per-container OOM events;
+- VPS-root cgroup memory PSI and OOM events through the `id="/"` series;
 - CPU use and throttling;
 - container last-seen state.
 
@@ -280,16 +304,19 @@ node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
 ```
 
 ```promql
-rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10
+rate(container_pressure_memory_waiting_seconds_total{job="cadvisor",id="/"}[5m]) > 0.10
 ```
 
 ```promql
-rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.05
+rate(container_pressure_memory_stalled_seconds_total{job="cadvisor",id="/"}[5m]) > 0.05
 ```
 
 ```promql
-increase(node_vmstat_oom_kill[5m]) > 0
+increase(container_oom_events_total{job="cadvisor",id="/"}[5m]) > 0
 ```
+
+Do not substitute the similarly named Node Exporter pressure or VM OOM
+counters on MIKR.US LXC; those series cover the shared physical provider host.
 
 ### Swap
 
@@ -366,22 +393,29 @@ host-down alert should suppress individual container-down alerts.
 
 ### Explicit JVM and container limits
 
-Use these as initial test values, not permanent values without observation:
+The production values below were selected after reviewing seven days of
+working-set and RSS peaks. They are safety ceilings, not reservations, and
+must be reviewed after controlled load tests or material traffic growth:
 
-| Service | Initial JVM target | Initial container limit |
+| Service | JVM target | Container limit |
 | --- | --- | --- |
 | `backend` | `-Xms256m -Xmx896m` | 1.5 GiB |
 | `consumer` | `-Xms192m -Xmx768m` | 1.125 GiB |
 | `aitesters-backend` | Existing percentage-based limit | Existing 768 MiB |
-| `activemq` | 384-512 MiB maximum heap | 768 MiB |
-| `ollama-mock` | Explicit heap if supported | 512 MiB |
-| `grafana` | Not applicable | Approximately 640 MiB |
-| `prometheus` | Not applicable | Approximately 384 MiB |
+| `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
+| `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
+| `grafana` | Not applicable | 640 MiB |
+| `prometheus` | Not applicable | 512 MiB |
+| `postgres` | Not applicable | 512 MiB |
+| `gateway`, `edge` | Not applicable | 128 MiB each |
+| frontends, `mailpit` | Not applicable | 64 MiB each |
 
-Validate the ActiveMQ and Ollama image-specific JVM options before changing
-them. A container limit must leave room for native allocations beyond the Java
-heap. Run controlled load tests and monitor after-GC heap, container working
-set, GC overhead, and OOM counters before tightening a limit.
+The ActiveMQ image previously started with `-Xms512M -Xmx2G`; its explicit
+Compose `JAVA_ARGS` now preserves the image's operational JVM properties while
+bounding the heap. Ollama Mock previously advertised an approximately 29 GiB
+maximum heap and is now explicitly bounded. Container limits leave room for
+native allocations beyond the Java heap. Monitor after-GC heap, working set,
+GC overhead, and OOM counters before tightening them further.
 
 ### Emergency swap
 
@@ -393,6 +427,29 @@ The current MIKR.US LXC environment does not permit `swapon`, even for a valid
 root-owned swap file on ext4. Do not retain an inactive swap file or
 `/etc/fstab` entry on this host. Re-enable the tracked Ansible setting only
 after a provider or package change supplies the required capability.
+
+### Capacity upgrade
+
+The current Mikrus 3.5 plan provides 4 GiB advertised RAM and 40 GB advertised
+disk (4,352 MiB and 45 GB in the panel). An immediate upgrade is deferred
+because the corrected VPS-local signals show healthy headroom after the JVM and
+container limits were deployed. Observe at least seven days of normal traffic
+before reconsidering capacity.
+
+Reconsider migration when any of these conditions occurs:
+
+- `MemAvailable` remains below 600 MiB or 15% for 10 minutes;
+- VPS-root full memory PSI repeatedly exceeds 2% for 5 minutes;
+- a production container remains above 85% of its limit;
+- the VPS-root or a production container reports an OOM event; or
+- expected traffic growth requires materially more CPU, IOPS, or memory.
+
+If capacity is required, the preferred next plan is Mikrus 4.1 PRO: 8 GiB RAM,
+80 GB disk, and doubled CPU and IOPS allocation. MIKR.US requires an operator
+ticket for the in-place migration; migration is free and the remaining
+subscription term is recalculated proportionally against the new plan price.
+Treat the ticket and resulting migration window as an external change requiring
+explicit approval and post-migration verification.
 
 ### Optional memory guard
 
