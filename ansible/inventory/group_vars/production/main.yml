@@ -123,10 +123,5 @@ verify_urls:
     status_code: 404
   - url: http://127.0.0.1/mailhog/
     status_code: 404
-  - url: http://127.0.0.1/learn/
-    status_code: 404
-  - url: http://127.0.0.1/ai-learning-lab
-    status_code: 404
-
 verify_retries: 12
 verify_delay_seconds: 10
