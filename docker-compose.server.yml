@@ -62,28 +62,12 @@ services:
       - my-private-ntwk
 
   frontend:
-    # Release independently from aitesters-frontend. Do not update both tags
-    # unless the AI Lab route is intentionally enabled on both hostnames.
+    # Release independently from aitesters-frontend.
     image: slawekradzyminski/frontend:3.7.9@sha256:6a6e2fc9eb1d3c4bd1d9cc3845d68998812ca7ca93c01f42d543ab5b73afcc03
     restart: unless-stopped
     logging: *default-logging
     expose:
       - "80"
-    networks:
-      - my-private-ntwk
-
-  ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.5@sha256:8b51f5443ed1fd610b5b924851b1e4047c95fbccf2b16297715cd9ccff698d2b}
-    restart: unless-stopped
-    logging: *default-logging
-    expose:
-      - "80"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
     networks:
       - my-private-ntwk
 
@@ -108,6 +92,10 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
+      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "200"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "400"
+      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "200"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "100"
       SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
       SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
       SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
@@ -123,8 +111,6 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    # Kept on the recorded-course-compatible baseline until the aitesters host
-    # receives an explicit /learn routing decision.
     image: slawekradzyminski/frontend:3.7.6
     restart: unless-stopped
     logging: *default-logging
@@ -141,8 +127,6 @@ services:
       frontend:
         condition: service_started
       backend:
-        condition: service_healthy
-      ai-learning-lab:
         condition: service_healthy
       aitesters-frontend:
         condition: service_started

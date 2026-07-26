@@ -16,7 +16,6 @@ PINNED_IMAGE = re.compile(r"^[^@\s]+:[^@\s]+@sha256:[0-9a-f]{64}$")
 PRODUCTION_SERVICES = (
     "backend",
     "frontend",
-    "ai-learning-lab",
     "consumer",
     "ollama-mock",
 )
@@ -88,13 +87,13 @@ def main() -> int:
         )
         release_images[service] = image
 
-    for service in ("backend", "frontend", "ai-learning-lab", "consumer"):
+    for service in ("backend", "frontend", "consumer"):
         require(
             full.get(service) == release_images[service],
             f"full and server profiles must use the same {service} release",
             failures,
         )
-    for service in ("backend", "frontend", "ai-learning-lab", "ollama-mock"):
+    for service in ("backend", "frontend", "ollama-mock"):
         require(
             lightweight.get(service) == release_images[service],
             f"lightweight and server profiles must use the same {service} release",
@@ -106,7 +105,7 @@ def main() -> int:
         failures,
     )
 
-    runbook = (ROOT / "docs" / "AI_LAB_RELEASE.md").read_text()
+    runbook = (ROOT / "docs" / "CONTAINER_RELEASES.md").read_text()
     for service, image in release_images.items():
         require(
             image in runbook,

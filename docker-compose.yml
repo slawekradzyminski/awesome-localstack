@@ -70,20 +70,6 @@ services:
     networks:
       - my-private-ntwk
 
-  ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.5@sha256:8b51f5443ed1fd610b5b924851b1e4047c95fbccf2b16297715cd9ccff698d2b}
-    restart: always
-    expose:
-      - "80"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
-    networks:
-      - my-private-ntwk
-
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.0
     restart: always
@@ -121,8 +107,6 @@ services:
       frontend:
         condition: service_started
       backend:
-        condition: service_healthy
-      ai-learning-lab:
         condition: service_healthy
     ports:
       - "8081:80"

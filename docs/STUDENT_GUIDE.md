@@ -7,7 +7,6 @@ This guide is for the profile you will use most often:
 Its goal is to give you a fast local environment with:
 
 - frontend
-- AI Learning Lab course shell
 - backend
 - gateway
 - static images served by the gateway
@@ -24,7 +23,6 @@ Treat this as a single local web app served through one URL:
 Use that URL for:
 
 - frontend pages
-- authenticated AI Learning Lab pages under `/learn/`
 - backend API
 - Swagger UI
 - OpenAPI docs
@@ -37,15 +35,13 @@ Do not think in terms of “frontend on one port and backend on another port” 
 ```mermaid
 flowchart LR
     U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /learn + /images]
+    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
-    L[AI Learning Lab]
     B[Backend]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
-    G -->|/learn/| L
     G --> B
     B --> O
 ```
@@ -74,7 +70,6 @@ Expected services:
 
 - `backend`
 - `frontend`
-- `ai-learning-lab`
 - `gateway`
 - `ollama-mock`
 
@@ -91,7 +86,6 @@ Main application URL:
 Useful lightweight URLs:
 
 - frontend login: `http://localhost:8081/login`
-- AI Learning Lab after sign-in: `http://localhost:8081/learn/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
@@ -114,8 +108,6 @@ Keycloak SSO login:
 
 For the full SSO flow and the difference between password login and SSO, see [SSO_FLOW.md](SSO_FLOW.md).
 
-The AI Learning Lab requires a valid application session. If you open `/learn/` or a deep lesson URL while signed out, the Lab sends the browser to `/login` with a `returnTo` parameter. After a successful application-password or SSO login, every current profile returns you to the requested Lab route.
-
 For everyday work, prefer `8081`.
 
 ## Verification Checklist
@@ -134,23 +126,10 @@ Expected:
 - styling is present
 - images load
 
-Sign in with one of the application-password or Keycloak SSO training users listed above before continuing.
+Sign in with one of the application-password or Keycloak SSO training users
+listed above before continuing.
 
-### 2. AI Learning Lab Loads
-
-Open:
-
-- `http://localhost:8081/learn/`
-
-Expected:
-
-- the AI Learning Lab course shell loads
-- a deep lesson URL can be reloaded without a `404`
-- signing out and opening the same URL redirects to `/login` while preserving the Lab route in `returnTo`
-
-The lightweight Lab build is guided-only and does not expose live runtime controls. The mock is suitable for deterministic legacy LLM demonstrations, but it does not provide real embeddings or next-token log probabilities.
-
-### 3. Swagger Loads
+### 2. Swagger Loads
 
 Open:
 
@@ -165,7 +144,7 @@ Important:
 
 - Swagger requests should go to `http://localhost:8081/...`
 
-### 4. OpenAPI Docs Respond
+### 3. OpenAPI Docs Respond
 
 Run:
 
@@ -177,7 +156,7 @@ Expected:
 
 - HTTP `200`
 
-### 5. Product Images Work
+### 4. Product Images Work
 
 Run:
 
@@ -189,7 +168,7 @@ Expected:
 
 - HTTP `200`
 
-### 6. Mocked LLM Responds
+### 5. Mocked LLM Responds
 
 Run:
 
@@ -211,7 +190,6 @@ If you want one short sequence:
 docker compose -f lightweight-docker-compose.yml up -d
 docker compose -f lightweight-docker-compose.yml ps
 curl -i http://localhost:8081/login
-curl -i http://localhost:8081/learn/
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
@@ -219,7 +197,7 @@ curl -i -X POST http://localhost:11434/api/generate \
   -d '{"model":"qwen3.5:2b","prompt":"hello"}'
 ```
 
-These `curl` requests verify container and gateway availability only. A `200` from `/learn/` means the static Lab application shell is reachable; it does not create an authenticated browser session or prove that protected course content is visible. Complete steps 1 and 2 in a browser to verify authenticated Lab access.
+These `curl` requests verify container and gateway availability only.
 
 ## How To Read Failures
 
