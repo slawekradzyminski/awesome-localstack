@@ -105,6 +105,8 @@ verify_urls:
 verify_ai_lab_urls:
   - url: http://127.0.0.1/learn/
     content_pattern: "<title>AI Learning Lab</title>"
+  - url: http://127.0.0.1/learn/how-machines-learn/course/learning-from-mistakes
+    content_pattern: "<title>AI Learning Lab</title>"
   - url: http://127.0.0.1/learn/how-llm-works/course/attention
     content_pattern: "<title>AI Learning Lab</title>"
   - url: http://127.0.0.1/learn/how-ai-agent-works/course/agent-loop

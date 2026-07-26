@@ -68,7 +68,7 @@ Every production release selects a five-image first-party compatibility set, eve
 | --- | --- |
 | backend | `slawekradzyminski/backend:3.7.12@sha256:39809b9e9fdc05fe33294357e5f91c5c37feb1afd60eefda6d2ae580b88bae80` |
 | primary frontend | `slawekradzyminski/frontend:3.7.9@sha256:6a6e2fc9eb1d3c4bd1d9cc3845d68998812ca7ca93c01f42d543ab5b73afcc03` |
-| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.4@sha256:35ef645bc30dde3cd63f9735e3efcb6a59ab3440ce951f6c3bcafead4763f470` |
+| AI Lab | `slawekradzyminski/ai-learning-lab:0.1.5@sha256:8b51f5443ed1fd610b5b924851b1e4047c95fbccf2b16297715cd9ccff698d2b` |
 | JMS consumer | `slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872` |
 
@@ -128,11 +128,12 @@ Deploy through Ansible:
 make ansible-deploy
 ```
 
-The verification role retries startup-sensitive requests and checks both the Lab shell and the recorded Attention deep route for the AI Learning Lab HTML marker. After Ansible succeeds, verify the public TLS path as well:
+The verification role retries startup-sensitive requests and checks the Lab shell plus representative deep routes from all three courses for the AI Learning Lab HTML marker. After Ansible succeeds, verify the public TLS path as well:
 
 ```bash
 curl -I https://awesome.byst.re/learn
 curl -fsS https://awesome.byst.re/learn/ | grep -F '<title>AI Learning Lab</title>'
+curl -fsS https://awesome.byst.re/learn/how-machines-learn/course/learning-from-mistakes | grep -F '<title>AI Learning Lab</title>'
 curl -fsS https://awesome.byst.re/learn/how-llm-works/course/attention | grep -F '<title>AI Learning Lab</title>'
 curl -fsS https://awesome.byst.re/learn/how-ai-agent-works/course/agent-loop | grep -F '<title>AI Learning Lab</title>'
 ```
