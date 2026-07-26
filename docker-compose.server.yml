@@ -73,7 +73,7 @@ services:
       - my-private-ntwk
 
   ai-learning-lab:
-    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.4@sha256:35ef645bc30dde3cd63f9735e3efcb6a59ab3440ce951f6c3bcafead4763f470}
+    image: ${AI_LAB_IMAGE:-slawekradzyminski/ai-learning-lab:0.1.5@sha256:8b51f5443ed1fd610b5b924851b1e4047c95fbccf2b16297715cd9ccff698d2b}
     restart: unless-stopped
     logging: *default-logging
     expose:
