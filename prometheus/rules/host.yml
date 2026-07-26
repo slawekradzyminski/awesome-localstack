@@ -42,53 +42,53 @@ groups:
           description: Linux MemAvailable has remained below 300 MiB for 3 minutes.
 
       - alert: HostMemoryPressureWaiting
-        expr: rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10
+        expr: rate(container_pressure_memory_waiting_seconds_total{job="cadvisor",id="/"}[5m]) > 0.10
         for: 10m
         labels:
           severity: warning
           service: host
         annotations:
-          summary: Tasks are waiting on memory pressure
-          description: Memory PSI waiting time has exceeded 10% for 10 minutes.
+          summary: VPS tasks are waiting on memory pressure
+          description: VPS-root cgroup memory PSI waiting time has exceeded 10% for 10 minutes.
 
       - alert: HostMemoryPressureWaitingCritical
-        expr: rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.20
+        expr: rate(container_pressure_memory_waiting_seconds_total{job="cadvisor",id="/"}[5m]) > 0.20
         for: 3m
         labels:
           severity: critical
           service: host
         annotations:
-          summary: Severe task waiting caused by memory pressure
-          description: Memory PSI waiting time has exceeded 20% for 3 minutes.
+          summary: Severe VPS task waiting caused by memory pressure
+          description: VPS-root cgroup memory PSI waiting time has exceeded 20% for 3 minutes.
 
       - alert: HostMemoryFullStalls
-        expr: rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.02
+        expr: rate(container_pressure_memory_stalled_seconds_total{job="cadvisor",id="/"}[5m]) > 0.02
         for: 5m
         labels:
           severity: warning
           service: host
         annotations:
-          summary: Host is experiencing full memory stalls
-          description: Full memory PSI stalls have exceeded 2% for 5 minutes.
+          summary: VPS is experiencing full memory stalls
+          description: VPS-root cgroup full memory PSI stalls have exceeded 2% for 5 minutes.
 
       - alert: HostMemoryFullStallsCritical
-        expr: rate(node_pressure_memory_stalled_seconds_total[5m]) > 0.05
+        expr: rate(container_pressure_memory_stalled_seconds_total{job="cadvisor",id="/"}[5m]) > 0.05
         for: 3m
         labels:
           severity: critical
           service: host
         annotations:
-          summary: Host is experiencing severe full memory stalls
-          description: Full memory PSI stalls have exceeded 5% for 3 minutes.
+          summary: VPS is experiencing severe full memory stalls
+          description: VPS-root cgroup full memory PSI stalls have exceeded 5% for 3 minutes.
 
       - alert: HostKernelOOMKill
-        expr: increase(node_vmstat_oom_kill[5m]) > 0
+        expr: increase(container_oom_events_total{job="cadvisor",id="/"}[5m]) > 0
         labels:
           severity: critical
           service: host
         annotations:
-          summary: The Linux kernel killed a process due to memory exhaustion
-          description: At least one kernel OOM kill occurred during the last 5 minutes.
+          summary: The VPS experienced an OOM event
+          description: The VPS-root cgroup reported at least one OOM event during the last 5 minutes.
 
   - name: host-swap
     rules:

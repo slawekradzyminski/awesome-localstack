@@ -470,21 +470,37 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total[5m])",
-          "legendFormat": "some tasks waiting",
+          "expr": "100 * rate(container_pressure_memory_waiting_seconds_total{job=\"cadvisor\", id=\"/\"}[5m])",
+          "legendFormat": "VPS: some tasks waiting",
           "range": true,
           "refId": "A"
         },
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total[5m])",
-          "legendFormat": "all tasks stalled",
+          "expr": "100 * rate(container_pressure_memory_stalled_seconds_total{job=\"cadvisor\", id=\"/\"}[5m])",
+          "legendFormat": "VPS: all tasks stalled",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total[5m])",
+          "legendFormat": "provider host: some tasks waiting",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total[5m])",
+          "legendFormat": "provider host: all tasks stalled",
+          "range": true,
+          "refId": "D"
         }
       ],
-      "title": "Memory pressure (PSI)",
+      "title": "Memory pressure (VPS cgroup vs provider host PSI)",
       "type": "timeseries"
     },
     {
