@@ -407,7 +407,10 @@ flowchart LR
     O[Ollama Mock<br/>internal only]
     N[Node Exporter<br/>host metrics]
     CA[cAdvisor<br/>container metrics]
+    BB[Blackbox Exporter<br/>public HTTPS probes]
     P[Prometheus<br/>30 days / 5 GB]
+    AM[Alertmanager<br/>private]
+    T[Telegram<br/>operator alerts]
     GR[Grafana<br/>private dashboard]
 
     U --> G
@@ -424,9 +427,13 @@ flowchart LR
     AB --> O
     N --> P
     CA --> P
+    BB -->|public DNS + TLS| G
+    BB --> P
     B --> P
     C --> P
     P --> GR
+    P --> AM
+    AM --> T
 ```
 
 Production hardening in this profile:
@@ -438,8 +445,15 @@ Production hardening in this profile:
 - Mailpit API is not published
 - ActiveMQ is internal-only
 - consumer metrics are internal-only
-- Node Exporter, cAdvisor, and Prometheus are internal-only
+- Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and Alertmanager are internal-only
 - Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
+- Blackbox Exporter checks the public login and OpenAPI routes every 30 seconds,
+  including DNS, TLS, HTTP status, and latency
+- Alertmanager sends grouped warning, critical, and resolved notifications to
+  a Vault-configured private Telegram chat
+- the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
+  but swap remains disabled on the current MIKR.US LXC host because its
+  virtualization layer rejects `swapon`
 - the main backend and consumer have explicit JVM heap and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
@@ -447,7 +461,13 @@ Production hardening in this profile:
 - the aitesters frontend remains independently versioned and does not route `/learn/`
 
 Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
-the provisioned **Production Resources** dashboard.
+the provisioned **Production Resources** and
+**Production Availability & Safeguards** dashboards.
+
+The public probes run on the VPS, so they detect application, gateway, DNS, TLS,
+and public routing failures while the monitoring stack is alive. They cannot
+detect loss of the entire VPS. A separate off-server heartbeat monitor remains
+required for that failure mode.
 
 Quick public verification:
 

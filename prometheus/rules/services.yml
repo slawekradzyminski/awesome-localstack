@@ -1,0 +1,90 @@
+groups:
+  - name: monitoring-and-services
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus scrape target is unavailable
+          description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 2 minutes.
+
+      - alert: PrometheusTargetDownCritical
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Prometheus scrape target is persistently unavailable
+          description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 5 minutes.
+
+      - alert: PrometheusRuleEvaluationFailures
+        expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
+        labels:
+          severity: critical
+          service: prometheus
+        annotations:
+          summary: Prometheus failed to evaluate one or more rules
+          description: Prometheus reported rule evaluation failures during the last 5 minutes.
+
+      - alert: AlertmanagerNotificationFailures
+        expr: increase(alertmanager_notifications_failed_total[5m]) > 0
+        labels:
+          severity: critical
+          service: alertmanager
+        annotations:
+          summary: Alertmanager failed to deliver a notification
+          description: Alertmanager reported at least one failed notification during the last 5 minutes.
+
+  - name: public-availability
+    rules:
+      - alert: PublicEndpointProbeFailed
+        expr: probe_success{job="public_https"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: public-edge
+        annotations:
+          summary: Public HTTPS endpoint probe is failing
+          description: The probe of {{ $labels.instance }} has failed for 2 minutes.
+
+      - alert: PublicEndpointProbeFailedCritical
+        expr: probe_success{job="public_https"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: public-edge
+        annotations:
+          summary: Public HTTPS endpoint is persistently unavailable
+          description: The probe of {{ $labels.instance }} has failed for 5 minutes.
+
+      - alert: PublicEndpointLatencyHigh
+        expr: probe_duration_seconds{job="public_https"} > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: public-edge
+        annotations:
+          summary: Public HTTPS endpoint latency is high
+          description: The probe of {{ $labels.instance }} has taken over 2 seconds for 10 minutes.
+
+      - alert: PublicEndpointTLSExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry{job="public_https"} - time()) / 86400 < 21
+        for: 1h
+        labels:
+          severity: warning
+          service: public-edge
+        annotations:
+          summary: Public TLS certificate expires within 21 days
+          description: The certificate observed at {{ $labels.instance }} expires in less than 21 days.
+
+      - alert: PublicEndpointTLSExpiringCritical
+        expr: (probe_ssl_earliest_cert_expiry{job="public_https"} - time()) / 86400 < 7
+        for: 15m
+        labels:
+          severity: critical
+          service: public-edge
+        annotations:
+          summary: Public TLS certificate expires within 7 days
+          description: The certificate observed at {{ $labels.instance }} expires in less than 7 days.

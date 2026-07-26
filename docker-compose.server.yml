@@ -211,6 +211,46 @@ services:
     networks:
       - my-private-ntwk
 
+  alertmanager:
+    image: prom/alertmanager:v0.32.1@sha256:51a825c2a40acc3e338fdd00d622e01ec090f72be2b3ea46be0839cd47a4d286
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+      - --enable-feature=utf8-strict-mode
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/:ro
+      - alertmanager-data:/alertmanager
+    expose:
+      - "9093"
+    mem_limit: 128m
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - my-private-ntwk
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+      - --log.prober=warn
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+    expose:
+      - "9115"
+    mem_limit: 64m
+    read_only: true
+    user: "65534:65534"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - my-private-ntwk
+
   prometheus:
     image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
     restart: unless-stopped
@@ -228,6 +268,8 @@ services:
       - consumer
       - node-exporter
       - cadvisor
+      - alertmanager
+      - blackbox-exporter
     expose:
       - "9090"
     mem_limit: 512m
@@ -247,6 +289,7 @@ services:
       - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
       - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
       - ./grafana/provisioning/dashboards/production_resources.json:/etc/grafana/provisioning/dashboards/production_resources.json:ro
+      - ./grafana/provisioning/dashboards/production_safeguards.json:/etc/grafana/provisioning/dashboards/production_safeguards.json:ro
     depends_on:
       - prometheus
     ports:
@@ -342,6 +385,7 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+  alertmanager-data:
 
 networks:
   my-private-ntwk:

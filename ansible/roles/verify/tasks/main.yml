@@ -29,6 +29,8 @@
     - http://node-exporter:9100/metrics
     - http://cadvisor:8080/metrics
     - http://prometheus:9090/-/ready
+    - http://alertmanager:9093/-/ready
+    - http://blackbox-exporter:9115/-/healthy
   register: verify_monitoring_endpoint
   changed_when: false
   until: verify_monitoring_endpoint.rc == 0
@@ -57,6 +59,9 @@
       - spring_consumer_micrometer
       - node
       - cadvisor
+      - alertmanager
+      - blackbox
+      - public_https
   until:
     - prometheus_targets_response.rc == 0
     - >-
@@ -93,6 +98,207 @@
     - spring_consumer_micrometer
     - node
     - cadvisor
+    - alertmanager
+    - blackbox
+    - public_https
+
+- name: Verify Prometheus discovered Alertmanager
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - http://prometheus:9090/api/v1/alertmanagers
+    chdir: "{{ app_dir }}"
+  register: prometheus_alertmanagers_response
+  changed_when: false
+  until:
+    - prometheus_alertmanagers_response.rc == 0
+    - >-
+      (
+        (prometheus_alertmanagers_response.stdout | from_json)
+        .data.activeAlertmanagers
+        | length
+      ) > 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Read loaded Prometheus alert rules
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - http://prometheus:9090/api/v1/rules?type=alert
+    chdir: "{{ app_dir }}"
+  register: prometheus_rules_response
+  changed_when: false
+  until:
+    - prometheus_rules_response.rc == 0
+    - ((prometheus_rules_response.stdout | from_json).data.groups | length) > 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Record loaded Prometheus alert rule names
+  ansible.builtin.set_fact:
+    prometheus_loaded_rule_names: >-
+      {{
+        (prometheus_rules_response.stdout | from_json).data.groups
+        | map(attribute='rules')
+        | flatten
+        | map(attribute='name')
+        | list
+      }}
+
+- name: Verify required production alert rules are loaded
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - item in prometheus_loaded_rule_names
+    fail_msg: "Prometheus alert rule {{ item }} is not loaded"
+  loop:
+    - HostAvailableMemoryLow
+    - HostAvailableMemoryCritical
+    - HostKernelOOMKill
+    - HostSwapUsageHigh
+    - HostSwapThrashing
+    - HostRootDiskSpaceLow
+    - ContainerMemoryNearLimit
+    - ContainerOOMEvent
+    - CriticalContainerMissing
+    - JVMHeapUsageHigh
+    - PrometheusTargetDown
+    - AlertmanagerNotificationFailures
+    - PublicEndpointProbeFailed
+    - PublicEndpointTLSExpiringSoon
+
+- name: Verify Blackbox Exporter binary version
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - blackbox-exporter
+      - /bin/blackbox_exporter
+      - --version
+    chdir: "{{ app_dir }}"
+  register: blackbox_exporter_version
+  changed_when: false
+  failed_when: >-
+    blackbox_exporter_version.rc != 0
+    or 'version 0.28.0' not in blackbox_exporter_version.stdout
+
+- name: Query public HTTPS probe results
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -G
+      - --data-urlencode
+      - query=probe_success{job="public_https"}
+      - http://prometheus:9090/api/v1/query
+    chdir: "{{ app_dir }}"
+  register: public_probe_response
+  changed_when: false
+  until:
+    - public_probe_response.rc == 0
+    - ((public_probe_response.stdout | from_json).data.result | length) == 2
+    - >-
+      (
+        (public_probe_response.stdout | from_json).data.result
+        | map(attribute='value')
+        | map('last')
+        | map('float')
+        | min
+      ) == 1
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify managed emergency swap
+  ansible.builtin.command:
+    argv:
+      - swapon
+      - --show
+      - --noheadings
+      - --raw
+      - --output
+      - NAME
+  register: verify_swap
+  changed_when: false
+  failed_when: >-
+    verify_swap.rc != 0
+    or swap_file_path not in verify_swap.stdout_lines
+  when: swap_enabled | bool
+
+- name: Verify managed swappiness
+  ansible.builtin.command:
+    argv:
+      - sysctl
+      - -n
+      - vm.swappiness
+  register: verify_swappiness
+  changed_when: false
+  failed_when: >-
+    verify_swappiness.rc != 0
+    or verify_swappiness.stdout | int != swap_swappiness | int
+  when: swap_enabled | bool
+
+- name: Verify Alertmanager binary version
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - alertmanager
+      - /bin/alertmanager
+      - --version
+    chdir: "{{ app_dir }}"
+  register: alertmanager_version
+  changed_when: false
+  failed_when: >-
+    alertmanager_version.rc != 0
+    or 'version 0.32.1' not in alertmanager_version.stdout
+
+- name: Verify Alertmanager secret file permissions
+  ansible.builtin.command:
+    argv:
+      - stat
+      - -c
+      - "%a:%u:%g"
+      - "{{ item }}"
+  loop:
+    - "{{ app_dir }}/alertmanager/secrets/telegram_bot_token"
+    - "{{ app_dir }}/alertmanager/secrets/telegram_chat_id"
+  register: alertmanager_secret_permissions
+  changed_when: false
+  failed_when: >-
+    alertmanager_secret_permissions.rc != 0
+    or alertmanager_secret_permissions.stdout != "400:65534:65534"
 
 - name: Query effective Spring JVM maximum heaps
   ansible.builtin.command:
@@ -151,6 +357,22 @@
       - test
       - -r
       - /etc/grafana/provisioning/dashboards/production_resources.json
+    chdir: "{{ app_dir }}"
+  changed_when: false
+
+- name: Verify the production safeguards dashboard is provisioned
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - grafana
+      - test
+      - -r
+      - /etc/grafana/provisioning/dashboards/production_safeguards.json
     chdir: "{{ app_dir }}"
   changed_when: false
 

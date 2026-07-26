@@ -26,19 +26,55 @@
     group: root
     mode: "0755"
 
-- name: Read the deployed Prometheus configuration checksum
-  ansible.builtin.stat:
-    path: "{{ app_dir }}/prometheus/prometheus.server.yml"
-    checksum_algorithm: sha256
-  register: deployed_prometheus_config
+- name: Validate Telegram Alertmanager credentials
+  ansible.builtin.assert:
+    that:
+      - (alertmanager_telegram_bot_token | default('', true) | length) > 0
+      - (alertmanager_telegram_chat_id | default('', true) | string | length) > 0
+    fail_msg: >-
+      alertmanager_telegram_bot_token and alertmanager_telegram_chat_id
+      must be configured in Ansible Vault
+  no_log: true
 
-- name: Read the source Prometheus configuration checksum
+- name: Read deployed Prometheus configuration checksums
   ansible.builtin.stat:
-    path: "{{ repo_root }}/prometheus/prometheus.server.yml"
+    path: "{{ app_dir }}/{{ prometheus_config_file }}"
+    checksum_algorithm: sha256
+  loop: "{{ prometheus_server_config_files }}"
+  loop_control:
+    loop_var: prometheus_config_file
+  register: deployed_prometheus_configs
+
+- name: Read source Prometheus configuration checksums
+  ansible.builtin.stat:
+    path: "{{ repo_root }}/{{ prometheus_config_file }}"
     checksum_algorithm: sha256
   delegate_to: localhost
   become: false
-  register: source_prometheus_config
+  loop: "{{ prometheus_server_config_files }}"
+  loop_control:
+    loop_var: prometheus_config_file
+  register: source_prometheus_configs
+
+- name: Read deployed Alertmanager configuration checksums
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/{{ alertmanager_config_file }}"
+    checksum_algorithm: sha256
+  loop: "{{ alertmanager_config_files }}"
+  loop_control:
+    loop_var: alertmanager_config_file
+  register: deployed_alertmanager_configs
+
+- name: Read source Alertmanager configuration checksums
+  ansible.builtin.stat:
+    path: "{{ repo_root }}/{{ alertmanager_config_file }}"
+    checksum_algorithm: sha256
+  delegate_to: localhost
+  become: false
+  loop: "{{ alertmanager_config_files }}"
+  loop_control:
+    loop_var: alertmanager_config_file
+  register: source_alertmanager_configs
 
 - name: Copy Docker Compose file
   ansible.builtin.copy:
@@ -73,9 +109,50 @@
   ansible.builtin.set_fact:
     prometheus_config_changed: >-
       {{
-        not deployed_prometheus_config.stat.exists
-        or deployed_prometheus_config.stat.checksum
-          != source_prometheus_config.stat.checksum
+        (
+          deployed_prometheus_configs.results
+          | selectattr('stat.exists', 'equalto', false)
+          | list
+          | length
+        ) > 0
+        or
+        (
+          deployed_prometheus_configs.results
+          | selectattr('stat.exists')
+          | map(attribute='stat.checksum')
+          | list
+        )
+        !=
+        (
+          source_prometheus_configs.results
+          | map(attribute='stat.checksum')
+          | list
+        )
+      }}
+
+- name: Detect whether Alertmanager assets changed
+  ansible.builtin.set_fact:
+    alertmanager_config_changed: >-
+      {{
+        (
+          deployed_alertmanager_configs.results
+          | selectattr('stat.exists', 'equalto', false)
+          | list
+          | length
+        ) > 0
+        or
+        (
+          deployed_alertmanager_configs.results
+          | selectattr('stat.exists')
+          | map(attribute='stat.checksum')
+          | list
+        )
+        !=
+        (
+          source_alertmanager_configs.results
+          | map(attribute='stat.checksum')
+          | list
+        )
       }}
 
 - name: Render runtime environment file
@@ -118,6 +195,59 @@
     - grafana
     - prometheus
 
+- name: Ensure Alertmanager configuration assets are readable
+  ansible.builtin.file:
+    path: "{{ app_dir }}/alertmanager"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure Alertmanager configuration file is readable
+  ansible.builtin.file:
+    path: "{{ app_dir }}/alertmanager/alertmanager.yml"
+    state: file
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure Alertmanager templates are readable
+  ansible.builtin.file:
+    path: "{{ app_dir }}/alertmanager/templates"
+    state: directory
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+    recurse: true
+
+- name: Ensure Alertmanager secrets directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}/alertmanager/secrets"
+    state: directory
+    owner: root
+    group: root
+    mode: "0711"
+
+- name: Render Telegram bot token for Alertmanager
+  ansible.builtin.copy:
+    content: "{{ alertmanager_telegram_bot_token }}\n"
+    dest: "{{ app_dir }}/alertmanager/secrets/telegram_bot_token"
+    owner: "65534"
+    group: "65534"
+    mode: "0400"
+  register: alertmanager_telegram_token_file
+  no_log: true
+
+- name: Render Telegram chat ID for Alertmanager
+  ansible.builtin.copy:
+    content: "{{ alertmanager_telegram_chat_id }}\n"
+    dest: "{{ app_dir }}/alertmanager/secrets/telegram_chat_id"
+    owner: "65534"
+    group: "65534"
+    mode: "0400"
+  register: alertmanager_telegram_chat_id_file
+  no_log: true
+
 - name: Deploy Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
@@ -135,6 +265,16 @@
     cmd: docker compose -f {{ app_compose_file }} restart prometheus
     chdir: "{{ app_dir }}"
   when: prometheus_config_changed
+
+- name: Restart Alertmanager when its configuration or secrets change
+  ansible.builtin.command:
+    cmd: docker compose -f {{ app_compose_file }} restart alertmanager
+    chdir: "{{ app_dir }}"
+  when:
+    - >-
+      alertmanager_config_changed
+      or alertmanager_telegram_token_file is changed
+      or alertmanager_telegram_chat_id_file is changed
 
 - name: Ensure Artemis service account exists in the broker instance
   ansible.builtin.shell: |

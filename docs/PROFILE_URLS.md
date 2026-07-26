@@ -286,6 +286,8 @@ Not published on the host:
 - consumer `4002`
 - backend `4001`
 - Prometheus `9090`
+- Alertmanager `9093`
+- Blackbox Exporter `9115`
 - Node Exporter `9100`
 - cAdvisor `8080`
 - frontend `80`
@@ -305,8 +307,15 @@ Special behavior:
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus
+- Blackbox Exporter probes the public login and OpenAPI URLs every 30 seconds
+  through public DNS and validated TLS
 - Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
-- Grafana provisions the private `Production Resources` dashboard from the repository
+- Alertmanager stores silences and notification state in a named volume and
+  sends grouped notifications to a Vault-configured Telegram chat
+- Grafana provisions the private `Production Resources` and
+  `Production Availability & Safeguards` dashboards from the repository
+- Blackbox checks, alert delivery, and dashboards are server-profile-only;
+  the full and lightweight local profiles are unchanged
 
 ## Gateway Route Map
 
@@ -432,6 +441,8 @@ docker compose -f docker-compose.server.yml exec consumer curl -i http://consume
 docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://cadvisor:8080/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://prometheus:9090/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -i http://alertmanager:9093/-/ready
+docker compose -f docker-compose.server.yml exec gateway curl -i http://blackbox-exporter:9115/-/healthy
 docker compose -f docker-compose.server.yml exec gateway curl -i http://localhost/images/iphone.png
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```

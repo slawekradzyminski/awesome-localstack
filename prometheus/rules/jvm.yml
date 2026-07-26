@@ -1,0 +1,46 @@
+groups:
+  - name: jvm
+    rules:
+      - alert: JVMHeapUsageHigh
+        expr: |
+          sum by (job) (jvm_memory_used_bytes{area="heap"})
+          /
+          sum by (job) (jvm_memory_max_bytes{area="heap"})
+          > 0.75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: JVM heap usage is above 75%
+          description: JVM heap usage for {{ $labels.job }} has remained above 75% for 10 minutes.
+
+      - alert: JVMHeapUsageCritical
+        expr: |
+          sum by (job) (jvm_memory_used_bytes{area="heap"})
+          /
+          sum by (job) (jvm_memory_max_bytes{area="heap"})
+          > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: JVM heap usage is above 90%
+          description: JVM heap usage for {{ $labels.job }} has remained above 90% for 5 minutes.
+
+      - alert: JVMGCOverheadHigh
+        expr: sum by (job) (rate(jvm_gc_pause_seconds_sum[5m])) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: JVM is spending over 10% of time in garbage collection
+          description: GC pause time for {{ $labels.job }} has remained above 10% for 10 minutes.
+
+      - alert: JVMGCOverheadCritical
+        expr: sum by (job) (rate(jvm_gc_pause_seconds_sum[5m])) > 0.20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: JVM is spending over 20% of time in garbage collection
+          description: GC pause time for {{ $labels.job }} has remained above 20% for 5 minutes.

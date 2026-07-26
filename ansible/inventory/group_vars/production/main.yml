@@ -43,6 +43,15 @@ docker_log_max_file: "5"
 journald_system_max_use: 100M
 journald_max_retention_sec: 14day
 
+# MIKR.US runs this VPS inside LXC and rejects swapon with EPERM. Keep the
+# convergent role ready for a future VM/package that grants swap capability,
+# but do not leave an unusable /etc/fstab entry on this host.
+swap_enabled: false
+swap_disabled_reason: The MIKR.US LXC virtualization layer does not permit swapon.
+swap_file_path: /swapfile
+swap_file_size_mb: 1024
+swap_swappiness: 10
+
 app_compose_src: docker-compose.server.yml
 
 postgres_backup_enabled: true
@@ -63,8 +72,21 @@ app_copy_paths:
   - nginx
   - grafana
   - prometheus
+  - alertmanager
+  - blackbox
   - images
   - branding
+
+prometheus_server_config_files:
+  - prometheus/prometheus.server.yml
+  - prometheus/rules/host.yml
+  - prometheus/rules/containers.yml
+  - prometheus/rules/jvm.yml
+  - prometheus/rules/services.yml
+
+alertmanager_config_files:
+  - alertmanager/alertmanager.yml
+  - alertmanager/templates/telegram.tmpl
 
 app_runtime_env:
   GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
