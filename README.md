@@ -226,7 +226,7 @@ Verify the actual Compose path (backend -> adapter -> Docker Model Runner):
 ```bash
 docker compose exec -T backend printenv OLLAMA_BASE_URL
 docker run --rm --network awesome-full-native_my-private-ntwk \
-  curlimages/curl:8.21.0 \
+  curlimages/curl:8.21.0@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13 \
   http://ollama-dmr-adapter:11434/api/tags
 docker model ps
 ```
@@ -331,6 +331,7 @@ Server operations:
 make ansible-ssh
 make ansible-deploy
 make ansible-verify
+make ansible-cleanup
 make ansible-reset-demo-state
 make ansible-reset-aitesters-state
 ```
@@ -338,6 +339,7 @@ make ansible-reset-aitesters-state
 - `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
 - `make ansible-deploy`: converge the server stack and run post-deploy verification
 - `make ansible-verify`: run health checks without changing deployment state
+- `make ansible-cleanup`: run the checksum- and retention-guarded container cleanup
 - `make ansible-reset-demo-state`: destructively reset Postgres and Mailpit-backed demo state, then redeploy
 - `make ansible-reset-aitesters-state`: recreate only the H2-backed aitesters backend and reseed local demo data
 
@@ -431,6 +433,11 @@ Production hardening in this profile:
 - images are served directly by the gateway
 - the aitesters backend and frontend reuse the exact current application images;
   their sandbox behavior comes from runtime configuration, not stale releases
+- deployment verification checks every running image against its reviewed
+  immutable reference and exercises Artemis-to-consumer-to-Mailpit delivery
+- unused images are pruned only after 30 days; the retired Artemis volume also
+  requires a verified encrypted backup, no attachments, and the same retention
+  period before removal
 
 Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
 the provisioned **Production Resources** and

@@ -8,3 +8,4 @@
     - postgres_backup
     - app
     - verify
+    - cleanup

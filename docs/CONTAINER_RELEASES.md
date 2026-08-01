@@ -72,6 +72,10 @@ Previous application releases remain rollback references only.
 
 Static pin verification runs in normal LocalStack CI. `.github/workflows/verify-release-images.yml` performs the registry check weekly and on manual request.
 
+`scripts/verify-image-pins.py` extends the rule to every remotely pulled image
+in all Compose profiles, the Jenkins Dockerfile, CI service containers, and the
+PostgreSQL restore tool. Locally built `:local` images are the only exception.
+
 ## Release sequence
 
 1. Merge a green source change to that repository's default branch.
@@ -79,8 +83,14 @@ Static pin verification runs in normal LocalStack CI. `.github/workflows/verify-
 3. Create the matching signed or annotated `vX.Y.Z` tag, or run an explicit candidate from the intended commit.
 4. Wait for both registry publications and copy the Docker Hub manifest digest from the workflow summary or `docker buildx imagetools inspect`.
 5. Update the relevant `tag@sha256` references in the LocalStack profiles and the compatibility table.
-6. Run all Compose configuration checks and `python3 scripts/verify-release-images.py --remote`.
-7. Run the affected direct-service, gateway, lightweight, and full gates.
-8. Merge the LocalStack release PR, create an encrypted production backup when stateful services are affected, and deploy through Ansible.
+6. Run `make sync-release-images` from this repository to propagate backend,
+   frontend, and Ollama-mock references into the sibling development Compose
+   files. The command fails if the expected workspace repositories or reference
+   shapes are missing and validates each changed Compose file.
+7. Run all Compose configuration checks,
+   `python3 scripts/verify-image-pins.py`, and
+   `python3 scripts/verify-release-images.py --remote`.
+8. Run the affected direct-service, gateway, lightweight, and full gates.
+9. Merge the LocalStack release PR, create an encrypted production backup when stateful services are affected, and deploy through Ansible.
 
 An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set. Backward compatibility is maintained for persisted data and external contracts where required; the deployment does not keep stale application images running as compatibility variants.

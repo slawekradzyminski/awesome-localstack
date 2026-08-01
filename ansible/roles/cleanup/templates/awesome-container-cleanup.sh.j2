@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+readonly legacy_volume={{ cleanup_legacy_artemis_volume | quote }}
+readonly backup={{ cleanup_legacy_artemis_backup | quote }}
+readonly retention_days={{ cleanup_retention_days | int }}
+readonly retention_seconds=$((retention_days * 24 * 60 * 60))
+readonly retention_hours=$((retention_days * 24))
+
+if docker volume inspect "$legacy_volume" >/dev/null 2>&1; then
+  if [[ ! -f "$backup" || ! -f "${backup}.sha256" ]]; then
+    echo "Refusing to remove $legacy_volume: encrypted backup or checksum is missing." >&2
+    exit 1
+  fi
+
+  (
+    cd "$(dirname "$backup")"
+    sha256sum --check "$(basename "$backup").sha256"
+  )
+
+  backup_age_seconds=$(( $(date +%s) - $(stat -c %Y "$backup") ))
+  if (( backup_age_seconds >= retention_seconds )); then
+    attached_containers="$(docker ps -aq --filter "volume=$legacy_volume")"
+    if [[ -n "$attached_containers" ]]; then
+      echo "Refusing to remove $legacy_volume: it is still attached to a container." >&2
+      exit 1
+    fi
+    docker volume rm "$legacy_volume"
+    echo "Removed retired Artemis volume $legacy_volume after ${retention_days} days."
+  else
+    remaining_days=$(( (retention_seconds - backup_age_seconds + 86399) / 86400 ))
+    echo "Retaining retired Artemis volume $legacy_volume for approximately ${remaining_days} more days."
+  fi
+else
+  echo "Retired Artemis volume $legacy_volume is already absent."
+fi
+
+{% if cleanup_unused_images | bool %}
+docker image prune --all --force --filter "until=${retention_hours}h"
+{% else %}
+echo "Unused-image cleanup is disabled."
+{% endif %}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Awesome LocalStack guarded container cleanup
+
+[Timer]
+OnCalendar={{ cleanup_schedule }}
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

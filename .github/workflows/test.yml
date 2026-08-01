@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       docker:
-        image: docker:stable
+        image: docker:29.6.2-cli@sha256:be132a9f282288de4afaf63379dff75711fda0147c6b72a9df44e51841402144
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:
@@ -40,6 +40,8 @@ jobs:
     - uses: actions/checkout@v7.0.1
     - name: Verify immutable first-party image set
       run: python3 scripts/verify-release-images.py
+    - name: Verify all remotely pulled images are immutable
+      run: python3 scripts/verify-image-pins.py
 
   verifyLightweight:
     runs-on: ubuntu-latest
@@ -74,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       docker:
-        image: docker:stable
+        image: docker:29.6.2-cli@sha256:be132a9f282288de4afaf63379dff75711fda0147c6b72a9df44e51841402144
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
     steps:

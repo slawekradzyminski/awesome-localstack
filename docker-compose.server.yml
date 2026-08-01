@@ -286,7 +286,7 @@ services:
       - my-private-ntwk
 
   postgres:
-    image: postgres:16.14-bookworm
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: unless-stopped
     logging: *default-logging
     environment:
@@ -340,7 +340,7 @@ services:
       - my-private-ntwk
 
   mailpit:
-    image: axllent/mailpit:v1.30.0
+    image: axllent/mailpit:v1.30.0@sha256:0059ef81e492a7192af3816281eed6859eb078bd7bdc58b76757c13e10e53a7d
     restart: unless-stopped
     logging: *default-logging
     environment:

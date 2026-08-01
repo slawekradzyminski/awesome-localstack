@@ -34,6 +34,7 @@ ansible/
     postgres_backup/
     app/
     verify/
+    cleanup/
   requirements.yml
 Makefile
 ```
@@ -74,6 +75,12 @@ Run verification only:
 
 ```bash
 make ansible-verify
+```
+
+Run the guarded retention cleanup independently:
+
+```bash
+make ansible-cleanup
 ```
 
 Reset the public demo data store and redeploy from a clean baseline:
@@ -117,7 +124,7 @@ ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password
 
 `deploy.yml` is the normal operational entrypoint.
 
-It performs four steps in order:
+It performs five steps in order:
 
 1. Runs the guarded `swap` role. It can converge a 1 GiB emergency swap file
    and low swappiness on capable hosts; it reports a tracked reason and makes no
@@ -127,6 +134,7 @@ It performs four steps in order:
    `/opt/awesome-localstack`.
 4. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
+5. Runs the guarded `cleanup` role only after verification succeeds.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
@@ -167,6 +175,10 @@ The `verify` role remains separate so it can still be run on demand, but it is a
 The role checks:
 
 - `docker compose ps`
+- every expected service is running the exact image ID resolved from the
+  reviewed immutable Compose reference
+- an Artemis message is consumed and delivered to Mailpit as a uniquely named
+  email
 - `http://127.0.0.1/login`
 - `http://127.0.0.1/v3/api-docs`
 - `http://127.0.0.1/images/iphone.png`
@@ -198,6 +210,20 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 - `postgres_backup`: encrypted backups, restore checks, and the pre-deploy backup
 - `app`: file sync, runtime env rendering, Compose convergence
 - `verify`: operational checks after deploy
+- `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume
+  plus pruning of unused images older than the retention window
+
+### Retention-based container cleanup
+
+The cleanup role installs a daily systemd timer and also runs once after a
+successful deployment verification. The production retention window is 30
+days. It removes only unused images older than that window.
+
+The retired Artemis anonymous volume has an additional guard: the exact
+encrypted backup and its checksum sidecar must exist and verify successfully,
+the backup must be at least 30 days old, and no container may still reference
+the volume. Until every condition passes, the volume is retained. The encrypted
+backup is not deleted by this role.
 
 ## Vault Workflow
 
