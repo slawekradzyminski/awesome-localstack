@@ -2,7 +2,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.13@sha256:c7c7d3298bd2b140bc1f914c147d1932b6d493d2a16a793a350f3ad9bde6fa69
+    image: slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7
     restart: always
     expose:
       - "4001"
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.11@sha256:b1c0bb05b1aaf5ca8e38552dcb137d8ba908975fa1c8c0eb7d80ca003afa03f8
+    image: slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112
     restart: always
     expose:
       - "80"
@@ -194,7 +194,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96
+    image: slawekradzyminski/consumer:3.3.6@sha256:a4f980d7c88ce7ec628e58bfeeed8f9390b28251ae198dbd179eac6e7c4f8b89
     restart: always
     ports:
       - "4002:4002"

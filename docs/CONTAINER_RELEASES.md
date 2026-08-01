@@ -46,19 +46,26 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.7.13@sha256:c7c7d3298bd2b140bc1f914c147d1932b6d493d2a16a793a350f3ad9bde6fa69` |
-| Frontend | `slawekradzyminski/frontend:3.7.11@sha256:b1c0bb05b1aaf5ca8e38552dcb137d8ba908975fa1c8c0eb7d80ca003afa03f8` |
-| Consumer | `slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872` |
+| Backend | `slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7` |
+| Frontend | `slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112` |
+| Consumer | `slawekradzyminski/consumer:3.3.6@sha256:a4f980d7c88ce7ec628e58bfeeed8f9390b28251ae198dbd179eac6e7c4f8b89` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.8@sha256:9859266fbd274ae3030d3b191fe795de76710c0019ee4c33913658cffc7e712e` |
 
 ## LocalStack compatibility gate
 
 The production compatibility set is the four first-party services above.
+The main and `aitesters` variants do not have separate application release
+lines: `aitesters-backend` must use the exact current backend reference and
+`aitesters-frontend` must use the exact current frontend reference. Their
+behavior differs through runtime profiles and routing, not through old images.
+Previous application releases remain rollback references only.
+
 `scripts/verify-release-images.py` checks that:
 
 - each production service uses a `tag@sha256` reference;
 - full and server agree on backend, frontend, and consumer releases;
 - lightweight and server agree on backend, frontend, and model-mock releases;
+- the server's `aitesters` services reuse the exact backend and frontend releases;
 - the model-mock override agrees with the server model-mock release;
 - this document records the exact selected references;
 - with `--remote`, every manifest exists and contains both `linux/amd64` and `linux/arm64`.
@@ -76,4 +83,4 @@ Static pin verification runs in normal LocalStack CI. `.github/workflows/verify-
 7. Run the affected direct-service, gateway, lightweight, and full gates.
 8. Merge the LocalStack release PR, create an encrypted production backup when stateful services are affected, and deploy through Ansible.
 
-An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set.
+An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set. Backward compatibility is maintained for persisted data and external contracts where required; the deployment does not keep stale application images running as compatibility variants.

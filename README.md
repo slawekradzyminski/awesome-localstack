@@ -429,7 +429,8 @@ Production hardening in this profile:
 - the main backend and consumer have explicit JVM heap and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
 - images are served directly by the gateway
-- the aitesters frontend remains independently versioned
+- the aitesters backend and frontend reuse the exact current application images;
+  their sandbox behavior comes from runtime configuration, not stale releases
 
 Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
 the provisioned **Production Resources** and
