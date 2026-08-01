@@ -10,7 +10,7 @@ updates:
           - minor
           - patch
   - package-ecosystem: docker
-    directory: /ollama
+    directory: /ollama-dmr-adapter
     schedule:
       interval: weekly
     groups:

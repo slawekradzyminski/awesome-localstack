@@ -150,6 +150,16 @@ The Compose task uses convergent settings rather than forced recreation:
 
 That keeps repeated deploys idempotent when the server state already matches the repo.
 
+### Artemis 2.55 volume migration
+
+The official `apache/artemis` image uses the explicit `activemq-data` volume.
+The retired `apache/activemq-artemis` image created an anonymous instance
+volume whose launch scripts refer to the old distribution layout and cannot be
+reused by Artemis 2.55. Before the first deployment of Artemis 2.55, drain or
+export pending messages and retain a backup of the anonymous volume. The first
+convergent deployment creates the new named volume; do not delete the old
+anonymous volume until the Artemis-to-consumer delivery check has passed.
+
 ### Verification as part of deploy
 
 The `verify` role remains separate so it can still be run on demand, but it is also included in `deploy.yml`.

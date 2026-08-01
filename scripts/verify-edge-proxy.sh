@@ -28,7 +28,7 @@ docker run --detach --rm \
   --network "${network}" \
   --network-alias edge \
   --volume "${test_config}:/etc/nginx/conf.d/default.conf:ro" \
-  nginx:1.31.2-trixie >/dev/null
+  nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942 >/dev/null
 
 response=""
 for _ in $(seq 1 20); do

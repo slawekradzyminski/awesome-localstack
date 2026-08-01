@@ -289,7 +289,8 @@ Special behavior:
 - `https://awesome.byst.re/mailpit/api/v1/messages` is blocked with `404`
 - `https://awesome.byst.re/mailpit/` is blocked with `404`
 - Mailpit remains available only through SSH tunnelling to remote `127.0.0.1:8025`
-- `aitesters.byst.re` runs an additional backend with the Spring `local` profile
+- `aitesters.byst.re` runs the current backend image with the Spring `aitesters` profile
+- its frontend is the same current frontend image used by `awesome.byst.re`
 - `aitesters.byst.re` uses H2 in-memory data and seeded local demo users, including the demo admin
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer

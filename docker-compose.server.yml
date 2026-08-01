@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.13@sha256:c7c7d3298bd2b140bc1f914c147d1932b6d493d2a16a793a350f3ad9bde6fa69
+    image: slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -62,8 +62,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    # Release independently from aitesters-frontend.
-    image: slawekradzyminski/frontend:3.7.11@sha256:b1c0bb05b1aaf5ca8e38552dcb137d8ba908975fa1c8c0eb7d80ca003afa03f8
+    image: slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -73,7 +72,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.9
+    image: slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -112,7 +111,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.6
+    image: slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -122,7 +121,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.31.2-trixie
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: unless-stopped
     logging: *default-logging
     depends_on:
@@ -146,7 +145,7 @@ services:
       - my-private-ntwk
 
   edge:
-    image: nginx:1.31.2-trixie
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: unless-stopped
     network_mode: host
     logging: *default-logging
@@ -240,7 +239,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus:v3.13.1@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
     restart: unless-stopped
     logging: *default-logging
     command:
@@ -307,7 +306,7 @@ services:
       - my-private-ntwk
 
   activemq:
-    image: apache/activemq-artemis:2.42.0
+    image: apache/artemis:2.55.0@sha256:a192eee9c46e6352625ca9dbf0beebe4a34c363111c628bbb10c4aff1227341d
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -315,8 +314,7 @@ services:
         required: false
     environment:
       ANONYMOUS_LOGIN: "false"
-      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
-      BROKER_CONFIG_GLOBAL_MAX_SIZE: 256mb
+      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune --global-max-size 256M
       JAVA_ARGS: >-
         -XX:AutoBoxCacheMax=20000
         -XX:+PrintClassHistogram
@@ -334,6 +332,8 @@ services:
     expose:
       - "61616"
       - "8161"
+    volumes:
+      - activemq-data:/var/lib/artemis-instance
     hostname: activemq
     mem_limit: 768m
     networks:
@@ -355,7 +355,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.5@sha256:1da0e051f9fba1492e6597ae385aee64a78ebc434928bddd84bd1fd8a222fe96
+    image: slawekradzyminski/consumer:3.3.6@sha256:a4f980d7c88ce7ec628e58bfeeed8f9390b28251ae198dbd179eac6e7c4f8b89
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -380,7 +380,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872
+    image: slawekradzyminski/ollama-mock:1.0.8@sha256:9859266fbd274ae3030d3b191fe795de76710c0019ee4c33913658cffc7e712e
     restart: unless-stopped
     logging: *default-logging
     environment:
@@ -392,6 +392,7 @@ services:
       - my-private-ntwk
 
 volumes:
+  activemq-data:
   postgres-data:
   prometheus-data:
   alertmanager-data:

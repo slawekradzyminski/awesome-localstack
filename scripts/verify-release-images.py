@@ -100,6 +100,16 @@ def main() -> int:
             failures,
         )
     require(
+        server.get("aitesters-backend") == release_images["backend"],
+        "the aitesters backend must reuse the current backend release",
+        failures,
+    )
+    require(
+        server.get("aitesters-frontend") == release_images["frontend"],
+        "the aitesters frontend must reuse the current frontend release",
+        failures,
+    )
+    require(
         model_mock.get("ollama") == release_images["ollama-mock"],
         "the model-mock override must use the production Ollama mock release",
         failures,

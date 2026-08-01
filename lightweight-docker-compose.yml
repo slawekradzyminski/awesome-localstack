@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.13@sha256:c7c7d3298bd2b140bc1f914c147d1932b6d493d2a16a793a350f3ad9bde6fa69
+    image: slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7
     restart: always
     expose:
       - "4001"
@@ -38,7 +38,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.11@sha256:b1c0bb05b1aaf5ca8e38552dcb137d8ba908975fa1c8c0eb7d80ca003afa03f8
+    image: slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112
     restart: always
     expose:
       - "80"
@@ -46,7 +46,7 @@ services:
       - my-private-ntwk
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
     restart: always
     command:
       - start-dev
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   keycloak-init:
-    image: curlimages/curl:8.13.0
+    image: curlimages/curl:8.21.0
     entrypoint: ["/bin/sh", "/init/init-mock-users.sh"]
     volumes:
       - ./keycloak/init-mock-users.sh:/init/init-mock-users.sh:ro
@@ -76,7 +76,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.31.2-trixie
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: unless-stopped
     depends_on:
       frontend:
@@ -94,7 +94,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.7@sha256:623170cfb5bbe18b8584ca3683c69023af2267d3534812136eecef39e10f9872
+    image: slawekradzyminski/ollama-mock:1.0.8@sha256:9859266fbd274ae3030d3b191fe795de76710c0019ee4c33913658cffc7e712e
     restart: always
     ports:
       - "11434:11434"
