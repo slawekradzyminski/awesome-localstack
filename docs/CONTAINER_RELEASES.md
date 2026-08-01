@@ -31,12 +31,12 @@ The Docker Hub token should be scoped to repository image writes and stored sepa
 
 The workflows use action generations whose JavaScript entrypoints target Node.js 24:
 
-- `actions/checkout@v7.0.0`
+- `actions/checkout@v7.0.1`
 - `actions/setup-node@v7.0.0`
 - `actions/setup-java@v5.6.0`
 - `docker/setup-qemu-action@v4.2.0`
 - `docker/setup-buildx-action@v4.2.0`
-- `docker/login-action@v4.4.0`
+- `docker/login-action@v4.6.0`
 - `docker/metadata-action@v6.2.0`
 - `docker/build-push-action@v7.3.0`
 

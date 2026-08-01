@@ -46,7 +46,7 @@ services:
       - my-private-ntwk
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
     restart: always
     command:
       - start-dev
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   keycloak-init:
-    image: curlimages/curl:8.13.0
+    image: curlimages/curl:8.21.0
     entrypoint: ["/bin/sh", "/init/init-mock-users.sh"]
     volumes:
       - ./keycloak/init-mock-users.sh:/init/init-mock-users.sh:ro
@@ -76,7 +76,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.31.2-trixie
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: unless-stopped
     depends_on:
       frontend:

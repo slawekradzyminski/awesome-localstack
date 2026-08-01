@@ -77,7 +77,7 @@ those tests.
 ### Monitoring image revision audit
 
 The monitoring images were re-audited against their authoritative upstream
-releases and registries on 2026-07-26. The Compose file uses exact stable tags
+releases and registries on 2026-08-01. The Compose file uses exact stable tags
 and immutable multi-architecture manifest digests rather than floating `latest`
 tags.
 
@@ -85,7 +85,7 @@ tags.
 | --- | --- | --- |
 | Node Exporter | `v1.12.1` | `sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0` |
 | cAdvisor | `v0.60.5` | `sha256:763aecf1c32c2be8a1a75f9abfc2fc461005c9dbbaa39cb356b354aac1296dbe` |
-| Prometheus | `v3.13.1` | `sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893` |
+| Prometheus | `v3.13.2` | `sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69` |
 | Grafana | `13.1.1` | `sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b` |
 | Alertmanager | `v0.32.1` | `sha256:51a825c2a40acc3e338fdd00d622e01ec090f72be2b3ea46be0839cd47a4d286` |
 | Blackbox Exporter | `v0.28.0` | `sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc` |

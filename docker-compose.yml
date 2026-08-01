@@ -71,7 +71,7 @@ services:
       - my-private-ntwk
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
     restart: always
     command:
       - start-dev
@@ -101,7 +101,7 @@ services:
       - my-private-ntwk
 
   gateway:
-    image: nginx:1.31.2-trixie
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: always
     depends_on:
       frontend:
@@ -133,7 +133,7 @@ services:
       - my-private-ntwk
 
   prometheus:
-    image: prom/prometheus:v3.13.0
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
     restart: always
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -145,7 +145,7 @@ services:
       - my-private-ntwk
 
   grafana:
-    image: grafana/grafana:13.1.0
+    image: grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
     environment:
       GF_SECURITY_ADMIN_PASSWORD: grafana
     volumes:
@@ -164,19 +164,19 @@ services:
       - my-private-ntwk
 
   activemq:
-    image: apache/activemq-artemis:2.42.0
+    image: apache/artemis:2.55.0@sha256:a192eee9c46e6352625ca9dbf0beebe4a34c363111c628bbb10c4aff1227341d
     restart: always
     environment:
       ARTEMIS_USER: admin
       ARTEMIS_PASSWORD: admin
       ANONYMOUS_LOGIN: "true"
-      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune
-      DISABLE_SECURITY: true
-      BROKER_CONFIG_GLOBAL_MAX_SIZE: 512mb
+      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune --global-max-size 512M
     ports:
       - "61616:61616"
       - "8161:8161"
       - "5672:5672"
+    volumes:
+      - activemq-data:/var/lib/artemis-instance
     hostname: activemq
     networks:
       - my-private-ntwk
@@ -213,7 +213,7 @@ services:
       - my-private-ntwk
 
   influxdb:
-    image: influxdb:1.8
+    image: influxdb:1.12.4@sha256:7f65020ddef923f0366dfee0ce753adc0d20b97b0b110b0988c03e0426932396
     ports:
       - '8086:8086'
     volumes:
@@ -226,6 +226,7 @@ services:
       - my-private-ntwk
 
 volumes:
+  activemq-data:
   influxdb-storage:
   postgres-data:
 

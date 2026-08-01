@@ -142,6 +142,18 @@ For a clean, verified startup that also removes obsolete services, use:
 ./run-docker-compose.sh
 ```
 
+The full profile uses InfluxDB `1.12.4`. Before starting it against a named
+volume last written by the older `1.8` image, back up the `influxdb-storage`
+volume. InfluxDB 3 is a separate migration target and is not a drop-in image
+replacement for this profile.
+
+InfluxDB `1.12.4` runs as UID/GID `1500`. A volume created by the older image
+may still be owned by UID `999` or root and must be backed up and recursively
+re-owned before the first `1.12.4` startup. The Artemis `2.55.0` image uses the
+explicit `activemq-data` volume; do not attach an anonymous instance volume
+created by the retired `apache/activemq-artemis` image. Drain or export pending
+messages before the first broker upgrade.
+
 This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
 
 Main app URL:
