@@ -22,6 +22,7 @@
     chdir: "{{ app_dir }}"
   register: verify_compose_config_response
   changed_when: false
+  no_log: true
 
 - name: Record expected production services and image references
   ansible.builtin.set_fact:
@@ -32,6 +33,7 @@
         | list
         | sort
       }}
+  no_log: true
 
 - name: Read running production services
   ansible.builtin.command:
@@ -63,6 +65,32 @@
     fail_msg: >-
       Expected running services {{ verify_expected_services }}, got
       {{ verify_running_services_response.stdout_lines }}
+
+- name: Verify PostgreSQL authentication with the Vault-managed password
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - -e
+      - PGPASSWORD
+      - postgres
+      - psql
+      - --host=postgres
+      - --username=postgres
+      - --dbname=postgres
+      - --tuples-only
+      - --no-align
+      - --command=SELECT 1
+    chdir: "{{ app_dir }}"
+  environment:
+    PGPASSWORD: "{{ postgres_password }}"
+  register: verify_postgres_vault_password
+  changed_when: false
+  no_log: true
 
 - name: Resolve running production container IDs
   ansible.builtin.command:

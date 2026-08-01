@@ -21,7 +21,6 @@ services:
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
@@ -289,10 +288,12 @@ services:
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: unless-stopped
     logging: *default-logging
+    env_file:
+      - path: .env.runtime
+        required: false
     environment:
       POSTGRES_DB: testdb
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
