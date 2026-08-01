@@ -1,0 +1,10 @@
+[Unit]
+Description=Awesome LocalStack guarded container cleanup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/awesome-container-cleanup
+User=root
+Group=root

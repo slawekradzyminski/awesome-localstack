@@ -9,6 +9,219 @@
   ansible.builtin.debug:
     var: compose_ps.stdout_lines
 
+- name: Read the resolved production Compose configuration
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - config
+      - --format
+      - json
+    chdir: "{{ app_dir }}"
+  register: verify_compose_config_response
+  changed_when: false
+
+- name: Record expected production services and image references
+  ansible.builtin.set_fact:
+    verify_compose_config: "{{ verify_compose_config_response.stdout | from_json }}"
+    verify_expected_services: >-
+      {{
+        (verify_compose_config_response.stdout | from_json).services.keys()
+        | list
+        | sort
+      }}
+
+- name: Read running production services
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - --services
+      - --status
+      - running
+    chdir: "{{ app_dir }}"
+  register: verify_running_services_response
+  changed_when: false
+
+- name: Verify every production service is running
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - >-
+        verify_expected_services
+        | difference(verify_running_services_response.stdout_lines)
+        | length == 0
+      - >-
+        verify_running_services_response.stdout_lines
+        | difference(verify_expected_services)
+        | length == 0
+    fail_msg: >-
+      Expected running services {{ verify_expected_services }}, got
+      {{ verify_running_services_response.stdout_lines }}
+
+- name: Resolve running production container IDs
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - -q
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop: "{{ verify_expected_services }}"
+  register: verify_running_container_id_results
+  changed_when: false
+
+- name: Resolve running container image IDs
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "--format={{ '{{.Image}}' }}"
+      - "{{ item.stdout }}"
+  loop: "{{ verify_running_container_id_results.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: verify_running_image_id_results
+  changed_when: false
+
+- name: Resolve reviewed image-reference IDs
+  ansible.builtin.command:
+    argv:
+      - docker
+      - image
+      - inspect
+      - "--format={{ '{{.Id}}' }}"
+      - "{{ verify_compose_config.services[item].image }}"
+  loop: "{{ verify_expected_services }}"
+  register: verify_expected_image_id_results
+  changed_when: false
+
+- name: Verify running containers use the reviewed image references
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - verify_running_image_id_results.results[verify_image_index].stdout == item.stdout
+    fail_msg: >-
+      Service {{ item.item }} is running image ID
+      {{ verify_running_image_id_results.results[verify_image_index].stdout }},
+      but {{ verify_compose_config.services[item.item].image }} resolves to
+      {{ item.stdout }}
+  loop: "{{ verify_expected_image_id_results.results }}"
+  loop_control:
+    index_var: verify_image_index
+    label: "{{ item.item }}"
+
+- name: Create a unique JMS delivery-contract identifier
+  ansible.builtin.command:
+    argv:
+      - date
+      - +%s%N
+  register: verify_jms_contract_id
+  changed_when: false
+
+- name: Record the JMS delivery-contract payload
+  ansible.builtin.set_fact:
+    verify_jms_contract_subject: >-
+      Awesome deployment JMS contract {{ verify_jms_contract_id.stdout }}
+    verify_jms_contract_message:
+      to: delivery-contract@example.test
+      subject: >-
+        Awesome deployment JMS contract {{ verify_jms_contract_id.stdout }}
+      message: Artemis to consumer to Mailpit production verification
+      template: GENERIC
+      properties: {}
+
+- name: Publish the JMS delivery-contract message
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - activemq
+      - /var/lib/artemis-instance/bin/artemis
+      - producer
+      - --url
+      - tcp://localhost:61616
+      - --user
+      - "{{ artemis_username }}"
+      - --password
+      - "{{ artemis_password }}"
+      - --destination
+      - queue://email
+      - --message-count
+      - "1"
+      - --message
+      - "{{ verify_jms_contract_message | to_json }}"
+      - --properties
+      - '[{"type":"string","key":"_awesome_","value":"EmailDTO"}]'
+      - --silent
+    chdir: "{{ app_dir }}"
+  register: verify_jms_publish
+  changed_when: true
+  no_log: true
+  until: verify_jms_publish.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Wait for the consumer to deliver the contract email to Mailpit
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - http://mailpit:8025/api/v1/messages
+    chdir: "{{ app_dir }}"
+  register: verify_jms_mailpit_response
+  changed_when: false
+  until:
+    - verify_jms_mailpit_response.rc == 0
+    - >-
+      verify_jms_contract_subject in
+      (
+        (verify_jms_mailpit_response.stdout | from_json).messages
+        | map(attribute='Subject')
+        | list
+      )
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Record the delivered JMS contract email
+  ansible.builtin.set_fact:
+    verify_jms_delivered_message: >-
+      {{
+        (verify_jms_mailpit_response.stdout | from_json).messages
+        | selectattr('Subject', 'equalto', verify_jms_contract_subject)
+        | first
+      }}
+
+- name: Verify the JMS contract email recipient
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - >-
+        'delivery-contract@example.test' in
+        (verify_jms_delivered_message.To | map(attribute='Address') | list)
+    fail_msg: >-
+      JMS contract email reached Mailpit with unexpected recipients:
+      {{ verify_jms_delivered_message.To }}
+
 - name: Verify internal monitoring endpoints
   ansible.builtin.command:
     argv:

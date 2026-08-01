@@ -66,7 +66,7 @@ postgres_backup_remote_target: "{{ backup_remote_target | default('', true) }}"
 postgres_backup_encryption_passphrase: "{{ backup_encryption_passphrase | default('', true) }}"
 postgres_backup_database: testdb
 postgres_backup_user: postgres
-postgres_restore_image: postgres:16.14-bookworm
+postgres_restore_image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
 
 app_copy_paths:
   - nginx
@@ -125,3 +125,10 @@ verify_urls:
     status_code: 404
 verify_retries: 12
 verify_delay_seconds: 10
+
+cleanup_enabled: true
+cleanup_retention_days: 30
+cleanup_schedule: "*-*-* 04:45:00"
+cleanup_unused_images: true
+cleanup_legacy_artemis_volume: 52872b8d5d81bd2a5b8016993442b445559710bb5e8f3bcb92022f0fc5505add
+cleanup_legacy_artemis_backup: /var/backups/awesome-localstack/artemis/artemis-instance-pre-2.55-20260801T105500Z.tgz.enc

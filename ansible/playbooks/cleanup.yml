@@ -1,0 +1,7 @@
+- name: Run guarded production container cleanup
+  hosts: production
+  become: true
+  gather_facts: false
+
+  roles:
+    - cleanup

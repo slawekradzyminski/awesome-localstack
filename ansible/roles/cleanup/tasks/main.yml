@@ -1,0 +1,60 @@
+- name: Validate cleanup retention settings
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - cleanup_retention_days | int >= 7
+      - cleanup_legacy_artemis_volume is match('^[0-9a-f]{64}$')
+      - cleanup_legacy_artemis_backup is match('^/.+\.enc$')
+    fail_msg: Cleanup targets must be explicit and retention must be at least seven days.
+  when: cleanup_enabled | bool
+
+- name: Install guarded container cleanup script
+  ansible.builtin.template:
+    src: awesome-container-cleanup.sh.j2
+    dest: /usr/local/sbin/awesome-container-cleanup
+    owner: root
+    group: root
+    mode: "0700"
+  when: cleanup_enabled | bool
+
+- name: Install guarded container cleanup systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - awesome-container-cleanup.service
+    - awesome-container-cleanup.timer
+  register: cleanup_systemd_units
+  when: cleanup_enabled | bool
+
+- name: Reload systemd after installing cleanup units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when:
+    - cleanup_enabled | bool
+    - cleanup_systemd_units is changed
+
+- name: Enable guarded container cleanup timer
+  ansible.builtin.systemd_service:
+    name: awesome-container-cleanup.timer
+    enabled: true
+    state: started
+  when: cleanup_enabled | bool
+
+- name: Run guarded container cleanup after successful verification
+  ansible.builtin.command:
+    argv:
+      - /usr/local/sbin/awesome-container-cleanup
+  register: cleanup_run
+  changed_when: >-
+    'Removed retired Artemis volume' in cleanup_run.stdout
+    or 'Deleted Images:' in cleanup_run.stdout
+  when: cleanup_enabled | bool
+
+- name: Print guarded container cleanup result
+  ansible.builtin.debug:
+    var: cleanup_run.stdout_lines
+  when: cleanup_enabled | bool
