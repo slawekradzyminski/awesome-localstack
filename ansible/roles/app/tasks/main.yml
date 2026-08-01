@@ -36,6 +36,17 @@
       must be configured in Ansible Vault
   no_log: true
 
+- name: Validate PostgreSQL credentials
+  ansible.builtin.assert:
+    that:
+      - (postgres_password | default('', true) | string | length) >= 16
+      - (postgres_password | default('', true) | string) != 'postgres'
+    fail_msg: >-
+      postgres_password must be a non-default value of at least 16 characters
+      configured in Ansible Vault
+    quiet: true
+  no_log: true
+
 - name: Read deployed Prometheus configuration checksums
   ansible.builtin.stat:
     path: "{{ app_dir }}/{{ prometheus_config_file }}"
@@ -247,6 +258,100 @@
     mode: "0400"
   register: alertmanager_telegram_chat_id_file
   no_log: true
+
+- name: Check whether PostgreSQL is already running
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - -q
+      - postgres
+    chdir: "{{ app_dir }}"
+  register: app_postgres_container
+  changed_when: false
+  failed_when: false
+
+- name: Check whether PostgreSQL accepts the Vault-managed password
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - -e
+      - PGPASSWORD
+      - postgres
+      - psql
+      - --host=postgres
+      - --username=postgres
+      - --dbname=postgres
+      - --tuples-only
+      - --no-align
+      - --command=SELECT 1
+    chdir: "{{ app_dir }}"
+  environment:
+    PGPASSWORD: "{{ postgres_password }}"
+  register: postgres_vault_password_check
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when: app_postgres_container.stdout | trim | length > 0
+
+- name: Reconcile the existing PostgreSQL role password with Ansible Vault
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - postgres
+      - psql
+      - --username=postgres
+      - --dbname=postgres
+      - --set=ON_ERROR_STOP=1
+    chdir: "{{ app_dir }}"
+    stdin: >-
+      ALTER ROLE postgres WITH PASSWORD
+      '{{ postgres_password | replace("'", "''") }}';
+  register: postgres_password_reconciliation
+  changed_when: true
+  no_log: true
+  when:
+    - app_postgres_container.stdout | trim | length > 0
+    - postgres_vault_password_check.rc != 0
+
+- name: Verify the reconciled PostgreSQL password
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - -e
+      - PGPASSWORD
+      - postgres
+      - psql
+      - --host=postgres
+      - --username=postgres
+      - --dbname=postgres
+      - --tuples-only
+      - --no-align
+      - --command=SELECT 1
+    chdir: "{{ app_dir }}"
+  environment:
+    PGPASSWORD: "{{ postgres_password }}"
+  changed_when: false
+  no_log: true
+  when: postgres_password_reconciliation is changed
 
 - name: Deploy Docker Compose stack
   community.docker.docker_compose_v2:

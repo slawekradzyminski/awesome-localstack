@@ -15,6 +15,9 @@ alertmanager_telegram_bot_token: replace-with-the-botfather-token
 alertmanager_telegram_chat_id: "123456789"
 artemis_username: awesome-broker
 artemis_password: replace-with-a-strong-broker-secret
+# Used by both the PostgreSQL container and the backend datasource. The
+# deployment reconciles an existing postgres role before recreating services.
+postgres_password: replace-with-a-strong-database-secret
 app_bootstrap_admin_enabled: "true"
 app_bootstrap_admin_username: admin
 app_bootstrap_admin_password: replace-with-a-16-plus-character-secret

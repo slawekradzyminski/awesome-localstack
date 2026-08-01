@@ -130,8 +130,9 @@ It performs five steps in order:
    and low swappiness on capable hosts; it reports a tracked reason and makes no
    swap changes on the current MIKR.US LXC host.
 2. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
-3. Runs the `app` role to converge files and Docker Compose state in
-   `/opt/awesome-localstack`.
+3. Runs the `app` role to reconcile the existing PostgreSQL role with the
+   Vault-managed password, render the protected runtime environment, and
+   converge files and Docker Compose state in `/opt/awesome-localstack`.
 4. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
 5. Runs the guarded `cleanup` role only after verification succeeds.
@@ -238,6 +239,7 @@ The local production Vault file stores values such as:
 - `alertmanager_telegram_chat_id`
 - `artemis_username`
 - `artemis_password`
+- `postgres_password`
 - `app_bootstrap_admin_enabled`
 - `app_bootstrap_admin_username`
 - `app_bootstrap_admin_password`

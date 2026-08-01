@@ -418,6 +418,8 @@ Production hardening in this profile:
 - Mailpit SMTP is not published
 - Mailpit API is not published
 - ActiveMQ is internal-only
+- the production PostgreSQL password is supplied by Ansible Vault and is not
+  stored in Compose
 - consumer metrics are internal-only
 - Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and Alertmanager are internal-only
 - Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
