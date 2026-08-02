@@ -1,0 +1,11 @@
+diff --git a/src/main/java/com/awesome/testing/security/ratelimit/AuthRateLimitGuard.java b/src/main/java/com/awesome/testing/security/ratelimit/AuthRateLimitGuard.java
+--- a/src/main/java/com/awesome/testing/security/ratelimit/AuthRateLimitGuard.java
++++ b/src/main/java/com/awesome/testing/security/ratelimit/AuthRateLimitGuard.java
+@@ -112,7 +112,6 @@ public class AuthRateLimitGuard {
+         String normalizedUsername = normalize(username);
+         if (normalizedUsername != null) {
+             rateLimitService.check(endpoint, "username", normalizedUsername, authenticatedPolicy);
+-            return;
+         }
+ 
+         String clientIp = clientAddressResolver.resolve(request);

@@ -1,0 +1,11 @@
+diff --git a/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java b/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
+--- a/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
++++ b/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
+@@ -196,6 +196,6 @@ public class ChatToolsService {
+         } else if (chunk.getMessage() != null && chunk.getMessage().getToolCalls() != null
+                 && !chunk.getMessage().getToolCalls().isEmpty()) {
+-            delay = properties.getToolCallDelay();
++            delay = properties.getTokenDelay();
+         } else {
+             delay = properties.getTokenDelay();
+         }

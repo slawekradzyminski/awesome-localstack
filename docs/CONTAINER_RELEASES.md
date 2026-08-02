@@ -46,10 +46,10 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.7.14@sha256:dd310697d66c389eab971adb8cbb07cf00fc17d824f4775b99e8dbdce7271ad7` |
-| Frontend | `slawekradzyminski/frontend:3.7.12@sha256:59acd367dca78a0aea8776467885eda39d56b8259906a0f110d7063e6ff7e112` |
-| Consumer | `slawekradzyminski/consumer:3.3.6@sha256:a4f980d7c88ce7ec628e58bfeeed8f9390b28251ae198dbd179eac6e7c4f8b89` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.8@sha256:9859266fbd274ae3030d3b191fe795de76710c0019ee4c33913658cffc7e712e` |
+| Backend | `slawekradzyminski/backend:3.7.15@sha256:3a4255b3d51d7cbc4e8690f9f9608487114dd24fa526c1bd897895dbe1143bf0` |
+| Frontend | `slawekradzyminski/frontend:3.7.13@sha256:8f7e5cb457d277c9dd85098cb1354a646830c544d78bddca2a110ec8e1591cea` |
+| Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
 
 ## LocalStack compatibility gate
 

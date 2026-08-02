@@ -1,0 +1,25 @@
+diff --git a/src/lib/sso.ts b/src/lib/sso.ts
+--- a/src/lib/sso.ts
++++ b/src/lib/sso.ts
+@@ -110,6 +110,10 @@ const completeCallbackOnce = async (
+     throw new Error('Missing SSO code verifier');
+   }
+ 
++  safeRemoveItem(SSO_STATE_KEY);
++  safeRemoveItem(SSO_NONCE_KEY);
++  safeRemoveItem(SSO_CODE_VERIFIER_KEY);
++
+   const tokenResponse = await fetch(`${config.authority}/protocol/openid-connect/token`, {
+     method: 'POST',
+     headers: {
+@@ -136,10 +140,6 @@ const completeCallbackOnce = async (
+     throw new Error('Missing SSO id token');
+   }
+ 
+-  safeRemoveItem(SSO_STATE_KEY);
+-  safeRemoveItem(SSO_NONCE_KEY);
+-  safeRemoveItem(SSO_CODE_VERIFIER_KEY);
+-
+   const response = await idTokenExchange({ idToken: tokenBody.id_token });
+   return response.data;
+ };

@@ -1,0 +1,13 @@
+diff --git a/src/main/java/com/awesome/testing/listener/JmsConfig.java b/src/main/java/com/awesome/testing/listener/JmsConfig.java
+--- a/src/main/java/com/awesome/testing/listener/JmsConfig.java
++++ b/src/main/java/com/awesome/testing/listener/JmsConfig.java
+@@ -34,8 +34,7 @@ public class JmsConfig {
+         converter.setTargetType(MessageType.TEXT);
+         converter.setTypeIdPropertyName("_awesome_");
+         converter.setTypeIdMappings(Map.of(
+-            "EmailDTO", EmailDto.class,
+-            "com.awesome.testing.dto.email.EmailDTO", EmailDto.class
++            "EmailDTO", EmailDto.class
+         ));
+         return converter;
+     }
