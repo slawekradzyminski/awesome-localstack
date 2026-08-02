@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "Codex",
+  "generationMode": "white-box semantic pilot",
+  "mutants": [
+    {
+      "id": "backend-partial-sso-account-blocked",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-partial-sso-account-blocked.patch",
+      "description": "Treat an account as SSO-only when either provider field is present instead of requiring a complete provider identity.",
+      "contract": "Only users with both authProvider and providerSubject are SSO-only; partially migrated local accounts must retain password reset.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=PasswordResetServiceTest", "test"]
+    },
+    {
+      "id": "backend-authenticated-route-double-counted",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-authenticated-route-double-counted.patch",
+      "description": "Apply both username and IP limits to authenticated email/QR calls after a defense-in-depth refactor.",
+      "contract": "Authenticated email and QR calls use the user policy; IP is the fallback only when identity is unavailable.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=AuthRateLimitGuardTest", "test"]
+    },
+    {
+      "id": "frontend-sso-clears-pkce-before-exchange",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-sso-clears-pkce-before-exchange.patch",
+      "description": "Clear one-time PKCE state before the remote token exchange rather than after a successful response.",
+      "contract": "A transient exchange failure must leave callback state available for a safe retry.",
+      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
+      "test": ["npm", "test", "--", "--run", "src/lib/sso.test.ts"]
+    },
+    {
+      "id": "frontend-sse-discards-previous-network-chunk",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-sse-discards-previous-network-chunk.patch",
+      "description": "Parse only the latest network chunk and overwrite an incomplete buffered SSE event.",
+      "contract": "SSE event boundaries are independent of transport chunk boundaries; incomplete events must be retained.",
+      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
+      "test": ["npm", "test", "--", "--run", "src/lib/sse.test.ts"]
+    },
+    {
+      "id": "frontend-training-sso-any-loopback-port",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-training-sso-any-loopback-port.patch",
+      "description": "Generalize automatic training SSO activation from the gateway origin to every loopback port.",
+      "contract": "Implicit training SSO is enabled only on the designated localhost:8081 gateway, never on unrelated loopback applications.",
+      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
+      "test": ["npm", "test", "--", "--run", "src/lib/runtimeConfig.test.ts"]
+    },
+    {
+      "id": "mock-tool-call-uses-token-delay",
+      "component": "mock",
+      "repository": "../ollama-mock",
+      "patch": "mutants/mock-tool-call-uses-token-delay.patch",
+      "description": "Use the ordinary token delay for tool calls, collapsing two latency policies during cleanup.",
+      "contract": "Tool-call chunks use toolCallDelay; textual chunks use tokenDelay; completion is immediate.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=ChatToolsServiceTest", "test"]
+    },
+    {
+      "id": "mock-conversation-uses-first-message",
+      "component": "mock",
+      "repository": "../ollama-mock",
+      "patch": "mutants/mock-conversation-uses-first-message.patch",
+      "description": "Resolve a multi-turn conversation from the first meaningful message rather than its latest message.",
+      "contract": "Tool scenarios advance according to the latest meaningful user/tool message.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=ChatToolsServiceTest", "test"]
+    },
+    {
+      "id": "consumer-drops-legacy-fqcn-type-id",
+      "component": "consumer",
+      "repository": "../jms-email-consumer",
+      "patch": "mutants/consumer-drops-legacy-fqcn-type-id.patch",
+      "description": "Keep only the short JMS type identifier and silently remove the legacy producer FQCN alias.",
+      "contract": "The consumer accepts both EmailDTO and com.awesome.testing.dto.email.EmailDTO type identifiers during migration.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=JmsConfigTest", "test"]
+    }
+  ]
+}

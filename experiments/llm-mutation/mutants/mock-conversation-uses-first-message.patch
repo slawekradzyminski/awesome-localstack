@@ -1,0 +1,12 @@
+diff --git a/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java b/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
+--- a/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
++++ b/src/main/java/com/awesome/testing/ollama/service/ChatToolsService.java
+@@ -104,7 +104,7 @@ public class ChatToolsService {
+ 
+     private ChatMessageDto latestMessage(ChatRequestDto request) {
+         List<ChatMessageDto> messages = Optional.ofNullable(request.getMessages()).orElse(List.of());
+-        for (int i = messages.size() - 1; i >= 0; i--) {
++        for (int i = 0; i < messages.size(); i++) {
+             ChatMessageDto message = messages.get(i);
+             if (StringUtils.hasText(message.getRole())) {
+                 return message;

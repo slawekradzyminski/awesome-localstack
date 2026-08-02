@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "backend-partial-sso-account-blocked",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-partial-sso-account-blocked.patch",
+      "description": "Treat an account as SSO-only when either provider field is present instead of requiring a complete provider identity.",
+      "contract": "Only users with both authProvider and providerSubject are SSO-only; partially migrated local accounts must retain password reset.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 3.006,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 0,
+        "durationSeconds": 4.207,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+        "timedOut": false
+      },
+      "status": "survived",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 3.274,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 4.289,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "backend-authenticated-route-double-counted",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-authenticated-route-double-counted.patch",
+      "description": "Apply both username and IP limits to authenticated email/QR calls after a defense-in-depth refactor.",
+      "contract": "Authenticated email and QR calls use the user policy; IP is the fallback only when identity is unavailable.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 3.013,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 0,
+        "durationSeconds": 3.865,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+        "timedOut": false
+      },
+      "status": "survived",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 3.075,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 3.902,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "frontend-sso-clears-pkce-before-exchange",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-sso-clears-pkce-before-exchange.patch",
+      "description": "Clear one-time PKCE state before the remote token exchange rather than after a successful response.",
+      "contract": "A transient exchange failure must leave callback state available for a safe retry.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 1.831,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.574,
+        "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/sso.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-45_2fmb1/frontend-sso-clears-pkce-before-exchange\n\n \u276f src/lib/sso.test.ts (18 tests | 1 failed) 9ms\n     \u00d7 retries the same callback after a transient exchange failure 2ms\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af Failed Tests 1 \u23af\u23af\u23af\u23af\u23af\u23af\u23af\n\n FAIL  src/lib/sso.test.ts > sso helper > retries the same callback after a transient exchange failure\nAssertionError: promise rejected \"Error: Missing SSO code verifier\" instead of resolving\n \u276f src/lib/sso.test.ts:313:87\n    311|     await expect(sso.completeCallback(callbackUrl, exchange, ssoEnv, r\u2026\n    312|       .rejects.toThrow('temporary network failure');\n    313|     await expect(sso.completeCallback(callbackUrl, exchange, ssoEnv, r\u2026\n       |                                                                                       ^\n    314|       .resolves.toMatchObject({ token: 'access-retry' });\n    315|     expect(fetchMock).toHaveBeenCalledTimes(2);\n\nCaused by: Error: Missing SSO code verifier\n \u276f completeCallbackOnce src/lib/sso.ts:118:11\n \u276f Object.completeCallback src/lib/sso.ts:265:21\n \u276f src/lib/sso.test.ts:313:22\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 17 passed (18)\n   Start at  17:35:23\n   Duration  324ms (transform 32ms, setup 43ms, import 28ms, tests 9ms, environment 193ms)\n\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.465,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.6,
+          "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/sso.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-baseline-lalniupx/frontend-sso-clears-pkce-before-exchange\n\n\n Test Files  1 passed (1)\n      Tests  18 passed (18)\n   Start at  17:35:20\n   Duration  343ms (transform 34ms, setup 47ms, import 30ms, tests 8ms, environment 209ms)\n\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "frontend-sse-discards-previous-network-chunk",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-sse-discards-previous-network-chunk.patch",
+      "description": "Parse only the latest network chunk and overwrite an incomplete buffered SSE event.",
+      "contract": "SSE event boundaries are independent of transport chunk boundaries; incomplete events must be retained.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.794,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.555,
+        "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/sse.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-hie2zrnk/frontend-sse-discards-previous-network-chunk\n\nstderr | src/lib/sse.test.ts > processSSEResponse > preserves a UTF-8 character split across network chunks\nSSE parsing error: SyntaxError: Unexpected token '\u017c', \"\u017c\"}\" is not valid JSON\n    at JSON.parse (<anonymous>)\n    at processSSEResponse (/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-hie2zrnk/frontend-sse-discards-previous-network-chunk/src/lib/sse.ts:41:31)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-hie2zrnk/frontend-sse-discards-previous-network-chunk/src/lib/sse.test.ts:71:5\n    at file:///Users/slawek/IdeaProjects/vite-react-frontend/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20 \u017c\"}\n\n \u276f src/lib/sse.test.ts (11 tests | 1 failed) 8ms\n     \u00d7 preserves a UTF-8 character split across network chunks 2ms\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af Failed Tests 1 \u23af\u23af\u23af\u23af\u23af\u23af\u23af\n\n FAIL  src/lib/sse.test.ts > processSSEResponse > preserves a UTF-8 character split across network chunks\nAssertionError: expected \"vi.fn()\" to be called with arguments: [ { response: '\u017c' } ]\n\nNumber of calls: 0\n\n \u276f src/lib/sse.test.ts:73:33\n     71|     await processSSEResponse(response, processor);\n     72|\n     73|     expect(processor.onMessage).toHaveBeenCalledWith({ response: '\u017c' }\u2026\n       |                                 ^\n     74|     expect(processor.onError).not.toHaveBeenCalled();\n     75|   });\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 10 passed (11)\n   Start at  17:35:25\n   Duration  303ms (transform 16ms, setup 43ms, import 9ms, tests 8ms, environment 194ms)\n\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.434,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.563,
+          "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/sse.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-baseline-is1yljvo/frontend-sse-discards-previous-network-chunk\n\n\n Test Files  1 passed (1)\n      Tests  11 passed (11)\n   Start at  17:35:24\n   Duration  305ms (transform 18ms, setup 43ms, import 12ms, tests 7ms, environment 192ms)\n\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "frontend-training-sso-any-loopback-port",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-training-sso-any-loopback-port.patch",
+      "description": "Generalize automatic training SSO activation from the gateway origin to every loopback port.",
+      "contract": "Implicit training SSO is enabled only on the designated localhost:8081 gateway, never on unrelated loopback applications.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.759,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 0,
+        "durationSeconds": 0.559,
+        "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/runtimeConfig.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-pv539zit/frontend-training-sso-any-loopback-port\n\n\n Test Files  1 passed (1)\n      Tests  13 passed (13)\n   Start at  17:35:28\n   Duration  300ms (transform 20ms, setup 43ms, import 13ms, tests 3ms, environment 192ms)\n\n",
+        "timedOut": false
+      },
+      "status": "survived",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.432,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.553,
+          "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/lib/runtimeConfig.test.ts\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-baseline-srxkifts/frontend-training-sso-any-loopback-port\n\n\n Test Files  1 passed (1)\n      Tests  13 passed (13)\n   Start at  17:35:26\n   Duration  298ms (transform 18ms, setup 43ms, import 11ms, tests 3ms, environment 192ms)\n\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "mock-tool-call-uses-token-delay",
+      "component": "mock",
+      "repository": "../ollama-mock",
+      "patch": "mutants/mock-tool-call-uses-token-delay.patch",
+      "description": "Use the ordinary token delay for tool calls, collapsing two latency policies during cleanup.",
+      "contract": "Tool-call chunks use toolCallDelay; textual chunks use tokenDelay; completion is immediate.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 1.966,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 2.204,
+        "outputTail": "xConcatMap.java:868)\n\tat reactor.core.publisher.MonoDelayElement$DelayElementSubscriber.run(MonoDelayElement.java:201)\n\tat reactor.test.scheduler.VirtualTimeScheduler.drain(VirtualTimeScheduler.java:405)\n\tat reactor.test.scheduler.VirtualTimeScheduler.advanceTime(VirtualTimeScheduler.java:379)\n\tat reactor.test.scheduler.VirtualTimeScheduler.advanceTimeBy(VirtualTimeScheduler.java:284)\n\tat reactor.test.DefaultStepVerifierBuilder.virtualOrRealWait(DefaultStepVerifierBuilder.java:2448)\n\tat reactor.test.DefaultStepVerifierBuilder$NoEvent.run(DefaultStepVerifierBuilder.java:2465)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.waitTaskEvent(DefaultStepVerifierBuilder.java:1727)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.pollTaskEventOrComplete(DefaultStepVerifierBuilder.java:1748)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.verify(DefaultStepVerifierBuilder.java:1320)\n\t... 4 more\n\tSuppressed: java.lang.AssertionError: expectation failed (expected no event: onNext(ChatResponseDto(model=qwen3.5:2b, createdAt=2026-08-02T15:35:36.871103Z, message=ChatMessageDto(role=assistant, content=null, thinking=null, toolCalls=[ToolCallDto(id=toolcall-74175229-9688-4bc7-8cdc-382a70dbe808, function=ToolCallFunctionDto(name=list_products, arguments={category=electronics, inStockOnly=true, limit=25}))], toolName=null), done=false)))\n\t\tat reactor.test.MessageFormatter.assertionError(MessageFormatter.java:115)\n\t\tat reactor.test.MessageFormatter.failPrefix(MessageFormatter.java:104)\n\t\tat reactor.test.MessageFormatter.fail(MessageFormatter.java:73)\n\t\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.setFailure(DefaultStepVerifierBuilder.java:1362)\n\t\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.onExpectation(DefaultStepVerifierBuilder.java:1454)\n\t\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.onNext(DefaultStepVerifierBuilder.java:1168)\n\t\tat reactor.core.publisher.FluxLimitRequest$FluxLimitRequestSubscriber.onNext(FluxLimitRequest.java:99)\n\t\t... 15 more\n\tSuppressed: java.lang.AssertionError: expectation failed (expected no event: onComplete())\n\t\tat reactor.test.MessageFormatter.assertionError(MessageFormatter.java:115)\n\t\tat reactor.test.MessageFormatter.failPrefix(MessageFormatter.java:104)\n\t\tat reactor.test.MessageFormatter.fail(MessageFormatter.java:73)\n\t\t... 19 more\n\n[ERROR] Failures: \n[ERROR]   ChatToolsServiceTest.shouldUseTheToolCallDelayWithoutWaitingInRealTime:197 Expectation failure(s):\n - reactor.core.Exceptions$CompositeException: Multiple exceptions\n - java.lang.AssertionError: expectation failed (expected no event: onNext(ChatResponseDto(model=qwen3.5:2b, createdAt=2026-08-02T15:35:36.871103Z, message=ChatMessageDto(role=assistant, content=null, thinking=null, toolCalls=[ToolCallDto(id=toolcall-74175229-9688-4bc7-8cdc-382a70dbe808, function=ToolCallFunctionDto(name=list_products, arguments={category=electronics, inStockOnly=true, limit=25}))], toolName=null), done=false)))\n - java.lang.AssertionError: expectation failed (expected no event: onComplete())\n[ERROR] Tests run: 9, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project ollama-mock: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-syapcrb7/mock-tool-call-uses-token-delay/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 1.983,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 2.143,
+          "outputTail": "testing.ollama.service.ChatToolsService -- [chat-tools][content-token] and\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Samsung\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Galaxy\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] S21.\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Snapshot\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] for\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] iPhone\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] 13\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Pro:\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] priced\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] at\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] $999\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] with\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] 5\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] unit(s)\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] in\n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:32.699 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] stock.\n17:35:32.702 [main] INFO com.awesome.testing.ollama.scenario.chat.ChatScenarioRepository -- Loaded 7 chat scenario(s) from scenarios/chat-scenarios.json\n17:35:32.702 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][call] prompt='What iphones do we have available? Tell me the details about them' issuing list_products\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "mock-conversation-uses-first-message",
+      "component": "mock",
+      "repository": "../ollama-mock",
+      "patch": "mutants/mock-conversation-uses-first-message.patch",
+      "description": "Resolve a multi-turn conversation from the first meaningful message rather than its latest message.",
+      "contract": "Tool scenarios advance according to the latest meaningful user/tool message.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 1.958,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 2.163,
+        "outputTail": "der.java:904)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultStepVerifier.verify(DefaultStepVerifierBuilder.java:844)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultStepVerifier.verify(DefaultStepVerifierBuilder.java:836)\n\tat reactor.test.DefaultStepVerifierBuilder.verifyComplete(DefaultStepVerifierBuilder.java:702)\n\tat com.awesome.testing.ollama.service.ChatToolsServiceTest.shouldIssueSnapshotAfterCatalogResult(ChatToolsServiceTest.java:74)\n\n[ERROR] com.awesome.testing.ollama.service.ChatToolsServiceTest.shouldRespondWithSummaryAfterSnapshot -- Time elapsed: 0.004 s <<< FAILURE!\njava.lang.AssertionError: \n\nExpecting actual:\n  \"\"\nto contain:\n  \"iPhone 13 Pro\" \n\tat com.awesome.testing.ollama.service.ChatToolsServiceTest.lambda$shouldRespondWithSummaryAfterSnapshot$0(ChatToolsServiceTest.java:103)\n\tat reactor.test.DefaultStepVerifierBuilder.lambda$consumeNextWith$0(DefaultStepVerifierBuilder.java:282)\n\tat reactor.test.DefaultStepVerifierBuilder$SignalEvent.test(DefaultStepVerifierBuilder.java:2339)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.onSignal(DefaultStepVerifierBuilder.java:1554)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.onExpectation(DefaultStepVerifierBuilder.java:1501)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultVerifySubscriber.onNext(DefaultStepVerifierBuilder.java:1168)\n\tat reactor.core.publisher.Operators$BaseFluxToMonoOperator.completePossiblyEmpty(Operators.java:2093)\n\tat reactor.core.publisher.MonoCollectList$MonoCollectListSubscriber.onComplete(MonoCollectList.java:117)\n\tat reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.onComplete(FluxConcatMapNoPrefetch.java:240)\n\tat reactor.core.publisher.FluxConcatArray$ConcatArraySubscriber.onComplete(FluxConcatArray.java:213)\n\tat reactor.core.publisher.FluxConcatArray.subscribe(FluxConcatArray.java:79)\n\tat reactor.core.publisher.Mono.subscribe(Mono.java:4569)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultStepVerifier.toVerifierAndSubscribe(DefaultStepVerifierBuilder.java:904)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultStepVerifier.verify(DefaultStepVerifierBuilder.java:844)\n\tat reactor.test.DefaultStepVerifierBuilder$DefaultStepVerifier.verify(DefaultStepVerifierBuilder.java:836)\n\tat reactor.test.DefaultStepVerifierBuilder.verifyComplete(DefaultStepVerifierBuilder.java:702)\n\tat com.awesome.testing.ollama.service.ChatToolsServiceTest.shouldRespondWithSummaryAfterSnapshot(ChatToolsServiceTest.java:106)\n\n[ERROR] Failures: \n[ERROR]   ChatToolsServiceTest.shouldIssueSnapshotAfterCatalogResult:74->lambda$shouldIssueSnapshotAfterCatalogResult$0:71 \nexpected: \"get_product_snapshot\"\n but was: \"list_products\"\n[ERROR]   ChatToolsServiceTest.shouldPreferToolCallWhenSingleStageAlsoContainsNarration:218->lambda$shouldPreferToolCallWhenSingleStageAlsoContainsNarration$0:216 \nexpected: \"get_product_snapshot\"\n but was: \"list_products\"\n[ERROR]   ChatToolsServiceTest.shouldRespondWithSummaryAfterSnapshot:106->lambda$shouldRespondWithSummaryAfterSnapshot$0:103 \nExpecting actual:\n  \"\"\nto contain:\n  \"iPhone 13 Pro\" \n[ERROR] Tests run: 9, Failures: 3, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project ollama-mock: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-gukcp2iw/mock-conversation-uses-first-message/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 2.009,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 2.177,
+          "outputTail": "testing.ollama.service.ChatToolsService -- [chat-tools][content-token] and\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Samsung\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Galaxy\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] S21.\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Snapshot\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] for\n17:35:41.099 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] iPhone\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] 13\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] Pro:\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] priced\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] at\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] $999\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] with\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] 5\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] unit(s)\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] in\n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token]  \n17:35:41.100 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][content-token] stock.\n17:35:41.103 [main] INFO com.awesome.testing.ollama.scenario.chat.ChatScenarioRepository -- Loaded 7 chat scenario(s) from scenarios/chat-scenarios.json\n17:35:41.103 [main] INFO com.awesome.testing.ollama.service.ChatToolsService -- [chat-tools][call] prompt='What iphones do we have available? Tell me the details about them' issuing list_products\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "consumer-drops-legacy-fqcn-type-id",
+      "component": "consumer",
+      "repository": "../jms-email-consumer",
+      "patch": "mutants/consumer-drops-legacy-fqcn-type-id.patch",
+      "description": "Keep only the short JMS type identifier and silently remove the legacy producer FQCN alias.",
+      "contract": "The consumer accepts both EmailDTO and com.awesome.testing.dto.email.EmailDTO type identifiers during migration.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 1.694,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 0,
+        "durationSeconds": 2.357,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nMockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nWARNING: A Java agent has been loaded dynamically (/Users/slawek/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\n",
+        "timedOut": false
+      },
+      "status": "survived",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 1.639,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 2.335,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nMockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nWARNING: A Java agent has been loaded dynamically (/Users/slawek/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar)\nWARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning\nWARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information\nWARNING: Dynamic loading of agents will be disallowed by default in a future release\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 4,
+    "survived": 4
+  }
+}

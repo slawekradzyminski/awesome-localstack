@@ -1,0 +1,13 @@
+diff --git a/src/lib/runtimeConfig.ts b/src/lib/runtimeConfig.ts
+--- a/src/lib/runtimeConfig.ts
++++ b/src/lib/runtimeConfig.ts
+@@ -25,7 +25,8 @@ export type SsoRuntimeConfig = {
+ const getRuntimeOrigin = (location: RuntimeLocation) => trimTrailingSlash(location.origin);
+ const isLocalTrainingGateway = (location: RuntimeLocation) => {
+   const origin = getRuntimeOrigin(location);
+-  return origin === 'http://localhost:8081' || origin === 'http://127.0.0.1:8081';
++  const hostname = new URL(origin).hostname;
++  return hostname === 'localhost' || hostname === '127.0.0.1';
+ };
+ 
+ export const getApiBaseUrl = (

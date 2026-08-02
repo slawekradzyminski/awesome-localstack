@@ -1,0 +1,12 @@
+diff --git a/src/main/java/com/awesome/testing/service/password/PasswordResetService.java b/src/main/java/com/awesome/testing/service/password/PasswordResetService.java
+--- a/src/main/java/com/awesome/testing/service/password/PasswordResetService.java
++++ b/src/main/java/com/awesome/testing/service/password/PasswordResetService.java
+@@ -91,7 +91,7 @@ public class PasswordResetService {
+     }
+ 
+     private boolean isSsoOnlyUser(UserEntity user) {
+-        return StringUtils.hasText(user.getAuthProvider()) && StringUtils.hasText(user.getProviderSubject());
++        return StringUtils.hasText(user.getAuthProvider()) || StringUtils.hasText(user.getProviderSubject());
+     }
+ 
+     private String buildResetLink(String token) {

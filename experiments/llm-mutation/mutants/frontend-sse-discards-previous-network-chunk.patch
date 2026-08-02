@@ -1,0 +1,14 @@
+diff --git a/src/lib/sse.ts b/src/lib/sse.ts
+--- a/src/lib/sse.ts
++++ b/src/lib/sse.ts
+@@ -24,9 +24,8 @@ export async function processSSEResponse<T>(
+ 
+       if (value) {
+         const chunkText = decoder.decode(value, { stream: true });
+-        buffer += chunkText;
+ 
+-        const events = buffer.split('\n\n');
++        const events = chunkText.split('\n\n');
+         buffer = events.pop() ?? '';
+ 
+         for (const eventBlock of events) {

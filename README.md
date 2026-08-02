@@ -18,6 +18,10 @@ For the local SSO flow, standard-login comparison, and local credentials, see [d
 For repository-owned image publishing and the complete four-image compatibility
 set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
 
+For the empirical mutation-testing results and the workflow used by coding
+agents, see [docs/MUTATION_TESTING_AI_STUDY.md](docs/MUTATION_TESTING_AI_STUDY.md)
+and [docs/MUTATION_TESTING_AGENT_PLAYBOOK.md](docs/MUTATION_TESTING_AGENT_PLAYBOOK.md).
+
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
 This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081` and `11434`, so stop one profile before starting the other.
