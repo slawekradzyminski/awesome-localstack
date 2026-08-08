@@ -4,6 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 1
     groups:
       non-major-images:
         update-types:
@@ -13,6 +14,7 @@ updates:
     directory: /ollama-dmr-adapter
     schedule:
       interval: weekly
+    open-pull-requests-limit: 1
     groups:
       non-major-ollama:
         update-types:
@@ -23,7 +25,16 @@ updates:
       - dependency-name: ollama/ollama
         update-types:
           - version-update:semver-minor
+      # Keep Python prereleases out of routine maintenance; reconsider when 3.15 is stable.
+      - dependency-name: python
+        versions:
+          - ">= 3.15.0b0, < 3.15.0"
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns:
+          - "*"
