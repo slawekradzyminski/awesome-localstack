@@ -25,10 +25,10 @@ updates:
       - dependency-name: ollama/ollama
         update-types:
           - version-update:semver-minor
-      # Keep Python prereleases out of routine maintenance; reconsider when 3.15 is stable.
+      # Keep the runtime on Python 3.14; patch updates remain enabled.
       - dependency-name: python
-        versions:
-          - ">= 3.15.0b0, < 3.15.0"
+        update-types:
+          - version-update:semver-minor
   - package-ecosystem: github-actions
     directory: /
     schedule:
