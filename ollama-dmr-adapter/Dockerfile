@@ -1,4 +1,4 @@
-FROM python:3.14.6-alpine@sha256:26730869004e2b9c4b9ad09cab8625e81d256d1ce97e72df5520e806b1709f92
+FROM python:3.15.0a8-alpine@sha256:67a4b22b18852de8a9f668937641d2926e2dc9832b4a24ed29c9f5afb125251d
 
 WORKDIR /app
 COPY adapter.py /app/adapter.py
