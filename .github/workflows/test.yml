@@ -6,6 +6,13 @@ permissions:
   contents: read
 
 jobs:
+  verifyDeploymentSilence:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Verify bounded deployment alert silence
+      run: python3 scripts/verify-deployment-silence.py
+
   verifyEdgeProxy:
     runs-on: ubuntu-latest
     steps:

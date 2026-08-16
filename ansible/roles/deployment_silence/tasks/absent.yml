@@ -1,0 +1,27 @@
+- name: Expire the deployment silence after successful verification
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - --fail
+      - --silent
+      - --show-error
+      - --request
+      - DELETE
+      - "http://alertmanager:9093/api/v2/silence/{{ deployment_silence_id }}"
+    chdir: "{{ app_dir }}"
+  changed_when: true
+  when: deployment_silence_id is defined
+
+- name: Report expired deployment silence
+  ansible.builtin.debug:
+    msg: >-
+      Expired the planned deployment warning silence after successful
+      verification; normal warning notifications are active again.
+  when: deployment_silence_id is defined

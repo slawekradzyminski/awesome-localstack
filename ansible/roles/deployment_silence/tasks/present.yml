@@ -1,0 +1,155 @@
+- name: Check for an existing deployed Compose file
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/{{ app_compose_file }}"
+  register: deployment_silence_compose
+
+- name: Check whether Alertmanager is running
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - --status
+      - running
+      - --quiet
+      - alertmanager
+    chdir: "{{ app_dir }}"
+  register: deployment_silence_alertmanager
+  changed_when: false
+  failed_when: false
+  when: deployment_silence_compose.stat.exists
+
+- name: Check whether the gateway is running
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - --status
+      - running
+      - --quiet
+      - gateway
+    chdir: "{{ app_dir }}"
+  register: deployment_silence_gateway
+  changed_when: false
+  failed_when: false
+  when: deployment_silence_compose.stat.exists
+
+- name: Record deployment silence availability
+  ansible.builtin.set_fact:
+    deployment_silence_available: >-
+      {{
+        deployment_silence_compose.stat.exists
+        and deployment_silence_alertmanager is not skipped
+        and deployment_silence_alertmanager.rc == 0
+        and deployment_silence_alertmanager.stdout | length > 0
+        and deployment_silence_gateway is not skipped
+        and deployment_silence_gateway.rc == 0
+        and deployment_silence_gateway.stdout | length > 0
+      }}
+
+- name: Explain why no deployment silence was created
+  ansible.builtin.debug:
+    msg: >-
+      The existing Alertmanager path is unavailable, so this first-time or
+      recovery deployment will continue without a maintenance silence.
+  when: not deployment_silence_available | bool
+
+- name: Record deployment silence time bounds
+  ansible.builtin.set_fact:
+    deployment_silence_starts_at: >-
+      {{ '%Y-%m-%dT%H:%M:%SZ' | strftime(ansible_date_time.epoch | int, utc=true) }}
+    deployment_silence_ends_at: >-
+      {{
+        '%Y-%m-%dT%H:%M:%SZ'
+        | strftime(
+            (ansible_date_time.epoch | int)
+            + ((deployment_silence_duration_minutes | int) * 60),
+            utc=true
+          )
+      }}
+  when: deployment_silence_available | bool
+
+- name: Build deployment silence payload
+  ansible.builtin.set_fact:
+    deployment_silence_payload: >-
+      {{
+        {
+          'matchers': [
+            {
+              'name': 'alertname',
+              'value': 'PublicEndpointProbeFailed',
+              'isRegex': false,
+              'isEqual': true
+            },
+            {
+              'name': 'job',
+              'value': 'public_https',
+              'isRegex': false,
+              'isEqual': true
+            },
+            {
+              'name': 'service',
+              'value': 'public-edge',
+              'isRegex': false,
+              'isEqual': true
+            }
+          ],
+          'startsAt': deployment_silence_starts_at,
+          'endsAt': deployment_silence_ends_at,
+          'createdBy': deployment_silence_created_by,
+          'comment': deployment_silence_comment
+        }
+        | to_json
+      }}
+  when: deployment_silence_available | bool
+
+- name: Silence planned public endpoint warnings during deployment
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - --fail
+      - --silent
+      - --show-error
+      - --request
+      - POST
+      - http://alertmanager:9093/api/v2/silences
+      - --header
+      - "Content-Type: application/json"
+      - --data
+      - "{{ deployment_silence_payload }}"
+    chdir: "{{ app_dir }}"
+  register: deployment_silence_create
+  changed_when: true
+  when: deployment_silence_available | bool
+
+- name: Record the deployment silence identifier
+  ansible.builtin.set_fact:
+    deployment_silence_id: "{{ (deployment_silence_create.stdout | from_json).silenceID }}"
+  when: deployment_silence_available | bool
+
+- name: Verify the deployment silence was created
+  ansible.builtin.assert:
+    that:
+      - deployment_silence_id | length > 0
+    fail_msg: Alertmanager did not return a deployment silence identifier
+    quiet: true
+  when: deployment_silence_available | bool
+
+- name: Report deployment silence
+  ansible.builtin.debug:
+    msg: >-
+      Silenced PublicEndpointProbeFailed warnings until
+      {{ deployment_silence_ends_at }}; critical endpoint alerts remain active.
+  when: deployment_silence_available | bool

@@ -1,0 +1,4 @@
+deployment_silence_state: present
+deployment_silence_duration_minutes: 15
+deployment_silence_created_by: ansible-deploy
+deployment_silence_comment: Planned Awesome Server deployment
