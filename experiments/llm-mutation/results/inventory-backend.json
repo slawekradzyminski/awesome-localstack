@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "backend-inventory-product-lock-removed",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-product-lock-removed.patch",
+      "description": "Read stock without a pessimistic product lock, allowing competing checkouts to validate the same final unit.",
+      "contract": "Checkout must serialize product validation and deduction so one final unit produces one order and a stable HTTP 409 for the loser.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 3.657,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 10.826,
+        "outputTail": ")\n\tat org.hibernate.engine.jdbc.mutation.internal.AbstractMutationExecutor.execute(AbstractMutationExecutor.java:65)\n\tat org.hibernate.persister.entity.mutation.UpdateCoordinatorStandard.doStaticUpdate(UpdateCoordinatorStandard.java:861)\n\tat org.hibernate.persister.entity.mutation.UpdateCoordinatorStandard.performUpdate(UpdateCoordinatorStandard.java:336)\n\tat org.hibernate.persister.entity.mutation.UpdateCoordinatorStandard.update(UpdateCoordinatorStandard.java:251)\n\tat org.hibernate.action.internal.EntityUpdateAction.execute(EntityUpdateAction.java:161)\n\tat org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:634)\n\tat org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:505)\n\tat org.hibernate.event.internal.AbstractFlushingEventListener.performExecutions(AbstractFlushingEventListener.java:381)\n\tat org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)\n\tat org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:138)\n\tat org.hibernate.internal.SessionImpl.fireFlush(SessionImpl.java:1458)\n\tat org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:484)\n\tat org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:2086)\n\tat org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:2007)\n\tat org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:426)\n\tat org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:167)\n\tat org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commitNoRollbackOnly(JdbcResourceLocalTransactionCoordinatorImpl.java:252)\n\tat org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:242)\n\tat org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:89)\n\tat org.springframework.orm.jpa.JpaTransactionManager.doCommit(JpaTransactionManager.java:552)\n\t... 10 more\nCaused by: org.hibernate.StaleStateException: Unexpected row count (expected row count 1 but was 0) [update products set category=?,description=?,image_url=?,name=?,price=?,stock_quantity=?,updated_at=?,version=? where id=? and version=?]\n\tat org.hibernate.jdbc.Expectations.checkNonBatched(Expectations.java:93)\n\tat org.hibernate.jdbc.Expectation$RowCount.verifyOutcome(Expectation.java:170)\n\tat org.hibernate.engine.jdbc.mutation.internal.ModelMutationHelper.identifiedResultsCheck(ModelMutationHelper.java:57)\n\t... 35 more\n\n[ERROR] Errors: \n[ERROR]   InventoryConcurrencyIT.onlyOneBuyerCanCheckoutTheFinalUnit:112 \u00bb Execution org.springframework.orm.ObjectOptimisticLockingFailureException: Unexpected row count (expected row count 1 but was 0) [update products set category=?,description=?,image_url=?,name=?,price=?,stock_quantity=?,updated_at=?,version=? where id=? and version=?] for entity [com.awesome.testing.entity.ProductEntity with id '1']\n[ERROR] Tests run: 3, Failures: 0, Errors: 1, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-pmd-plugin:3.28.0:check (default) on project jwt-auth-service: PMD 7.17.0 has found 2 violations. For more details see: /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-0o08e08j/backend-inventory-product-lock-removed/target/pmd.xml -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 3.696,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 11.282,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "backend-inventory-partial-checkout-committed",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-partial-checkout-committed.patch",
+      "description": "Persist the order and deduct each line while validation is still in progress, then commit a stock conflict.",
+      "contract": "A multi-line checkout is atomic: one unavailable line leaves every stock quantity, movement, order, and cart unchanged.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 3.283,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 10.249,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n[ERROR] Tests run: 3, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 4.106 s <<< FAILURE! -- in com.awesome.testing.service.InventoryConcurrencyIT\n[ERROR] com.awesome.testing.service.InventoryConcurrencyIT.onlyOneBuyerCanCheckoutTheFinalUnit -- Time elapsed: 0.205 s <<< FAILURE!\norg.opentest4j.AssertionFailedError: \n\nexpected: 1L\n but was: 2L\n\tat com.awesome.testing.service.InventoryConcurrencyIT.onlyOneBuyerCanCheckoutTheFinalUnit(InventoryConcurrencyIT.java:117)\n\n[ERROR] com.awesome.testing.service.InventoryConcurrencyIT.unavailableLineRollsBackTheEntireCheckout -- Time elapsed: 0.029 s <<< FAILURE!\norg.opentest4j.AssertionFailedError: \n\nexpected: 2\n but was: 1\n\tat com.awesome.testing.service.InventoryConcurrencyIT.unavailableLineRollsBackTheEntireCheckout(InventoryConcurrencyIT.java:159)\n\n[ERROR] Failures: \n[ERROR]   InventoryConcurrencyIT.onlyOneBuyerCanCheckoutTheFinalUnit:117 \nexpected: 1L\n but was: 2L\n[ERROR]   InventoryConcurrencyIT.unavailableLineRollsBackTheEntireCheckout:159 \nexpected: 2\n but was: 1\n[ERROR] Tests run: 3, Failures: 2, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-failsafe-plugin:3.5.6:verify (default) on project jwt-auth-service: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-g8vll9zd/backend-inventory-partial-checkout-committed/target/failsafe-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 3.369,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 10.31,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "backend-inventory-double-restoration",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-double-restoration.patch",
+      "description": "Allow cancellation of an already-cancelled order and leave its inventory state deducted so compensation runs again.",
+      "contract": "Cancellation restores deducted stock exactly once and transitions the internal inventory state to RESTORED.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 3.394,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 4.408,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n[ERROR] Tests run: 11, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.680 s <<< FAILURE! -- in com.awesome.testing.service.OrderServiceTest\n[ERROR] com.awesome.testing.service.OrderServiceTest.shouldRestoreDeductedInventoryExactlyOnceWhenOrderIsCancelled -- Time elapsed: 0.011 s <<< FAILURE!\norg.opentest4j.AssertionFailedError: \n\nexpected: RESTORED\n but was: DEDUCTED\n\tat com.awesome.testing.service.OrderServiceTest.shouldRestoreDeductedInventoryExactlyOnceWhenOrderIsCancelled(OrderServiceTest.java:177)\n\n[ERROR] Failures: \n[ERROR]   OrderServiceTest.shouldRestoreDeductedInventoryExactlyOnceWhenOrderIsCancelled:177 \nexpected: RESTORED\n but was: DEDUCTED\n[ERROR] Tests run: 11, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project jwt-auth-service: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-krx6557r/backend-inventory-double-restoration/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 3.281,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 4.43,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 3
+  }
+}

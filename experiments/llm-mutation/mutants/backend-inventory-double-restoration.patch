@@ -1,0 +1,14 @@
+diff --git a/src/main/java/com/awesome/testing/service/OrderService.java b/src/main/java/com/awesome/testing/service/OrderService.java
+--- a/src/main/java/com/awesome/testing/service/OrderService.java
++++ b/src/main/java/com/awesome/testing/service/OrderService.java
+@@ -148,3 +148,5 @@ public class OrderService {
+     private boolean canBeCancelled(OrderStatus status) {
+-        return status == OrderStatus.PENDING || status == OrderStatus.PAID;
++        return status == OrderStatus.PENDING
++                || status == OrderStatus.PAID
++                || status == OrderStatus.CANCELLED;
+     }
+@@ -166,3 +168,2 @@ public class OrderService {
+             });
+-            order.setInventoryState(InventoryState.RESTORED);
+         }
