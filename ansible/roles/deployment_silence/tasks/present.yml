@@ -62,12 +62,15 @@
 - name: Record deployment silence time bounds
   ansible.builtin.set_fact:
     deployment_silence_starts_at: >-
-      {{ '%Y-%m-%dT%H:%M:%SZ' | strftime(ansible_date_time.epoch | int, utc=true) }}
+      {{
+        '%Y-%m-%dT%H:%M:%SZ'
+        | strftime(ansible_facts['date_time']['epoch'] | int, utc=true)
+      }}
     deployment_silence_ends_at: >-
       {{
         '%Y-%m-%dT%H:%M:%SZ'
         | strftime(
-            (ansible_date_time.epoch | int)
+            (ansible_facts['date_time']['epoch'] | int)
             + ((deployment_silence_duration_minutes | int) * 60),
             utc=true
           )
