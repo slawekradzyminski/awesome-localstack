@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "frontend-inventory-rotates-request-id-after-conflict",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-inventory-rotates-request-id-after-conflict.patch",
+      "description": "Generate a new adjustment request ID after a rejected attempt, turning an operator retry into a new inventory intent.",
+      "contract": "A failed or ambiguous inventory adjustment retains its UUID so retrying the unchanged form is idempotent; only success or a new selected-product intent rotates it.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 2.041,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 1.081,
+        "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/components/admin/AdminInventory.test.tsx\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-4h6fy8tv/frontend-inventory-rotates-request-id-after-conflict\n\n \u276f src/components/admin/AdminInventory.test.tsx (6 tests | 1 failed) 468ms\n     \u00d7 validates adjustments and preserves the request id across a failed retry 101ms\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af Failed Tests 1 \u23af\u23af\u23af\u23af\u23af\u23af\u23af\n\n FAIL  src/components/admin/AdminInventory.test.tsx > AdminInventory > validates adjustments and preserves the request id across a failed retry\nAssertionError: expected '22222222-2222-4222-8222-222222222222' to be '11111111-1111-4111-8111-111111111111' // Object.is equality\n\nExpected: \"11111111-1111-4111-8111-111111111111\"\nReceived: \"22222222-2222-4222-8222-222222222222\"\n\n \u276f src/components/admin/AdminInventory.test.tsx:197:68\n    195|     await user.click(screen.getByRole('button', { name: 'Apply adjustm\u2026\n    196|     await waitFor(() => expect(inventory.adjust).toHaveBeenCalledTimes\u2026\n    197|     expect(vi.mocked(inventory.adjust).mock.calls[1][1].requestId).toB\u2026\n       |                                                                    ^\n    198|     await waitFor(() => expect(screen.getByLabelText('Quantity change'\u2026\n    199|     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['inventory\u2026\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n\n\n Test Files  1 failed (1)\n      Tests  1 failed | 5 passed (6)\n   Start at  15:41:18\n   Duration  845ms (transform 42ms, setup 42ms, import 86ms, tests 468ms, environment 198ms)\n\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.594,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 1.165,
+          "outputTail": "\n> vite@3.7.13 test\n> vitest run --run src/components/admin/AdminInventory.test.tsx\n\n\n RUN  v4.1.10 /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-baseline-6cjrttrv/frontend-inventory-rotates-request-id-after-conflict\n\n\n Test Files  1 passed (1)\n      Tests  6 passed (6)\n   Start at  15:41:14\n   Duration  935ms (transform 51ms, setup 51ms, import 97ms, tests 525ms, environment 210ms)\n\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 1
+  }
+}

@@ -1,0 +1,20 @@
+diff --git a/src/main/java/com/awesome/testing/service/OrderService.java b/src/main/java/com/awesome/testing/service/OrderService.java
+--- a/src/main/java/com/awesome/testing/service/OrderService.java
++++ b/src/main/java/com/awesome/testing/service/OrderService.java
+@@ -38,2 +38,2 @@ public class OrderService {
+-    @Transactional
++    @Transactional(noRollbackFor = CustomException.class)
+     public OrderDto createOrder(String username, AddressDto addressDto) {
+@@ -51,11 +51,9 @@ public class OrderService {
+                 .map(id -> productRepository.findByIdForUpdate(id)
+                         .orElseThrow(() -> new CustomException("Product not found", HttpStatus.NOT_FOUND)))
+                 .toList();
++        OrderEntity savedOrder = orderRepository.save(order);
+         for (ProductEntity product : locked) {
+             inventoryService.checkAvailable(product, quantities.get(product.getId()));
+-        }
+-        OrderEntity savedOrder = orderRepository.save(order);
+-        for (ProductEntity product : locked) {
+             inventoryService.deduct(product, quantities.get(product.getId()), savedOrder);
+         }
+         cartItemRepository.deleteByUsername(username);

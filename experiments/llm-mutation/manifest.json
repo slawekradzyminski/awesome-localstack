@@ -24,6 +24,36 @@
       "test": ["./mvnw", "-q", "-Dtest=AuthRateLimitGuardTest", "test"]
     },
     {
+      "id": "backend-inventory-product-lock-removed",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-product-lock-removed.patch",
+      "description": "Read stock without a pessimistic product lock, allowing competing checkouts to validate the same final unit.",
+      "contract": "Checkout must serialize product validation and deduction so one final unit produces one order and a stable HTTP 409 for the loser.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Pintegration-tests", "-Dskip.jacoco=true", "-Dtest=InventoryServiceTest", "-Dit.test=InventoryConcurrencyIT", "verify"]
+    },
+    {
+      "id": "backend-inventory-partial-checkout-committed",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-partial-checkout-committed.patch",
+      "description": "Persist the order and deduct each line while validation is still in progress, then commit a stock conflict.",
+      "contract": "A multi-line checkout is atomic: one unavailable line leaves every stock quantity, movement, order, and cart unchanged.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Pintegration-tests", "-Dskip.jacoco=true", "-Dtest=InventoryServiceTest", "-Dit.test=InventoryConcurrencyIT", "verify"]
+    },
+    {
+      "id": "backend-inventory-double-restoration",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-inventory-double-restoration.patch",
+      "description": "Allow cancellation of an already-cancelled order and leave its inventory state deducted so compensation runs again.",
+      "contract": "Cancellation restores deducted stock exactly once and transitions the internal inventory state to RESTORED.",
+      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
+      "test": ["./mvnw", "-q", "-Dtest=OrderServiceTest", "test"]
+    },
+    {
       "id": "frontend-sso-clears-pkce-before-exchange",
       "component": "frontend",
       "repository": "../vite-react-frontend",
@@ -52,6 +82,16 @@
       "contract": "Implicit training SSO is enabled only on the designated localhost:8081 gateway, never on unrelated loopback applications.",
       "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
       "test": ["npm", "test", "--", "--run", "src/lib/runtimeConfig.test.ts"]
+    },
+    {
+      "id": "frontend-inventory-rotates-request-id-after-conflict",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-inventory-rotates-request-id-after-conflict.patch",
+      "description": "Generate a new adjustment request ID after a rejected attempt, turning an operator retry into a new inventory intent.",
+      "contract": "A failed or ambiguous inventory adjustment retains its UUID so retrying the unchanged form is idempotent; only success or a new selected-product intent rotates it.",
+      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
+      "test": ["npm", "test", "--", "--run", "src/components/admin/AdminInventory.test.tsx"]
     },
     {
       "id": "mock-tool-call-uses-token-delay",

@@ -1,0 +1,7 @@
+diff --git a/src/components/admin/AdminInventory.tsx b/src/components/admin/AdminInventory.tsx
+--- a/src/components/admin/AdminInventory.tsx
++++ b/src/components/admin/AdminInventory.tsx
+@@ -85,2 +85,3 @@ export function AdminInventory() {
+     onError: (error) => {
++      setRequestId(crypto.randomUUID());
+       setAdjustmentError(isConflict(error)

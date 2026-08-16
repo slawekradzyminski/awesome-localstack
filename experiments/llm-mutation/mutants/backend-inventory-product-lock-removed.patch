@@ -1,0 +1,7 @@
+diff --git a/src/main/java/com/awesome/testing/repository/ProductRepository.java b/src/main/java/com/awesome/testing/repository/ProductRepository.java
+--- a/src/main/java/com/awesome/testing/repository/ProductRepository.java
++++ b/src/main/java/com/awesome/testing/repository/ProductRepository.java
+@@ -18,3 +18,2 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long>, J
+-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+     @Query("select p from ProductEntity p where p.id = :id")
+     Optional<ProductEntity> findByIdForUpdate(@Param("id") Long id);

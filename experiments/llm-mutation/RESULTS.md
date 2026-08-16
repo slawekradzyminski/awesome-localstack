@@ -58,3 +58,21 @@ Raw execution records:
 - [`results/latest.json`](./results/latest.json): initial 4 killed / 4 survived;
 - [`results/after-strengthening.json`](./results/after-strengthening.json):
   8 killed / 0 survived.
+
+## Inventory feature extensions (2026-08-16)
+
+Four requirement-driven inventory mutants were added after the original pilot.
+They remain separate from the original eight-mutant score and were executed as
+bounded feature checks:
+
+| Mutant | Result | Requirement exercised |
+| --- | --- | --- |
+| backend removes the product lock | killed | concurrent checkout cannot sell the final unit twice |
+| backend commits a partial checkout | killed | multi-line checkout is atomic on a stock conflict |
+| backend restores cancelled stock twice | killed | cancellation compensation is exactly once |
+| frontend rotates the request ID after conflict | killed | an unchanged adjustment retry preserves its idempotency key |
+
+All four baseline copies passed, every mutant compiled, and the focused tests
+killed each mutant. Raw records are in
+[`results/inventory-backend.json`](./results/inventory-backend.json) and
+[`results/inventory-frontend.json`](./results/inventory-frontend.json).
