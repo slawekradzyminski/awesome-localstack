@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.15@sha256:3a4255b3d51d7cbc4e8690f9f9608487114dd24fa526c1bd897895dbe1143bf0
+    image: slawekradzyminski/backend:3.7.16@sha256:71cd8913a276f613200f35c83e846a0aa647a9313fa3e5e5f741390f4dc2dbac
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -61,7 +61,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.13@sha256:8f7e5cb457d277c9dd85098cb1354a646830c544d78bddca2a110ec8e1591cea
+    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -71,7 +71,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.15@sha256:3a4255b3d51d7cbc4e8690f9f9608487114dd24fa526c1bd897895dbe1143bf0
+    image: slawekradzyminski/backend:3.7.16@sha256:71cd8913a276f613200f35c83e846a0aa647a9313fa3e5e5f741390f4dc2dbac
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -110,7 +110,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.13@sha256:8f7e5cb457d277c9dd85098cb1354a646830c544d78bddca2a110ec8e1591cea
+    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
     restart: unless-stopped
     logging: *default-logging
     expose:
