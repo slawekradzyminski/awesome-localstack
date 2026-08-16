@@ -1,0 +1,14 @@
+- name: Validate deployment silence state
+  ansible.builtin.assert:
+    that:
+      - deployment_silence_state in ['present', 'absent']
+      - deployment_silence_duration_minutes | int >= 5
+    quiet: true
+
+- name: Create the deployment silence
+  ansible.builtin.include_tasks: present.yml
+  when: deployment_silence_state == 'present'
+
+- name: Expire the deployment silence
+  ansible.builtin.include_tasks: absent.yml
+  when: deployment_silence_state == 'absent'

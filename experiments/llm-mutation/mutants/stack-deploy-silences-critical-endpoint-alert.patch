@@ -1,0 +1,12 @@
+diff --git a/ansible/roles/deployment_silence/tasks/present.yml b/ansible/roles/deployment_silence/tasks/present.yml
+--- a/ansible/roles/deployment_silence/tasks/present.yml
++++ b/ansible/roles/deployment_silence/tasks/present.yml
+@@ -82,7 +82,7 @@
+           'matchers': [
+             {
+               'name': 'alertname',
+-              'value': 'PublicEndpointProbeFailed',
++              'value': 'PublicEndpointProbeFailedCritical',
+               'isRegex': false,
+               'isEqual': true
+             },

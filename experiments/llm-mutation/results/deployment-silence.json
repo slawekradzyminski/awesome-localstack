@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "stack-deploy-silences-critical-endpoint-alert",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-silences-critical-endpoint-alert.patch",
+      "description": "Silence the critical endpoint alert during a planned deployment instead of the warning alert.",
+      "contract": "Deployments may suppress the two-minute public endpoint warning, but the five-minute critical alert must remain active.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.488,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.023,
+        "outputTail": "Deployment silence contract failed: the warning alert must be silenced\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.514,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.026,
+          "outputTail": "Deployment silence contract verified\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-deploy-expires-silence-before-verification",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-expires-silence-before-verification.patch",
+      "description": "Expire the maintenance silence immediately after Compose convergence while verification is still running.",
+      "contract": "The planned warning silence must remain active until post-deployment verification succeeds.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.449,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.021,
+        "outputTail": "Deployment silence contract failed: silence must wrap app convergence and verification\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.43,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.022,
+          "outputTail": "Deployment silence contract verified\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 2
+  }
+}

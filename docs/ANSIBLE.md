@@ -32,6 +32,7 @@ ansible/
     docker/
     swap/
     postgres_backup/
+    deployment_silence/
     app/
     verify/
     cleanup/
@@ -124,18 +125,23 @@ ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password
 
 `deploy.yml` is the normal operational entrypoint.
 
-It performs five steps in order:
+It performs seven steps in order:
 
 1. Runs the guarded `swap` role. It can converge a 1 GiB emergency swap file
    and low swappiness on capable hosts; it reports a tracked reason and makes no
    swap changes on the current MIKR.US LXC host.
 2. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
-3. Runs the `app` role to reconcile the existing PostgreSQL role with the
+3. Creates a 15-minute Alertmanager silence for the warning-level
+   `PublicEndpointProbeFailed` alert when the existing monitoring stack is
+   reachable. The five-minute critical alert remains active.
+4. Runs the `app` role to reconcile the existing PostgreSQL role with the
    Vault-managed password, render the protected runtime environment, and
    converge files and Docker Compose state in `/opt/awesome-localstack`.
-4. Runs the `verify` role to make sure the deployed stack is actually
+5. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
-5. Runs the guarded `cleanup` role only after verification succeeds.
+6. Expires the warning silence immediately after verification succeeds. If a
+   deploy fails first, the silence expires automatically after 15 minutes.
+7. Runs the guarded `cleanup` role only after verification succeeds.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
@@ -209,6 +215,8 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 - `swap`: guarded emergency-swap convergence; disabled on the current LXC host
   because the provider rejects `swapon`
 - `postgres_backup`: encrypted backups, restore checks, and the pre-deploy backup
+- `deployment_silence`: bounded suppression of planned warning-level public
+  endpoint alerts; critical endpoint alerts are never silenced
 - `app`: file sync, runtime env rendering, Compose convergence
 - `verify`: operational checks after deploy
 - `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume

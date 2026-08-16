@@ -4,6 +4,26 @@
   "generationMode": "white-box semantic pilot",
   "mutants": [
     {
+      "id": "stack-deploy-silences-critical-endpoint-alert",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-silences-critical-endpoint-alert.patch",
+      "description": "Silence the critical endpoint alert during a planned deployment instead of the warning alert.",
+      "contract": "Deployments may suppress the two-minute public endpoint warning, but the five-minute critical alert must remain active.",
+      "compile": ["bash", "-lc", "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"],
+      "test": ["python3", "scripts/verify-deployment-silence.py"]
+    },
+    {
+      "id": "stack-deploy-expires-silence-before-verification",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-expires-silence-before-verification.patch",
+      "description": "Expire the maintenance silence immediately after Compose convergence while verification is still running.",
+      "contract": "The planned warning silence must remain active until post-deployment verification succeeds.",
+      "compile": ["bash", "-lc", "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"],
+      "test": ["python3", "scripts/verify-deployment-silence.py"]
+    },
+    {
       "id": "backend-partial-sso-account-blocked",
       "component": "backend",
       "repository": "../test-secure-backend",

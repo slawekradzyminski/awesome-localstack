@@ -1,0 +1,12 @@
+diff --git a/ansible/playbooks/deploy.yml b/ansible/playbooks/deploy.yml
+--- a/ansible/playbooks/deploy.yml
++++ b/ansible/playbooks/deploy.yml
+@@ -9,7 +9,7 @@
+     - role: deployment_silence
+       deployment_silence_state: present
+     - app
+-    - verify
+     - role: deployment_silence
+       deployment_silence_state: absent
++    - verify
+     - cleanup

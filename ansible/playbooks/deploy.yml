@@ -6,6 +6,10 @@
   roles:
     - swap
     - postgres_backup
+    - role: deployment_silence
+      deployment_silence_state: present
     - app
     - verify
+    - role: deployment_silence
+      deployment_silence_state: absent
     - cleanup
