@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.16@sha256:71cd8913a276f613200f35c83e846a0aa647a9313fa3e5e5f741390f4dc2dbac
+    image: slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -71,7 +71,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.16@sha256:71cd8913a276f613200f35c83e846a0aa647a9313fa3e5e5f741390f4dc2dbac
+    image: slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
