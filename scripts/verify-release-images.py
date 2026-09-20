@@ -8,6 +8,8 @@ import json
 import re
 import subprocess
 import sys
+import shutil
+import tempfile
 from pathlib import Path
 
 
@@ -21,19 +23,30 @@ PRODUCTION_SERVICES = (
 )
 
 
-def compose_services(*files: str) -> dict[str, dict]:
+def compose_services(*files: str, directory: Path = ROOT) -> dict[str, dict]:
     command = ["docker", "compose"]
     for filename in files:
         command.extend(("-f", filename))
     command.extend(("config", "--no-env-resolution", "--format", "json"))
     result = subprocess.run(
         command,
-        cwd=ROOT,
+        cwd=directory,
         check=True,
         capture_output=True,
         text=True,
     )
     return json.loads(result.stdout)["services"]
+
+
+def server_configuration() -> dict[str, dict]:
+    # Older Compose versions omit missing optional env files from config output.
+    # Render an isolated copy with empty placeholders, never production secrets.
+    with tempfile.TemporaryDirectory(prefix="awesome-release-config-") as folder:
+        directory = Path(folder)
+        shutil.copy2(ROOT / "docker-compose.server.yml", directory / "docker-compose.server.yml")
+        for name in (".env.runtime", ".env.aitesters"):
+            (directory / name).write_text("# Release validation placeholder\n")
+        return compose_services("docker-compose.server.yml", directory=directory)
 
 
 def compose_images(*files: str) -> dict[str, str]:
@@ -118,7 +131,7 @@ def main() -> int:
         failures,
     )
 
-    server_services = compose_services("docker-compose.server.yml")
+    server_services = server_configuration()
     for service, port in (("backend", "9091"), ("aitesters-backend", "9092")):
         config = server_services[service]
         native_ports = [entry for entry in config.get("ports", []) if entry.get("target") == 9091]
