@@ -8,8 +8,6 @@ import json
 import re
 import subprocess
 import sys
-import shutil
-import tempfile
 from pathlib import Path
 
 
@@ -21,16 +19,20 @@ PRODUCTION_SERVICES = (
     "consumer",
     "ollama-mock",
 )
+SERVICE_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
+SERVICE_KEY = re.compile(r"^    ([A-Za-z0-9_-]+):\s*$")
+ENV_FILE_PATH = re.compile(r"^      - path: (\S+)\s*$")
+ENV_FILE_SHORT = re.compile(r"^      - (\.?\S+)\s*$")
 
 
-def compose_services(*files: str, directory: Path = ROOT) -> dict[str, dict]:
+def compose_services(*files: str) -> dict[str, dict]:
     command = ["docker", "compose"]
     for filename in files:
         command.extend(("-f", filename))
     command.extend(("config", "--no-env-resolution", "--format", "json"))
     result = subprocess.run(
         command,
-        cwd=directory,
+        cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
@@ -38,15 +40,36 @@ def compose_services(*files: str, directory: Path = ROOT) -> dict[str, dict]:
     return json.loads(result.stdout)["services"]
 
 
-def server_configuration() -> dict[str, dict]:
-    # Older Compose versions omit missing optional env files from config output.
-    # Render an isolated copy with empty placeholders, never production secrets.
-    with tempfile.TemporaryDirectory(prefix="awesome-release-config-") as folder:
-        directory = Path(folder)
-        shutil.copy2(ROOT / "docker-compose.server.yml", directory / "docker-compose.server.yml")
-        for name in (".env.runtime", ".env.aitesters"):
-            (directory / name).write_text("# Release validation placeholder\n")
-        return compose_services("docker-compose.server.yml", directory=directory)
+def declared_env_files(service: str, compose_file: Path = ROOT / "docker-compose.server.yml") -> list[str]:
+    # Read declarations from the Compose source. Rendered `config` output omits
+    # optional env_file entries on some Compose versions even when placeholders exist.
+    files: list[str] = []
+    in_service = False
+    in_env_file = False
+    for line in compose_file.read_text().splitlines():
+        service_match = SERVICE_HEADER.match(line)
+        if service_match:
+            if in_service:
+                break
+            in_service = service_match.group(1) == service
+            in_env_file = False
+            continue
+        if not in_service:
+            continue
+        key_match = SERVICE_KEY.match(line)
+        if key_match:
+            in_env_file = key_match.group(1) == "env_file"
+            continue
+        if not in_env_file or line.lstrip().startswith("#"):
+            continue
+        path_match = ENV_FILE_PATH.match(line)
+        if path_match:
+            files.append(Path(path_match.group(1)).name)
+            continue
+        short_match = ENV_FILE_SHORT.match(line)
+        if short_match:
+            files.append(Path(short_match.group(1)).name)
+    return files
 
 
 def compose_images(*files: str) -> dict[str, str]:
@@ -131,7 +154,7 @@ def main() -> int:
         failures,
     )
 
-    server_services = server_configuration()
+    server_services = compose_services("docker-compose.server.yml")
     for service, port in (("backend", "9091"), ("aitesters-backend", "9092")):
         config = server_services[service]
         native_ports = [entry for entry in config.get("ports", []) if entry.get("target") == 9091]
@@ -149,13 +172,12 @@ def main() -> int:
             failures,
         )
 
-    sandbox = server_services["aitesters-backend"]
-    sandbox_env_files = [Path(entry["path"]).name for entry in sandbox.get("env_file", [])]
-    stable_env_files = [Path(entry["path"]).name for entry in server_services["backend"].get("env_file", [])]
+    sandbox_env_files = declared_env_files("aitesters-backend")
+    stable_env_files = declared_env_files("backend")
     require(
         sandbox_env_files == [".env.aitesters"]
         and ".env.aitesters" not in stable_env_files
-        and "JWT_SECRET_KEY" not in sandbox.get("environment", {}),
+        and "JWT_SECRET_KEY" not in server_services["aitesters-backend"].get("environment", {}),
         f"sandbox must use its own runtime env file instead of the stable signing key "
         f"(sandbox files: {sandbox_env_files}, stable files: {stable_env_files})",
         failures,
