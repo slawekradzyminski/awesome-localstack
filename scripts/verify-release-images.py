@@ -143,7 +143,8 @@ def main() -> int:
         sandbox_env_files == [".env.aitesters"]
         and ".env.aitesters" not in stable_env_files
         and "JWT_SECRET_KEY" not in sandbox.get("environment", {}),
-        "sandbox must use its own runtime env file instead of the stable signing key",
+        f"sandbox must use its own runtime env file instead of the stable signing key "
+        f"(sandbox files: {sandbox_env_files}, stable files: {stable_env_files})",
         failures,
     )
 
