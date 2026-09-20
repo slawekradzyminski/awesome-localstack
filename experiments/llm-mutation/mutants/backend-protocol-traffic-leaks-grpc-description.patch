@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/traffic/protocol/GrpcTrafficInterceptor.java
++++ b/src/main/java/com/awesome/testing/traffic/protocol/GrpcTrafficInterceptor.java
+@@ -40,7 +40,7 @@
+         Context context = Context.current();
+         java.util.function.Consumer<Status> finish = status -> recorder.complete(trace, "GRPC", "/" + method,
+                 status.getCode().value(), call.getMethodDescriptor().getBareMethodName(),
+-                status.isOk() ? "SUCCESS" : "ERROR", List.of(status.getCode().name()));
++                status.isOk() ? "SUCCESS" : "ERROR", List.of(String.valueOf(status.getDescription())));
+         ServerCall.Listener<Q> listener = next.startCall(new ForwardingServerCall.SimpleForwardingServerCall<>(call) {
+             @Override
+             public void close(Status status, Metadata trailers) {

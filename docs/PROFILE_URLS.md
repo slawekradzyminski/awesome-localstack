@@ -251,6 +251,28 @@ Disposable API/UI testing sandbox:
 - local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
 - images through gateway: `https://aitesters.byst.re/images/iphone.png`
 
+Rate-limit capacities are intentionally increased for repeated parallel course
+and regression-suite runs. Policy windows remain unchanged from the backend
+defaults.
+
+| Policy | `awesome.byst.re` | `aitesters.byst.re` |
+| --- | ---: | ---: |
+| Signup per IP | 2,000 | 2,000 |
+| Sign-in per IP | 4,000 | 4,000 |
+| Sign-in per username | 2,000 | 2,000 |
+| Sign-in per IP and username | 1,000 | 1,000 |
+| MFA per IP | 600 | 600 |
+| MFA per challenge | 80 | 80 |
+| MFA per user | 300 | 300 |
+| Password-forgot per IP | 2,000 | 100 |
+| Password-forgot per identifier | 600 | 30 |
+| Password-reset per IP | 2,000 | 100 |
+| Refresh per IP | 12,000 | 600 |
+| Email per user | 6,000 | 300 |
+| QR per user | 12,000 | 600 |
+| Ollama per user | 4,000 | 200 |
+| Ollama per IP | 4,000 | 200 |
+
 Hostname notes:
 
 - `awesome.byst.re` is the stable production-like playground.
@@ -425,3 +447,31 @@ docker compose -f docker-compose.server.yml exec gateway curl -i http://blackbox
 docker compose -f docker-compose.server.yml exec gateway curl -i http://localhost/images/iphone.png
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```
+
+## GraphiQL in backend 3.8.0
+
+Backend 3.8.0 enables GraphiQL at `/api/v1/graphiql` on the same origin as the
+app, for example `http://localhost:8081/api/v1/graphiql`. The pinned application
+images include this feature, and the `/api/v1/` gateway route covers this URL. Enter a bearer access token in the editor's Headers tab for schema
+exploration and queries. Swagger remains the REST API explorer.
+
+See [GraphiQL verification](GRAPHIQL_VERIFICATION.md) and
+[usage](../../test-secure-backend/docs/GRAPHQL.md#use-graphiql).
+
+## Native gRPC in backend 3.8.0
+
+`docker-compose.grpc.yml` adds a loopback-only `127.0.0.1:9091` listener when used
+with the released backend image. It preserves the selected base application's
+profiles; GraphQL and GraphiQL remain available over the existing HTTP gateway.
+Prometheus keeps 9090. Native gRPC has no public nginx route, and both health and
+optional reflection require an administrator JWT. See [gRPC setup](GRPC_INVENTORY.md).
+
+Frontend/backend 3.8.0 also show protocol summaries in Traffic
+Monitor. Supply its displayed session ID in GraphiQL headers or native gRPC
+metadata. See the [protocol lab](PROTOCOL_TESTING_LAB.md).
+
+The updated **server profile** explicitly enables native gRPC on two loopback-only
+host ports: `127.0.0.1:9091` for the stable backend and `127.0.0.1:9092` for the
+aitesters sandbox. Reach them through an [SSH tunnel](GRPC_INVENTORY.md#server-deployment-and-ssh-access).
+There is no public gRPC nginx route. Full and lightweight profiles retain the
+optional override described above.

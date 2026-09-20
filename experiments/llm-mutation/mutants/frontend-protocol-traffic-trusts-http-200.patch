@@ -1,0 +1,11 @@
+--- a/src/lib/trafficPresentation.ts
++++ b/src/lib/trafficPresentation.ts
+@@ -3,7 +3,7 @@
+ export function trafficPresentation(event: TrafficEventDto) {
+   const details = event.protocolDetails;
+   if (details) {
+-    const success = details.outcome === 'SUCCESS';
++    const success = event.status === 200 || details.outcome === 'SUCCESS';
+     const outcome = success ? 'Success' : details.outcome === 'PARTIAL_ERROR' ? 'Partial error' : 'Error';
+     return {
+       protocol: details.protocol === 'GRAPHQL' ? 'GraphQL' : 'gRPC',

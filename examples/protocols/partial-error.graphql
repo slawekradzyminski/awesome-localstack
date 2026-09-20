@@ -1,0 +1,4 @@
+query PartialError {
+  products(limit: 1) { items { id name } }
+  cart(username: "another-customer") { totalItems }
+}

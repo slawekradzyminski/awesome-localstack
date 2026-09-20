@@ -46,8 +46,8 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b` |
-| Frontend | `slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b` |
+| Backend | `slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f` |
+| Frontend | `slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5` |
 | Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
 
@@ -102,3 +102,18 @@ PostgreSQL restore tool. Locally built `:local` images are the only exception.
 9. Merge the LocalStack release PR, create an encrypted production backup when stateful services are affected, and deploy through Ansible.
 
 An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set. Backward compatibility is maintained for persisted data and external contracts where required; the deployment does not keep stale application images running as compatibility variants.
+
+## GraphQL/gRPC 3.8.0 release
+
+Backend [PR #59](https://github.com/slawekradzyminski/test-secure-backend/pull/59)
+and tag `v3.8.0` add GraphQL commerce, GraphiQL, optional native admin inventory
+RPCs, and metadata-only protocol traffic. The
+[release workflow](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/35515279059)
+passed all gates and published both supported architectures with provenance and
+SBOM. No database migration is introduced.
+
+The frontend counterpart is tracked in
+[PR #67](https://github.com/slawekradzyminski/vite-react-frontend/pull/67).
+The [release record](GRAPHQL_GRPC_RELEASE.md) tracks historical lesson results,
+artifact verification, deployment, and public smoke tests. The existing user
+instruction excludes rollback work for this rollout.

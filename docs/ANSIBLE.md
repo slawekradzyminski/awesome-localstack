@@ -289,3 +289,13 @@ cd ansible
 - `verify.yml` is still useful when you want smoke checks without changing deployment state.
 - `bootstrap.yml` is intended to be idempotent on an already-configured host.
 - The old shell deployment path has been removed; use `make ansible-deploy`.
+
+## Stable and sandbox authentication isolation
+
+Configure distinct `jwt_secret_key` and `aitesters_jwt_secret_key` values in
+Ansible Vault (at least 32 random bytes each). Deployment renders `.env.runtime`
+for the stable backend and `.env.aitesters` for the disposable backend. The latter
+receives the same required service settings with its own JWT key, and never
+inherits the stable runtime file. Both files are root-owned mode 0600 and ignored
+by Git. Ansible rejects missing or equal signing keys and verifies that tokens
+issued by one site return HTTP 401 at the other.

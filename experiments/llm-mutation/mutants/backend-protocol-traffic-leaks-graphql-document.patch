@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/traffic/protocol/GraphQlTrafficInterceptor.java
++++ b/src/main/java/com/awesome/testing/traffic/protocol/GraphQlTrafficInterceptor.java
+@@ -35,7 +35,7 @@
+             return chain.next(request);
+         }
+         AtomicReference<GraphQlTrafficFilter.Summary> summary = (AtomicReference<GraphQlTrafficFilter.Summary>) attribute;
+-        String operation = operation(request);
++        String operation = request.getDocument();
+         return chain.next(request).doOnNext(response -> {
+             String outcome = response.getErrors().isEmpty() ? "SUCCESS" : response.getData() == null ? "ERROR" : "PARTIAL_ERROR";
+             List<String> codes = response.getErrors().stream().map(error -> {

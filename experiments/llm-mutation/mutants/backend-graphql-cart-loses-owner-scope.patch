@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
++++ b/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
+@@ -65,7 +65,7 @@
+ 
+     public Cart cart(String username) {
+         String owner = access.owner(username);
+-        return Cart.from(owner, cartItemRepository.findByUsername(owner));
++        return Cart.from(owner, cartItemRepository.findAll());
+     }
+ 
+     @PreAuthorize("hasRole('ADMIN')")

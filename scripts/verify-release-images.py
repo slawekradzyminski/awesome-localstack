@@ -21,11 +21,11 @@ PRODUCTION_SERVICES = (
 )
 
 
-def compose_images(*files: str) -> dict[str, str]:
+def compose_services(*files: str) -> dict[str, dict]:
     command = ["docker", "compose"]
     for filename in files:
         command.extend(("-f", filename))
-    command.extend(("config", "--format", "json"))
+    command.extend(("config", "--no-env-resolution", "--format", "json"))
     result = subprocess.run(
         command,
         cwd=ROOT,
@@ -33,8 +33,11 @@ def compose_images(*files: str) -> dict[str, str]:
         capture_output=True,
         text=True,
     )
-    services = json.loads(result.stdout)["services"]
-    return {name: service.get("image", "") for name, service in services.items()}
+    return json.loads(result.stdout)["services"]
+
+
+def compose_images(*files: str) -> dict[str, str]:
+    return {name: service.get("image", "") for name, service in compose_services(*files).items()}
 
 
 def require(condition: bool, message: str, failures: list[str]) -> None:
@@ -112,6 +115,35 @@ def main() -> int:
     require(
         model_mock.get("ollama") == release_images["ollama-mock"],
         "the model-mock override must use the production Ollama mock release",
+        failures,
+    )
+
+    server_services = compose_services("docker-compose.server.yml")
+    for service, port in (("backend", "9091"), ("aitesters-backend", "9092")):
+        config = server_services[service]
+        native_ports = [entry for entry in config.get("ports", []) if entry.get("target") == 9091]
+        require(
+            len(native_ports) == 1 and native_ports[0].get("host_ip") == "127.0.0.1"
+            and str(native_ports[0].get("published")) == port,
+            f"{service} native gRPC must publish only on 127.0.0.1:{port}",
+            failures,
+        )
+        environment = config.get("environment", {})
+        require(
+            {"graphql", "grpc"} <= set(environment.get("SPRING_PROFILES_INCLUDE", "").split(","))
+            and environment.get("GRPC_REFLECTION_ENABLED") == "false",
+            f"{service} must include GraphQL and gRPC with reflection disabled",
+            failures,
+        )
+
+    sandbox = server_services["aitesters-backend"]
+    sandbox_env_files = [Path(entry["path"]).name for entry in sandbox.get("env_file", [])]
+    stable_env_files = [Path(entry["path"]).name for entry in server_services["backend"].get("env_file", [])]
+    require(
+        sandbox_env_files == [".env.aitesters"]
+        and ".env.aitesters" not in stable_env_files
+        and "JWT_SECRET_KEY" not in sandbox.get("environment", {}),
+        "sandbox must use its own runtime env file instead of the stable signing key",
         failures,
     )
 

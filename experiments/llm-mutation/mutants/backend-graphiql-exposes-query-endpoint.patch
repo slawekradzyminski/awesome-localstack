@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/security/WebSecurityConfig.java
++++ b/src/main/java/com/awesome/testing/security/WebSecurityConfig.java
+@@ -94,6 +94,8 @@
+                 auth.requestMatchers(matcherBuilder.matcher("/api/v1/traffic/**")).permitAll();
+             }
+             
++            auth.requestMatchers("/api/v1/graphql").permitAll();
++
+             // Finally, require authentication for all other endpoints
+             auth.anyRequest().authenticated();
+         });

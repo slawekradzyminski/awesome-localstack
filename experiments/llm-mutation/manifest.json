@@ -10,8 +10,15 @@
       "patch": "mutants/stack-deploy-silences-critical-endpoint-alert.patch",
       "description": "Silence the critical endpoint alert during a planned deployment instead of the warning alert.",
       "contract": "Deployments may suppress the two-minute public endpoint warning, but the five-minute critical alert must remain active.",
-      "compile": ["bash", "-lc", "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"],
-      "test": ["python3", "scripts/verify-deployment-silence.py"]
+      "compile": [
+        "bash",
+        "-lc",
+        "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-deployment-silence.py"
+      ]
     },
     {
       "id": "stack-deploy-expires-silence-before-verification",
@@ -20,8 +27,15 @@
       "patch": "mutants/stack-deploy-expires-silence-before-verification.patch",
       "description": "Expire the maintenance silence immediately after Compose convergence while verification is still running.",
       "contract": "The planned warning silence must remain active until post-deployment verification succeeds.",
-      "compile": ["bash", "-lc", "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"],
-      "test": ["python3", "scripts/verify-deployment-silence.py"]
+      "compile": [
+        "bash",
+        "-lc",
+        "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-deployment-silence.py"
+      ]
     },
     {
       "id": "backend-partial-sso-account-blocked",
@@ -30,8 +44,18 @@
       "patch": "mutants/backend-partial-sso-account-blocked.patch",
       "description": "Treat an account as SSO-only when either provider field is present instead of requiring a complete provider identity.",
       "contract": "Only users with both authProvider and providerSubject are SSO-only; partially migrated local accounts must retain password reset.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=PasswordResetServiceTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=PasswordResetServiceTest",
+        "test"
+      ]
     },
     {
       "id": "backend-authenticated-route-double-counted",
@@ -40,8 +64,18 @@
       "patch": "mutants/backend-authenticated-route-double-counted.patch",
       "description": "Apply both username and IP limits to authenticated email/QR calls after a defense-in-depth refactor.",
       "contract": "Authenticated email and QR calls use the user policy; IP is the fallback only when identity is unavailable.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=AuthRateLimitGuardTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=AuthRateLimitGuardTest",
+        "test"
+      ]
     },
     {
       "id": "backend-inventory-product-lock-removed",
@@ -50,8 +84,21 @@
       "patch": "mutants/backend-inventory-product-lock-removed.patch",
       "description": "Read stock without a pessimistic product lock, allowing competing checkouts to validate the same final unit.",
       "contract": "Checkout must serialize product validation and deduction so one final unit produces one order and a stable HTTP 409 for the loser.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Pintegration-tests", "-Dskip.jacoco=true", "-Dtest=InventoryServiceTest", "-Dit.test=InventoryConcurrencyIT", "verify"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Pintegration-tests",
+        "-Dskip.jacoco=true",
+        "-Dtest=InventoryServiceTest",
+        "-Dit.test=InventoryConcurrencyIT",
+        "verify"
+      ]
     },
     {
       "id": "backend-inventory-partial-checkout-committed",
@@ -60,8 +107,21 @@
       "patch": "mutants/backend-inventory-partial-checkout-committed.patch",
       "description": "Persist the order and deduct each line while validation is still in progress, then commit a stock conflict.",
       "contract": "A multi-line checkout is atomic: one unavailable line leaves every stock quantity, movement, order, and cart unchanged.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Pintegration-tests", "-Dskip.jacoco=true", "-Dtest=InventoryServiceTest", "-Dit.test=InventoryConcurrencyIT", "verify"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Pintegration-tests",
+        "-Dskip.jacoco=true",
+        "-Dtest=InventoryServiceTest",
+        "-Dit.test=InventoryConcurrencyIT",
+        "verify"
+      ]
     },
     {
       "id": "backend-inventory-double-restoration",
@@ -70,8 +130,18 @@
       "patch": "mutants/backend-inventory-double-restoration.patch",
       "description": "Allow cancellation of an already-cancelled order and leave its inventory state deducted so compensation runs again.",
       "contract": "Cancellation restores deducted stock exactly once and transitions the internal inventory state to RESTORED.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=OrderServiceTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=OrderServiceTest",
+        "test"
+      ]
     },
     {
       "id": "frontend-sso-clears-pkce-before-exchange",
@@ -80,8 +150,22 @@
       "patch": "mutants/frontend-sso-clears-pkce-before-exchange.patch",
       "description": "Clear one-time PKCE state before the remote token exchange rather than after a successful response.",
       "contract": "A transient exchange failure must leave callback state available for a safe retry.",
-      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
-      "test": ["npm", "test", "--", "--run", "src/lib/sso.test.ts"]
+      "compile": [
+        "npm",
+        "exec",
+        "--",
+        "tsc",
+        "-b",
+        "--pretty",
+        "false"
+      ],
+      "test": [
+        "npm",
+        "test",
+        "--",
+        "--run",
+        "src/lib/sso.test.ts"
+      ]
     },
     {
       "id": "frontend-sse-discards-previous-network-chunk",
@@ -90,8 +174,22 @@
       "patch": "mutants/frontend-sse-discards-previous-network-chunk.patch",
       "description": "Parse only the latest network chunk and overwrite an incomplete buffered SSE event.",
       "contract": "SSE event boundaries are independent of transport chunk boundaries; incomplete events must be retained.",
-      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
-      "test": ["npm", "test", "--", "--run", "src/lib/sse.test.ts"]
+      "compile": [
+        "npm",
+        "exec",
+        "--",
+        "tsc",
+        "-b",
+        "--pretty",
+        "false"
+      ],
+      "test": [
+        "npm",
+        "test",
+        "--",
+        "--run",
+        "src/lib/sse.test.ts"
+      ]
     },
     {
       "id": "frontend-training-sso-any-loopback-port",
@@ -100,8 +198,22 @@
       "patch": "mutants/frontend-training-sso-any-loopback-port.patch",
       "description": "Generalize automatic training SSO activation from the gateway origin to every loopback port.",
       "contract": "Implicit training SSO is enabled only on the designated localhost:8081 gateway, never on unrelated loopback applications.",
-      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
-      "test": ["npm", "test", "--", "--run", "src/lib/runtimeConfig.test.ts"]
+      "compile": [
+        "npm",
+        "exec",
+        "--",
+        "tsc",
+        "-b",
+        "--pretty",
+        "false"
+      ],
+      "test": [
+        "npm",
+        "test",
+        "--",
+        "--run",
+        "src/lib/runtimeConfig.test.ts"
+      ]
     },
     {
       "id": "frontend-inventory-rotates-request-id-after-conflict",
@@ -110,8 +222,22 @@
       "patch": "mutants/frontend-inventory-rotates-request-id-after-conflict.patch",
       "description": "Generate a new adjustment request ID after a rejected attempt, turning an operator retry into a new inventory intent.",
       "contract": "A failed or ambiguous inventory adjustment retains its UUID so retrying the unchanged form is idempotent; only success or a new selected-product intent rotates it.",
-      "compile": ["npm", "exec", "--", "tsc", "-b", "--pretty", "false"],
-      "test": ["npm", "test", "--", "--run", "src/components/admin/AdminInventory.test.tsx"]
+      "compile": [
+        "npm",
+        "exec",
+        "--",
+        "tsc",
+        "-b",
+        "--pretty",
+        "false"
+      ],
+      "test": [
+        "npm",
+        "test",
+        "--",
+        "--run",
+        "src/components/admin/AdminInventory.test.tsx"
+      ]
     },
     {
       "id": "mock-tool-call-uses-token-delay",
@@ -120,8 +246,18 @@
       "patch": "mutants/mock-tool-call-uses-token-delay.patch",
       "description": "Use the ordinary token delay for tool calls, collapsing two latency policies during cleanup.",
       "contract": "Tool-call chunks use toolCallDelay; textual chunks use tokenDelay; completion is immediate.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=ChatToolsServiceTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=ChatToolsServiceTest",
+        "test"
+      ]
     },
     {
       "id": "mock-conversation-uses-first-message",
@@ -130,8 +266,18 @@
       "patch": "mutants/mock-conversation-uses-first-message.patch",
       "description": "Resolve a multi-turn conversation from the first meaningful message rather than its latest message.",
       "contract": "Tool scenarios advance according to the latest meaningful user/tool message.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=ChatToolsServiceTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=ChatToolsServiceTest",
+        "test"
+      ]
     },
     {
       "id": "consumer-drops-legacy-fqcn-type-id",
@@ -140,8 +286,278 @@
       "patch": "mutants/consumer-drops-legacy-fqcn-type-id.patch",
       "description": "Keep only the short JMS type identifier and silently remove the legacy producer FQCN alias.",
       "contract": "The consumer accepts both EmailDTO and com.awesome.testing.dto.email.EmailDTO type identifiers during migration.",
-      "compile": ["./mvnw", "-q", "-DskipTests", "compile"],
-      "test": ["./mvnw", "-q", "-Dtest=JmsConfigTest", "test"]
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=JmsConfigTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-graphql-cart-loses-owner-scope",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-graphql-cart-loses-owner-scope.patch",
+      "description": "Use an unscoped cart projection query.",
+      "contract": "Each customer can read only their own cart; an administrator may explicitly select another owner.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=CommerceAuthorizationTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-graphql-order-loses-owner-scope",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-graphql-order-loses-owner-scope.patch",
+      "description": "Reuse the administrative order lookup for every authenticated user.",
+      "contract": "A customer cannot read another customer\u2019s order by ID; administrators can.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=CommerceAuthorizationTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-graphql-inventory-loses-admin-policy",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-graphql-inventory-loses-admin-policy.patch",
+      "description": "Require only authentication for the administrative inventory listing.",
+      "contract": "Only administrators can query inventory management details; customer catalog availability remains shared.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=CommerceAuthorizationTest",
+        "test"
+      ]
+    },
+    {
+      "id": "frontend-graphql-accepts-partial-errors",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-graphql-accepts-partial-errors.patch",
+      "description": "A commerce operation with GraphQL errors must fail even when data is present.",
+      "contract": "A commerce operation with GraphQL errors must fail even when data is present.",
+      "compile": [
+        "npx",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "test": [
+        "npx",
+        "vitest",
+        "run",
+        "src/lib/commerceGraphql.test.ts"
+      ]
+    },
+    {
+      "id": "frontend-graphql-my-orders-becomes-admin-orders",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-graphql-my-orders-becomes-admin-orders.patch",
+      "description": "My orders must remain scoped to the current user, including administrators.",
+      "contract": "My orders must remain scoped to the current user, including administrators.",
+      "compile": [
+        "npx",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "test": [
+        "npx",
+        "vitest",
+        "run",
+        "src/lib/commerceGraphql.test.ts"
+      ]
+    },
+    {
+      "id": "backend-graphiql-exposes-query-endpoint",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-graphiql-exposes-query-endpoint.patch",
+      "description": "Make the GraphQL execution endpoint public while enabling the GraphiQL shell.",
+      "contract": "Only the GraphiQL editor GET is public; unauthenticated GraphQL requests must return HTTP 401.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=GraphQlDefaultAvailabilityTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-grpc-loses-admin-policy",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-grpc-loses-admin-policy.patch",
+      "description": "A customer must not access inventory RPCs.",
+      "contract": "A customer must not access inventory RPCs.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=InventoryGrpcTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-grpc-discards-request-id",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-grpc-discards-request-id.patch",
+      "description": "Replaying a product-scoped request ID must not apply the stock change twice.",
+      "contract": "Replaying a product-scoped request ID must not apply the stock change twice.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=InventoryGrpcTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-protocol-traffic-leaks-graphql-document",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-protocol-traffic-leaks-graphql-document.patch",
+      "description": "GraphQL traffic must omit raw documents, aliases, client operation names and literals.",
+      "contract": "GraphQL traffic must omit raw documents, aliases, client operation names and literals.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=ProtocolTrafficTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-protocol-traffic-leaks-grpc-description",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-protocol-traffic-leaks-grpc-description.patch",
+      "description": "Native traffic must store canonical status codes, never raw status descriptions.",
+      "contract": "Native traffic must store canonical status codes, never raw status descriptions.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=GrpcProtocolTrafficTest",
+        "test"
+      ]
+    },
+    {
+      "id": "frontend-protocol-traffic-trusts-http-200",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-protocol-traffic-trusts-http-200.patch",
+      "description": "GraphQL errors remain errors even when HTTP status is 200.",
+      "contract": "GraphQL errors remain errors even when HTTP status is 200.",
+      "compile": [
+        "npx",
+        "tsc",
+        "-b",
+        "--force"
+      ],
+      "test": [
+        "npx",
+        "vitest",
+        "run",
+        "src/lib/trafficPresentation.test.ts"
+      ]
+    },
+    {
+      "id": "stack-grpc-publishes-on-all-interfaces",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-grpc-publishes-on-all-interfaces.patch",
+      "description": "Native inventory gRPC must be exposed only on host loopback, not all interfaces.",
+      "contract": "Production native gRPC is available through SSH tunnelling; public native listeners violate deployment isolation.",
+      "compile": [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.server.yml",
+        "config",
+        "--quiet"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-release-images.py"
+      ]
+    },
+    {
+      "id": "stack-sandbox-reuses-stable-signing-key",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-reuses-stable-signing-key.patch",
+      "description": "The disposable sandbox must not inherit the stable site JWT signing key.",
+      "contract": "JWTs issued by either deployment must fail authentication at the other deployment.",
+      "compile": [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.server.yml",
+        "config",
+        "--quiet"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-release-images.py"
+      ]
     }
   ]
 }

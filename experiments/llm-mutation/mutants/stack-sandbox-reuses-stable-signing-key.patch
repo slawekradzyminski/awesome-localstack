@@ -1,0 +1,10 @@
+--- a/docker-compose.server.yml
++++ b/docker-compose.server.yml
+@@ -84,6 +84,6 @@
+     env_file:
+       # Separate runtime file prevents sandbox tokens from authenticating on the stable site.
+-      - path: .env.aitesters
++      - path: .env.runtime
+         required: false
+     environment:
+       SPRING_PROFILES_ACTIVE: aitesters
