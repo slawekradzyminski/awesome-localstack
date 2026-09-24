@@ -456,7 +456,7 @@ images include this feature, and the `/api/v1/` gateway route covers this URL. E
 exploration and queries. Swagger remains the REST API explorer.
 
 See [GraphiQL verification](GRAPHIQL_VERIFICATION.md) and
-[usage](../../test-secure-backend/docs/GRAPHQL.md#use-graphiql).
+[usage](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRAPHQL.md#use-graphiql).
 
 ## Native gRPC in backend 3.8.0
 

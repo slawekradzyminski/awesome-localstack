@@ -520,6 +520,28 @@
       ]
     },
     {
+      "id": "stack-lightweight-grpc-publishes-on-all-interfaces",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-lightweight-grpc-publishes-on-all-interfaces.patch",
+      "description": "The optional lightweight gRPC listener must not publish on public host interfaces.",
+      "contract": "Training gRPC is available only on host loopback; the Compose toggle must not expose it on the network.",
+      "compile": [
+        "docker",
+        "compose",
+        "-f",
+        "lightweight-docker-compose.yml",
+        "-f",
+        "docker-compose.grpc.yml",
+        "config",
+        "--quiet"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-release-images.py"
+      ]
+    },
+    {
       "id": "stack-grpc-publishes-on-all-interfaces",
       "component": "stack",
       "repository": ".",

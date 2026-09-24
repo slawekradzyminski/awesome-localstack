@@ -1,0 +1,8 @@
+--- a/docker-compose.grpc.yml
++++ b/docker-compose.grpc.yml
+@@ -8,4 +8,4 @@
+       GRPC_PORT: "9091"
+       GRPC_REFLECTION_ENABLED: ${GRPC_REFLECTION_ENABLED:-false}
+     ports:
+-      - "127.0.0.1:${GRPC_HOST_PORT:-9091}:9091"
++      - "0.0.0.0:${GRPC_HOST_PORT:-9091}:9091"

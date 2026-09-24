@@ -172,6 +172,30 @@ def main() -> int:
             failures,
         )
 
+    for base_file in ("lightweight-docker-compose.yml", "docker-compose.yml"):
+        base_services = compose_services(base_file)
+        grpc_services = compose_services(base_file, "docker-compose.grpc.yml")
+        base_backend = base_services["backend"]
+        grpc_backend = grpc_services["backend"]
+        native_ports = [entry for entry in grpc_backend.get("ports", []) if entry.get("target") == 9091]
+        require(
+            grpc_backend.get("image") == base_backend.get("image"),
+            f"{base_file} gRPC override must inherit the pinned backend image",
+            failures,
+        )
+        require(
+            len(native_ports) == 1 and native_ports[0].get("host_ip") == "127.0.0.1",
+            f"{base_file} gRPC override must publish only on host loopback",
+            failures,
+        )
+        environment = grpc_backend.get("environment", {})
+        require(
+            {"graphql", "grpc"} <= set(environment.get("SPRING_PROFILES_INCLUDE", "").split(","))
+            and environment.get("GRPC_REFLECTION_ENABLED") == "false",
+            f"{base_file} gRPC override must enable both protocols with reflection disabled",
+            failures,
+        )
+
     sandbox_env_files = declared_env_files("aitesters-backend")
     stable_env_files = declared_env_files("backend")
     require(
