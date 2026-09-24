@@ -33,7 +33,7 @@ policies remain enforced.
 
 The editor loads JavaScript and CSS from `esm.sh`. Its token header is entered
 manually and does not use the storefront's automatic token refresh. Usage is in
-[the backend guide](../../test-secure-backend/docs/GRAPHQL.md#use-graphiql).
+[the backend guide](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRAPHQL.md#use-graphiql).
 
 Local logs and browser/route evidence are under `outputs/graphiql-verification`.
 These ignored artifacts are private. The earlier course compatibility evidence

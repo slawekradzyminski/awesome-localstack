@@ -132,7 +132,7 @@ GraphiQL, an end-to-end request deadline, and public rollout remain later work.
 The backend now includes GraphQL automatically; the existing frontend continues
 to use REST.
 See [the phased plan](GRAPHQL_GRPC_IMPLEMENTATION_PLAN.md) and
-[the API guide](../../test-secure-backend/docs/GRAPHQL.md).
+[the API guide](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRAPHQL.md).
 
 
 ## Follow-up: GraphQL enabled by default

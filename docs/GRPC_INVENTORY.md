@@ -1,23 +1,22 @@
 # Optional native gRPC inventory listener
 
 Backend 3.8.0 includes four admin-only inventory RPCs. All primary Compose
-profiles now pin this release; use the override below to enable the listener
-for the full or lightweight profile.
+profiles pin this release. The override adds the listener to the lightweight
+stack without rebuilding; it defaults to the same pinned backend image:
 
-Build a local image from the backend repository, then opt into the override:
+For a step-by-step classroom exercise, see the [gRPC training runbook](GRPC_TRAINING_RUNBOOK.md).
 
 ```bash
-docker build -t awesome-backend:grpc-local ../test-secure-backend
-GRPC_BACKEND_IMAGE=awesome-backend:grpc-local \
-  docker compose -f lightweight-docker-compose.yml -f docker-compose.grpc.yml config --quiet
-GRPC_BACKEND_IMAGE=awesome-backend:grpc-local \
-  docker compose -f lightweight-docker-compose.yml -f docker-compose.grpc.yml up -d
+docker compose -f lightweight-docker-compose.yml -f docker-compose.grpc.yml config --quiet
+docker compose -f lightweight-docker-compose.yml -f docker-compose.grpc.yml up -d
 ```
 
-Use `docker-compose.yml` instead for the full profile. The override preserves the
-base active profiles and adds `graphql,grpc` to the included profiles. Other
-services and deployment pins are unchanged. It requires an explicit backend image
-so an older image is not mistaken for an implementation of this feature.
+To turn the lightweight listener off again without tearing down the stack, run
+`docker compose -f lightweight-docker-compose.yml up -d --force-recreate backend`.
+Use `docker-compose.yml` instead for the full profile. The override defaults to
+the same pinned backend image and preserves the base active profiles, adding
+`graphql,grpc` and a loopback port. `GRPC_BACKEND_IMAGE` can select a candidate
+image in a disposable compatibility run. No other service or image pin changes.
 
 The native endpoint is `127.0.0.1:9091`. Change `GRPC_HOST_PORT` if that host port
 is occupied; Prometheus remains on 9090. Inside the backend container, gRPC listens
@@ -32,7 +31,7 @@ listener. The server profile explicitly enables it as described below.
 GraphQL and GraphiQL remain enabled by default in the updated backend.
 
 For examples, status codes, presence semantics, deadlines, and idempotent retry
-rules, see [backend gRPC documentation](../../test-secure-backend/docs/GRPC.md).
+rules, see [backend gRPC documentation](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRPC.md).
 For verification evidence, see [gRPC verification](GRPC_VERIFICATION.md).
 
 ## Server deployment and SSH access

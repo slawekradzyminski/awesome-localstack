@@ -309,7 +309,9 @@ cover REST; it does not list GraphQL fields or native gRPC methods. The storefro
 starts in REST mode and offers a per-tab GraphQL selector.
 
 Native gRPC is an optional local listener with four admin inventory operations,
-not a replacement for the entire backend. See [gRPC setup](GRPC_INVENTORY.md).
+not a replacement for the entire backend. Add `docker-compose.grpc.yml` to the
+lightweight Compose command to enable it. See the [classroom runbook](GRPC_TRAINING_RUNBOOK.md)
+and [gRPC setup](GRPC_INVENTORY.md).
 Follow the [protocol testing lab](PROTOCOL_TESTING_LAB.md) for equivalent stock
 adjustments, partial-error assertions, native status codes, and safe traffic
 monitoring. Use the 3.8.0 application images. See the

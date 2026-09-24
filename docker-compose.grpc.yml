@@ -1,8 +1,8 @@
-# Opt-in native inventory gRPC listener. Requires a backend image built with gRPC.
+# Opt-in native inventory gRPC listener for the same pinned backend release.
 # Add this override after the chosen base Compose file; existing profiles survive.
 services:
   backend:
-    image: ${GRPC_BACKEND_IMAGE:?Set GRPC_BACKEND_IMAGE to a backend image containing the gRPC implementation}
+    image: ${GRPC_BACKEND_IMAGE:-slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f}
     environment:
       SPRING_PROFILES_INCLUDE: graphql,grpc
       GRPC_HOST: 0.0.0.0

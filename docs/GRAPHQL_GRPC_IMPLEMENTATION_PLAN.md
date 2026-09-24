@@ -24,7 +24,7 @@ rollout and public verification are recorded in the [release record](GRAPHQL_GRP
 Implementation entry point: [local course compatibility verification](COURSE_COMPATIBILITY.md).
 Results: [implementation verification](GRAPHQL_IMPLEMENTATION_VERIFICATION.md).
 Implementation details and operation examples are in
-[`test-secure-backend/docs/GRAPHQL.md`](../../test-secure-backend/docs/GRAPHQL.md).
+[`test-secure-backend/docs/GRAPHQL.md`](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRAPHQL.md).
 
 ## Implemented backend scope
 
@@ -54,7 +54,7 @@ transaction timeout is not an end-to-end request deadline. Join fetching and
 batched repository reads address cart product loading without a DataLoader.
 Phase 4 is implemented locally: a per-tab REST/GraphQL selector, adapters for all
 commerce operations, nested cart data, and cache clearing on switching/logout.
-See [the storefront guide](../../vite-react-frontend/docs/GRAPHQL_STOREFRONT.md).
+See [the storefront guide](https://github.com/slawekradzyminski/vite-react-frontend/blob/main/docs/GRAPHQL_STOREFRONT.md).
 Its normal, browser, and both mutation layers passed; see
 [storefront verification](GRAPHQL_STOREFRONT_VERIFICATION.md).
 Phase 5 is implemented locally: four versioned admin inventory RPCs, JWT metadata

@@ -533,11 +533,12 @@ Across the main profiles, the gateway serves:
 - If images are missing in the app, check the gateway URL first.
 - If nginx config changes do not seem to apply, recreate `gateway`.
 
-For the optional native inventory API in the next backend build, see
-[the gRPC guide](docs/GRPC_INVENTORY.md). The override publishes only on loopback;
-existing image pins and normal profiles remain unchanged.
+For the optional native inventory API in backend 3.8.0, see
+[the gRPC guide](docs/GRPC_INVENTORY.md). The lightweight Compose override
+publishes only on loopback and uses the same pinned backend release by default.
 
 For equivalent REST, GraphQL, and native gRPC inventory exercises, see the
-[protocol testing lab](docs/PROTOCOL_TESTING_LAB.md). Updated local builds show
-safe protocol summaries in Traffic Monitor; the lab explains session headers,
+[protocol testing lab](docs/PROTOCOL_TESTING_LAB.md). For a ready-to-run lightweight
+Docker exercise, use the [gRPC classroom runbook](docs/GRPC_TRAINING_RUNBOOK.md).
+Traffic Monitor shows safe protocol summaries; the lab explains session headers,
 HTTP versus execution status, and correlation IDs.

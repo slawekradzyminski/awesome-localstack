@@ -113,12 +113,16 @@ framework results. Evidence: `outputs/grpc-verification/semantic-mutations.json`
 The later deadline test strengthens this unchanged implementation; the frozen
 semantic candidates and their passing/killed evidence remain applicable.
 
-## Remaining work
+## Release and lightweight training toggle
 
-Phase 6 adds protocol-aware traffic presentation and the
-[teaching lab](PROTOCOL_TESTING_LAB.md). Whole-stack public release remains
-Phase 7; rollback work was excluded at the user’s request. Historical
-course and unchanged frontend evidence is retained; this increment reruns the
-latest lesson and affected native/backend contracts. See
-[the implementation plan](GRAPHQL_GRPC_IMPLEMENTATION_PLAN.md) and
-[local gRPC setup](GRPC_INVENTORY.md).
+The protocol-aware traffic presentation, [teaching lab](PROTOCOL_TESTING_LAB.md),
+and public rollout are complete; see the [release record](GRAPHQL_GRPC_RELEASE.md).
+The [classroom runbook](GRPC_TRAINING_RUNBOOK.md) uses the pinned 3.8.0 image
+through the lightweight gRPC Compose override. The standalone override and its
+lightweight, full, and server combinations pass `docker compose config --quiet`.
+The release-image checker confirms the lightweight and full overrides keep the
+reviewed backend image, enable `graphql,grpc`, disable reflection, and publish
+only on host loopback. There is no framework mutation scope for this YAML/Python
+deployment change. The frozen semantic candidate
+`stack-lightweight-grpc-publishes-on-all-interfaces` compiled as valid Compose
+but was killed by the checker: **1 killed, 0 survived, 0 invalid, 0 equivalent**.

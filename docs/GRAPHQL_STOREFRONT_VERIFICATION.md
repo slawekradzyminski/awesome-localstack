@@ -87,4 +87,4 @@ GraphiQL was enabled in a subsequent backend increment; see
 GraphQL traffic-monitor presentation is implemented in Phase 6; public rollout remains pending. Existing backend/course compatibility evidence remains applicable
 because this increment changes frontend transport, not REST contracts or backend
 business logic. See [the phased plan](GRAPHQL_GRPC_IMPLEMENTATION_PLAN.md) and
-[the storefront guide](../../vite-react-frontend/docs/GRAPHQL_STOREFRONT.md).
+[the storefront guide](https://github.com/slawekradzyminski/vite-react-frontend/blob/main/docs/GRAPHQL_STOREFRONT.md).
