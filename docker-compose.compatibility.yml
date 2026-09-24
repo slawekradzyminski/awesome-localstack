@@ -1,0 +1,64 @@
+# Disposable course-contract test stack. Does not replace any normal profile.
+name: awesome-compatibility
+
+x-backend: &backend
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b}
+  environment: &backend-environment
+    SPRING_PROFILES_ACTIVE: local,server
+    PASSWORD_RESET_EXPOSE_TOKEN_IN_RESPONSE: "false"
+    OLLAMA_BASE_URL: http://ollama-mock:11434
+    APP_SSO_ENABLED: "false"
+    SECURITY_RATE_LIMIT_ENABLED: "true"
+    SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "2000"
+    SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "4000"
+    SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "2000"
+    SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "1000"
+    SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "600"
+    SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "80"
+    SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "300"
+    SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IP_CAPACITY: "2000"
+    SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IDENTIFIER_CAPACITY: "600"
+    SECURITY_RATE_LIMIT_PASSWORD_RESET_IP_CAPACITY: "2000"
+    SECURITY_RATE_LIMIT_REFRESH_IP_CAPACITY: "12000"
+    SECURITY_RATE_LIMIT_EMAIL_USER_CAPACITY: "6000"
+    SECURITY_RATE_LIMIT_QR_USER_CAPACITY: "12000"
+    SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "4000"
+    SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "4000"
+    JAVA_TOOL_OPTIONS: -Xmx512m
+  mem_limit: 768m
+  depends_on:
+    - ollama-mock
+
+services:
+  backend:
+    <<: *backend
+    ports:
+      - "127.0.0.1:14001:4001"
+  admin-backend:
+    <<: *backend
+    environment:
+      <<: *backend-environment
+      SPRING_PROFILES_ACTIVE: local
+      APP_TRAFFIC_OBFUSCATE_AUTHORIZATION: "true"
+      APP_TRAFFIC_OBFUSCATE_EMAILS: "true"
+      APP_TRAFFIC_OBFUSCATE_SENSITIVE_BODY_FIELDS: "true"
+    ports:
+      - "127.0.0.1:14002:4001"
+  ollama-mock:
+    image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
+  frontend:
+    profiles: [graphql-preview]
+    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
+  gateway:
+    profiles: [graphql-preview]
+    image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "127.0.0.1:14081:80"
+    volumes:
+      - ./nginx/conf.d/lightweight-app-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+      - ./images:/usr/share/nginx/html/images:ro
+      - ./branding:/usr/share/nginx/html/branding:ro

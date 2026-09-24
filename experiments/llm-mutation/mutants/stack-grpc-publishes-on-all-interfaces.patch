@@ -1,0 +1,11 @@
+--- a/docker-compose.server.yml
++++ b/docker-compose.server.yml
+@@ -59,7 +59,7 @@
+       ollama-mock:
+         condition: service_started
+     ports:
+-      - "127.0.0.1:9091:9091"
++      - "0.0.0.0:9091:9091"
+     expose:
+       - "4001"
+     mem_limit: 1536m

@@ -1,0 +1,7 @@
+mutation Restock($productId: ID!, $input: InventoryAdjustmentInput!) {
+  adjustInventory(productId: $productId, input: $input) {
+    id
+    quantityAfter
+    requestId
+  }
+}

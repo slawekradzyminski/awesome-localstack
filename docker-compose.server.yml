@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b
+    image: slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -18,27 +18,31 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: "-Xms256m -Xmx896m"
       SPRING_PROFILES_ACTIVE: docker,server
+      SPRING_PROFILES_INCLUDE: graphql,grpc
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: "9091"
+      GRPC_REFLECTION_ENABLED: "false"
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
       SPRING_DATASOURCE_USERNAME: postgres
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
-      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "400"
-      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "100"
-      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
-      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
-      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
-      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IP_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IDENTIFIER_CAPACITY: "60"
-      SECURITY_RATE_LIMIT_PASSWORD_RESET_IP_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_REFRESH_IP_CAPACITY: "1200"
-      SECURITY_RATE_LIMIT_EMAIL_USER_CAPACITY: "600"
-      SECURITY_RATE_LIMIT_QR_USER_CAPACITY: "1200"
-      SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "400"
-      SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "400"
+      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "4000"
+      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "1000"
+      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "600"
+      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "80"
+      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "300"
+      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IP_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IDENTIFIER_CAPACITY: "600"
+      SECURITY_RATE_LIMIT_PASSWORD_RESET_IP_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_REFRESH_IP_CAPACITY: "12000"
+      SECURITY_RATE_LIMIT_EMAIL_USER_CAPACITY: "6000"
+      SECURITY_RATE_LIMIT_QR_USER_CAPACITY: "12000"
+      SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "4000"
+      SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "4000"
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: https://awesome.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://awesome.byst.re/swagger-ui/oauth2-redirect.html
@@ -54,6 +58,8 @@ services:
         condition: service_started
       ollama-mock:
         condition: service_started
+    ports:
+      - "127.0.0.1:9091:9091"
     expose:
       - "4001"
     mem_limit: 1536m
@@ -61,7 +67,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
+    image: slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -71,15 +77,20 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b
+    image: slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
     env_file:
-      - path: .env.runtime
+      # Separate runtime file prevents sandbox tokens from authenticating on the stable site.
+      - path: .env.aitesters
         required: false
     environment:
       SPRING_PROFILES_ACTIVE: aitesters
+      SPRING_PROFILES_INCLUDE: graphql,grpc
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: "9091"
+      GRPC_REFLECTION_ENABLED: "false"
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
@@ -91,18 +102,28 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
-      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "400"
-      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "200"
-      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "100"
-      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "60"
-      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "8"
-      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "30"
+      SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_CAPACITY: "4000"
+      SECURITY_RATE_LIMIT_SIGNIN_USERNAME_CAPACITY: "2000"
+      SECURITY_RATE_LIMIT_SIGNIN_IP_USERNAME_CAPACITY: "1000"
+      SECURITY_RATE_LIMIT_MFA_IP_CAPACITY: "600"
+      SECURITY_RATE_LIMIT_MFA_CHALLENGE_CAPACITY: "80"
+      SECURITY_RATE_LIMIT_MFA_USER_CAPACITY: "300"
+      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IP_CAPACITY: "100"
+      SECURITY_RATE_LIMIT_PASSWORD_FORGOT_IDENTIFIER_CAPACITY: "30"
+      SECURITY_RATE_LIMIT_PASSWORD_RESET_IP_CAPACITY: "100"
+      SECURITY_RATE_LIMIT_REFRESH_IP_CAPACITY: "600"
+      SECURITY_RATE_LIMIT_EMAIL_USER_CAPACITY: "300"
+      SECURITY_RATE_LIMIT_QR_USER_CAPACITY: "600"
+      SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "200"
+      SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "200"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20"
     depends_on:
       ollama-mock:
         condition: service_started
+    ports:
+      - "127.0.0.1:9092:9091"
     expose:
       - "4001"
     mem_limit: 768m
@@ -110,7 +131,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
+    image: slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5
     restart: unless-stopped
     logging: *default-logging
     expose:

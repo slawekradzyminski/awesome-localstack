@@ -166,6 +166,24 @@
         )
       }}
 
+- name: Require a distinct JWT signing key for the disposable sandbox
+  ansible.builtin.assert:
+    that:
+      - (aitesters_jwt_secret_key | default('', true) | length) >= 32
+      - aitesters_jwt_secret_key != jwt_secret_key
+    quiet: true
+    fail_msg: Configure a distinct aitesters_jwt_secret_key in Ansible Vault.
+  no_log: true
+
+- name: Render the isolated sandbox runtime environment
+  ansible.builtin.template:
+    src: env.aitesters.j2
+    dest: "{{ app_dir }}/.env.aitesters"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
 - name: Render runtime environment file
   ansible.builtin.template:
     src: env.runtime.j2

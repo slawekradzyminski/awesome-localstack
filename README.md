@@ -436,6 +436,9 @@ Production hardening in this profile:
   virtualization layer rejects `swapon`
 - the main backend and consumer have explicit JVM heap and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
+- both public training backends use explicitly increased rate-limit capacities
+  for repeated parallel API regression suites while retaining the original
+  policy windows; see `docs/PROFILE_URLS.md` for the per-policy values
 - images are served directly by the gateway
 - the aitesters backend and frontend reuse the exact current application images;
   their sandbox behavior comes from runtime configuration, not stale releases
@@ -529,3 +532,12 @@ Across the main profiles, the gateway serves:
 - If Swagger generates the wrong host or scheme, inspect `/v3/api-docs` and check `.servers[0].url`.
 - If images are missing in the app, check the gateway URL first.
 - If nginx config changes do not seem to apply, recreate `gateway`.
+
+For the optional native inventory API in the next backend build, see
+[the gRPC guide](docs/GRPC_INVENTORY.md). The override publishes only on loopback;
+existing image pins and normal profiles remain unchanged.
+
+For equivalent REST, GraphQL, and native gRPC inventory exercises, see the
+[protocol testing lab](docs/PROTOCOL_TESTING_LAB.md). Updated local builds show
+safe protocol summaries in Traffic Monitor; the lab explains session headers,
+HTTP versus execution status, and correlation IDs.

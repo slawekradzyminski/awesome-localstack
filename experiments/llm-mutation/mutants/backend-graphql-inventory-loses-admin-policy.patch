@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
++++ b/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
+@@ -90,7 +90,7 @@
+                 ? orderService.getOrderById(id) : orderService.getOrder(access.username(), id));
+     }
+ 
+-    @PreAuthorize("hasRole('ADMIN')")
++    @PreAuthorize("isAuthenticated()")
+     public ResultPage<InventoryItemDto> inventory(int page, int size, String search, String category,
+                                                  StockStatus status, int lowStockThreshold) {
+         validatePage(page, size);

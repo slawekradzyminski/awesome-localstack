@@ -1,0 +1,13 @@
+--- a/src/lib/commerceGraphql.ts
++++ b/src/lib/commerceGraphql.ts
+@@ -126,8 +126,8 @@
+     orders: {
+       async getUserOrders(pageNumber = 0, size = 10, status?: OrderStatus) {
+         // Admin profile pages also mean "my orders", whereas an unfiltered GraphQL query means all orders for admins.
+-        const user = await api.get<User>('/api/v1/users/me');
+-        return orderPage({ page: pageNumber, size, status, username: user.data.username });
++        await api.get<User>('/api/v1/users/me');
++        return orderPage({ page: pageNumber, size, status, username: undefined });
+       },
+       getAllOrders: (pageNumber = 0, size = 10, status?: OrderStatus) => orderPage({ page: pageNumber, size, status }),
+       getOrderById: (orderId: number) => readOrder(`query Order($id:ID!) { order(id:$id) { ${ORDER} } }`, 'order', { id: String(orderId) }),

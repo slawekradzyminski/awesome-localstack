@@ -1,0 +1,12 @@
+--- a/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
++++ b/src/main/java/com/awesome/testing/graphql/CommerceQueryService.java
+@@ -86,8 +86,7 @@
+     }
+ 
+     public Order order(Long id) {
+-        return Order.from(access.isAdmin()
+-                ? orderService.getOrderById(id) : orderService.getOrder(access.username(), id));
++        return Order.from(orderService.getOrderById(id));
+     }
+ 
+     @PreAuthorize("hasRole('ADMIN')")

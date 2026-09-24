@@ -1,0 +1,11 @@
+--- a/src/lib/commerceGraphql.ts
++++ b/src/lib/commerceGraphql.ts
+@@ -85,7 +85,7 @@
+ export function createCommerceGraphql(api: AxiosInstance) {
+   async function execute<T, R>(document: string, field: string, variables: object, map: (value: T) => R): Promise<AxiosResponse<R>> {
+     const response = await api.post<Envelope<Record<string, T>>>('/api/v1/graphql', { query: document, variables });
+-    if (response.data.errors?.length) throw new CommerceGraphQlError(response.data.errors);
++    // Mutant: accepts partial commerce data even when execution failed.
+     const value = response.data.data?.[field];
+     if (value == null) throw new Error('GraphQL returned no commerce data');
+     return { ...response, data: map(value) };

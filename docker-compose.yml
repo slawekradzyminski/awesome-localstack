@@ -2,7 +2,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b
+    image: slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f
     restart: always
     expose:
       - "4001"
@@ -63,7 +63,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
+    image: slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5
     restart: always
     expose:
       - "80"

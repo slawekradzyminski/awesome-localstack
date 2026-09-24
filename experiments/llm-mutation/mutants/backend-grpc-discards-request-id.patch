@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/grpc/InventoryGrpcService.java
++++ b/src/main/java/com/awesome/testing/grpc/InventoryGrpcService.java
+@@ -64,7 +64,7 @@
+             if (!requestId.toString().equalsIgnoreCase(request.getRequestId())) {
+                 throw new IllegalArgumentException("Canonical request UUID required");
+             }
+-            InventoryAdjustmentDto adjustment = new InventoryAdjustmentDto(request.getDelta(), request.getReason(), requestId);
++            InventoryAdjustmentDto adjustment = new InventoryAdjustmentDto(request.getDelta(), request.getReason(), UUID.randomUUID());
+             if (!validator.validate(adjustment).isEmpty()) {
+                 throw new IllegalArgumentException("Invalid adjustment");
+             }

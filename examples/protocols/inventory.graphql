@@ -1,0 +1,6 @@
+query InventorySnapshot($productId: ID!) {
+  inventoryItem(productId: $productId) {
+    productId
+    availableQuantity
+  }
+}
