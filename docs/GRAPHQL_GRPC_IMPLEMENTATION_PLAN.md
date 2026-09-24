@@ -1,8 +1,9 @@
 # GraphQL and gRPC implementation plan
 
-Status: GraphQL commerce, the optional GraphQL storefront, GraphiQL, and native
-admin inventory gRPC are implemented locally. Protocol-aware traffic visibility
-and teaching assets are implemented and locally verified. No public release.
+Status: GraphQL commerce, the optional GraphQL storefront, GraphiQL, native
+admin inventory gRPC, protocol-aware traffic visibility, and teaching assets
+are implemented and deployed to both public sites. Production verification
+passed on 2026-09-24.
 
 Prepared: 2026-09-20.
 
@@ -17,9 +18,8 @@ Deliver GraphQL for the customer shopping journey first, an optional GraphQL
 storefront mode second, and native gRPC inventory operations third. All
 interfaces use the same application services and data.
 
-This document records the implemented protocols and storefront alongside the
-remaining rollout work. Public deployment checks have not
-been performed.
+This document records the implemented protocols and storefront. The completed
+rollout and public verification are recorded in the [release record](GRAPHQL_GRPC_RELEASE.md).
 
 Implementation entry point: [local course compatibility verification](COURSE_COMPATIBILITY.md).
 Results: [implementation verification](GRAPHQL_IMPLEMENTATION_VERIFICATION.md).
@@ -62,7 +62,7 @@ authentication, explicit Protobuf presence, status mapping, product-scoped
 idempotency, client deadlines, protected health and optional reflection, and a
 loopback-only Compose override. See [gRPC usage](GRPC_INVENTORY.md) and
 [verification](GRPC_VERIFICATION.md). Phase 6 adds protocol traffic and the
-[testing lab](PROTOCOL_TESTING_LAB.md). Phase 7 public release remains pending.
+[testing lab](PROTOCOL_TESTING_LAB.md). Phase 7 public release is complete.
 
 
 ## Inspected baseline
@@ -392,7 +392,7 @@ and the [protocol testing lab](PROTOCOL_TESTING_LAB.md).
 
 ## Phase 7 — Whole-stack verification and release
 
-In progress with deployment authorization. See the [release record](GRAPHQL_GRPC_RELEASE.md).
+Completed on 2026-09-24. See the [release record](GRAPHQL_GRPC_RELEASE.md).
 
 ### Work
 

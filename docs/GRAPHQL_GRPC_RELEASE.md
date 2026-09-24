@@ -1,6 +1,6 @@
 # GraphQL and gRPC release 3.8.0
 
-Status: release preparation in progress. Public rollout has not yet run.
+Status: deployed to both public sites on 2026-09-24 and verified.
 
 ## Scope
 
@@ -9,7 +9,7 @@ GraphiQL execution, four optional admin inventory gRPC methods, and safe protoco
 traffic capture. Frontend 3.8.0 keeps REST as the default and adds the per-tab
 GraphQL transport plus protocol-aware traffic presentation.
 
-Both public sites will use the same immutable application releases. Stable data
+Both public sites use the same immutable application releases. Stable data
 remains PostgreSQL-backed; the aitesters sandbox keeps its existing disposable
 profile. No schema migration or explicit demo-state reset is needed. Existing production
 rate limits are preserved. The sandbox now receives a separate runtime file and
@@ -34,7 +34,8 @@ the additional protocols.
   commit `fffa956b0e2b940391480982690959c904674c18`, tag `v3.8.0`.
 - [Frontend release workflow](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/35516406179).
 - Frontend image: `slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5`.
-- LocalStack release references and deployment results will be recorded after rollout.
+- LocalStack deployment: [PR #56](https://github.com/slawekradzyminski/awesome-localstack/pull/56),
+  squash commit `a259904e749869698801dd471d2213896e8f1129`. All seven CI checks passed.
 
 ## Compatibility evidence
 
@@ -67,7 +68,33 @@ An intermediate rebase of the signing-key mutation patch failed to apply; it was
 corrected and rerun before the final valid result, and was not counted as a kill.
 
 The same **1,320 unchanged tests passed again against the published backend
-3.8.0 digest**, with no skips, failures, or retries. Public smoke-test results
-will be recorded after rollout.
+3.8.0 digest**, with no skips, failures, or retries.
 Private local evidence is under `outputs/protocol-release/` and
 `outputs/protocol-release-all/`; these directories are not release assets.
+
+## Production verification
+
+The production Ansible deployment completed with **117 successful tasks, 0 failed,
+0 unreachable**. It created an encrypted PostgreSQL backup before changing the
+stack, deployed both 3.8.0 image digests above, and passed the full production
+verifier. That includes direct and proxied authenticated GraphQL queries for both
+backends, anonymous GraphQL rejection, GraphiQL, both native gRPC listeners, and
+rejection of JWTs signed for the other site in both directions. The stable and
+sandbox native ports are bound only to `127.0.0.1:9091` and `127.0.0.1:9092`.
+
+Public checks passed on `https://awesome.byst.re` and
+`https://aitesters.byst.re`: login, Swagger, REST OpenAPI, GraphiQL, anonymous
+GraphQL rejection, customer ownership restrictions, and admin commerce queries.
+The public REST OpenAPI documents were structurally identical to the pre-release
+snapshots (43 stable paths and 44 sandbox paths). A disposable sandbox product
+and user exercised all four native inventory RPCs through an SSH tunnel,
+customer gRPC denial, and one idempotent stock adjustment replayed through gRPC,
+REST, and GraphQL. It produced one adjustment movement and stock 8; the fixtures
+were removed after verification. A browser check also displayed a live native
+gRPC `UNAUTHENTICATED (16)` event in the traffic monitor with its error styling.
+The stable native inventory read passed separately with stable credentials.
+
+GraphiQL: [stable](https://awesome.byst.re/api/v1/graphiql?path=/api/v1/graphql)
+and [sandbox](https://aitesters.byst.re/api/v1/graphiql?path=/api/v1/graphql).
+Swagger continues to describe REST; GraphQL uses GraphiQL/schema introspection,
+and native gRPC uses the versioned `.proto` contract through the SSH tunnel.
