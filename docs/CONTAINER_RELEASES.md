@@ -60,6 +60,11 @@ set the patch versions after the test and dependency maintenance work. Their
 and [frontend release](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/36323899973)
 passed their source-owned gates and published both supported architectures.
 This release introduces no database migration.
+The unchanged latest lesson `l20` suite at course commit
+`5005edfff470092c9083d2716c7fdfab0ad9a763` passed all 190 tests against
+the published backend image, with no skips, failures, or retries. The same
+disposable stack verified authenticated GraphQL directly and through nginx,
+rejected unauthenticated GraphQL, and opened the loopback-only gRPC listener.
 
 Rollback application references: backend
 `slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f`
