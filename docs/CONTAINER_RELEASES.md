@@ -65,6 +65,14 @@ The unchanged latest lesson `l20` suite at course commit
 the published backend image, with no skips, failures, or retries. The same
 disposable stack verified authenticated GraphQL directly and through nginx,
 rejected unauthenticated GraphQL, and opened the loopback-only gRPC listener.
+The [LocalStack main CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/36325214814)
+passed all seven jobs. On 27 September 2026, `make ansible-deploy` created an
+encrypted pre-deployment PostgreSQL backup and deployed these exact backend and
+frontend references to both `awesome.byst.re` and `aitesters.byst.re`. The
+playbook completed with no failed tasks, verified the running image IDs and
+application protocols, and removed the temporary alert silence. External HTTPS
+checks returned `200` for `/login`, `/v3/api-docs`, `/images/iphone.png`, and
+`/actuator/health` on both sites.
 
 Rollback application references: backend
 `slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f`
