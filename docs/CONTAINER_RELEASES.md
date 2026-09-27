@@ -46,10 +46,27 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f` |
-| Frontend | `slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5` |
+| Backend | `slawekradzyminski/backend:3.8.1@sha256:c60932c6cd1a907451ee08c34837694bae4efdb15b76bb885f90f057f5749c9a` |
+| Frontend | `slawekradzyminski/frontend:3.8.1@sha256:342fabfc98da79af4bad7d4b90dae23818b67f1c16c0a1bfc8ed694f02210310` |
 | Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
+
+## Backend and frontend 3.8.1 release
+
+Backend [PR #63](https://github.com/slawekradzyminski/test-secure-backend/pull/63)
+and frontend [PR #70](https://github.com/slawekradzyminski/vite-react-frontend/pull/70)
+set the patch versions after the test and dependency maintenance work. Their
+[backend release](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/36323924572)
+and [frontend release](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/36323899973)
+passed their source-owned gates and published both supported architectures.
+This release introduces no database migration.
+
+Rollback application references: backend
+`slawekradzyminski/backend:3.8.0@sha256:0fb27619c9048b93dcf38bc92c48ede0ff762d4956c009ef62a0f981cd112a9f`
+and frontend
+`slawekradzyminski/frontend:3.8.0@sha256:302e921c505c6b76a15c25fadcd6fb8ab3ff611c28b74a66c3a471b55ac9f8e5`.
+Restore both references in every production Compose profile and the sibling
+development Compose files before redeploying.
 
 ## Backend 3.7.17 release
 
