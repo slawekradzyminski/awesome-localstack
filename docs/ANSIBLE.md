@@ -222,6 +222,19 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 - `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume
   plus pruning of unused images older than the retention window
 
+### PostgreSQL restore verification
+
+The weekly checker restores the latest encrypted backup into a disposable
+PostgreSQL container and requires at least one public table. Readiness and SQL
+connections use TCP on `127.0.0.1`: the image's temporary initialization server
+accepts Unix-socket connections before the permanent server starts. A socket
+probe can therefore report readiness just before initialization shuts it down,
+which caused the 2026-10-04 verification failure.
+
+Run `python3 scripts/verify-postgres-restore.py` to verify this contract locally
+with Docker. The check deliberately delays initialization, restores an encrypted
+fixture, verifies its data, and removes the disposable container. CI runs it too.
+
 ### Retention-based container cleanup
 
 The cleanup role installs a daily systemd timer and also runs once after a

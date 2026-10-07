@@ -36,25 +36,27 @@ docker run --detach --rm \
   --env POSTGRES_DB=restorecheck \
   "${POSTGRES_RESTORE_IMAGE}" >/dev/null
 
+# The entrypoint's temporary initialization server accepts Unix-socket
+# connections. TCP becomes available only after the permanent server starts.
 for _ in $(seq 1 60); do
-  if docker exec "${container_name}" pg_isready --username postgres --dbname restorecheck >/dev/null 2>&1; then
+  if docker exec "${container_name}" pg_isready --host=127.0.0.1 --username postgres --dbname restorecheck >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
 
-docker exec "${container_name}" pg_isready --username postgres --dbname restorecheck >/dev/null
+docker exec "${container_name}" pg_isready --host=127.0.0.1 --username postgres --dbname restorecheck >/dev/null
 
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
     -pass env:BACKUP_ENCRYPTION_PASSPHRASE \
     -in "${latest_backup}" \
   | gzip -dc \
   | docker exec -i "${container_name}" \
-      psql --set ON_ERROR_STOP=1 --username postgres --dbname restorecheck >/dev/null
+      psql --host=127.0.0.1 --set ON_ERROR_STOP=1 --username postgres --dbname restorecheck >/dev/null
 
 table_count="$(
   docker exec "${container_name}" \
-    psql --tuples-only --no-align --username postgres --dbname restorecheck \
+    psql --host=127.0.0.1 --tuples-only --no-align --username postgres --dbname restorecheck \
       --command "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"
 )"
 
