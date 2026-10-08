@@ -38,7 +38,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.8.1@sha256:342fabfc98da79af4bad7d4b90dae23818b67f1c16c0a1bfc8ed694f02210310
+    image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
     restart: always
     expose:
       - "80"
