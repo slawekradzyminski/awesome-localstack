@@ -69,6 +69,19 @@ experimental and requires a compatible browser with WebMCP enabled; normal
 shopping works without it. No backend, database or secret change is required.
 The backend, consumer and Ollama mock retain their reviewed releases.
 
+On 8 October 2026, the
+[stack compatibility CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/37784077866)
+passed all eight jobs. `make ansible-deploy` created the encrypted pre-deploy
+PostgreSQL backup and completed with zero failed or unreachable tasks. The
+playbook verified exact running image IDs and application protocols and expired
+the deployment alert silence. External browser smoke checks passed on both
+`awesome.byst.re` and `aitesters.byst.re`: HTTPS routes/images, anonymous route
+protection, three native tools, visible search/stock/order controls, independent
+saved-cart agreement, route cleanup, healthy lab defaults, a 390px viewport,
+ordinary-browser fallback and GraphQL tool reads. The live checks used existing
+deployment accounts and made no cart writes. The blog article remains a local,
+unpublished draft.
+
 Previous frontend reference for rollback:
 `slawekradzyminski/frontend:3.8.1@sha256:342fabfc98da79af4bad7d4b90dae23818b67f1c16c0a1bfc8ed694f02210310`.
 
