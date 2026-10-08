@@ -47,9 +47,30 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.8.1@sha256:c60932c6cd1a907451ee08c34837694bae4efdb15b76bb885f90f057f5749c9a` |
-| Frontend | `slawekradzyminski/frontend:3.8.1@sha256:342fabfc98da79af4bad7d4b90dae23818b67f1c16c0a1bfc8ed694f02210310` |
+| Frontend | `slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15` |
 | Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
+
+## Frontend 3.9.0 WebMCP release
+
+Frontend [PR #74](https://github.com/slawekradzyminski/vite-react-frontend/pull/74),
+commit `16fe782`, adds native WebMCP tools to the existing `/products` page and
+an explicit `/webmcp` fault lab. The
+[3.9.0 release workflow](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/37782592962)
+passed unit/build, container smoke, all browser shards, REST/GraphQL commerce,
+and the new native WebMCP suite before publishing amd64/arm64 images with
+provenance and SBOM. Local verification passed 533 unit tests, 22 existing shop
+browser tests and 19 native WebMCP cases repeated three times (57/57).
+
+The three page tools reuse existing authenticated application clients. Search
+updates visible catalogue filters; cart reads/writes update the shared query
+cache. Deliberate faults are restricted to the lab. Native tool access remains
+experimental and requires a compatible browser with WebMCP enabled; normal
+shopping works without it. No backend, database or secret change is required.
+The backend, consumer and Ollama mock retain their reviewed releases.
+
+Previous frontend reference for rollback:
+`slawekradzyminski/frontend:3.8.1@sha256:342fabfc98da79af4bad7d4b90dae23818b67f1c16c0a1bfc8ed694f02210310`.
 
 ## Backend and frontend 3.8.1 release
 
