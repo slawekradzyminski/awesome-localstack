@@ -46,10 +46,48 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.8.1@sha256:c60932c6cd1a907451ee08c34837694bae4efdb15b76bb885f90f057f5749c9a` |
+| Backend | `slawekradzyminski/backend:3.9.0@sha256:5c824b0f9fdd7a4c27b709d9da4e874a23efaee1a42acd6b75ea5aab82b24eae` |
 | Frontend | `slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15` |
 | Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
+
+## Backend 3.9.0 upgrade
+
+[Release workflow](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/39480058223) passed all source-owned gates and published both supported architectures with SBOM and provenance.
+
+Backend [PR #74](https://github.com/slawekradzyminski/test-secure-backend/pull/74)
+reduces GraphQL database work, bounds and batches traffic capture, replaces
+PostgreSQL traffic large objects with text, preserves reads of legacy MFA
+ciphertext, and uses the current encryption API for new MFA writes.
+
+Before publication, the unchanged latest `l20` suite at course revision
+`c6f7aee44150ee3e46aa27aad7b340e729e8fada` passed 311/311 on H2 and
+311/311 on PostgreSQL 16.14 with Flyway V1–V6 and Hibernate validation. There
+were no skips or retries. Backend verification passed 590 unit and 44
+integration tests, with 25 focused checks after the final media guard change.
+PITest review is documented in the backend performance audit. Two additional
+frozen semantic mutants (wrong legacy MFA key and discarded immediate traffic
+reads) compiled and were killed by passing baseline tests. A third mutation
+that backs up before quiescing was killed by the upgrade-order check.
+
+Use `make ansible-deploy-backend-upgrade` for this release. The opt-in role
+pulls the selected immutable image before interrupting requests, stops both
+old backend instances with a 60-second graceful shutdown, and creates a second
+encrypted PostgreSQL backup after writes stop. Ordinary deployment remains
+available through `make ansible-deploy`. Both paths retain bounded warning-alert
+silencing through successful verification; the critical alert remains active.
+Existing MFA encryption password/salt must remain unchanged.
+
+V5 adds commerce/traffic indexes; V6 preserves existing payload contents while
+converting OID columns to text and unlinking converted large objects. Old binaries
+cannot read the migrated schema or newly written v2 MFA ciphertext. Do not use a
+rolling deployment or revert the image alone. To roll back, stop the new backends,
+restore the quiesced pre-upgrade database backup, restore the previous image pins,
+and redeploy with the same MFA keys. Restoring that backup discards subsequent
+writes, so assess any post-upgrade activity before rollback.
+
+Previous backend reference:
+`slawekradzyminski/backend:3.8.1@sha256:c60932c6cd1a907451ee08c34837694bae4efdb15b76bb885f90f057f5749c9a`.
 
 ## Frontend 3.9.0 WebMCP release
 

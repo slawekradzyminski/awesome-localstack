@@ -1,0 +1,39 @@
+# Opt-in maintenance window for database/ciphertext changes incompatible with old binaries.
+- name: Require encrypted backups for a coordinated backend upgrade
+  ansible.builtin.assert:
+    that:
+      - postgres_backup_enabled | bool
+      - postgres_backup_pre_deploy | bool
+    fail_msg: Coordinated backend upgrades require encrypted pre-deployment backups.
+
+- name: Read the selected backend release from the source Compose file
+  ansible.builtin.set_fact:
+    backend_upgrade_image: "{{ (lookup('file', repo_root ~ '/' ~ app_compose_src) | from_yaml).services.backend.image }}"
+
+- name: Pull the selected backend release before interrupting requests
+  ansible.builtin.command:
+    argv:
+      - docker
+      - pull
+      - "{{ backend_upgrade_image }}"
+  changed_when: false
+
+- name: Stop both old backend instances before applying incompatible migrations
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - stop
+      - --timeout
+      - "60"
+      - backend
+      - aitesters-backend
+    chdir: "{{ app_dir }}"
+
+- name: Create encrypted PostgreSQL backup after backend writes have stopped
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/awesome-postgres-backup backend-upgrade-quiesced
+  register: backend_upgrade_quiesced_backup
+  changed_when: true

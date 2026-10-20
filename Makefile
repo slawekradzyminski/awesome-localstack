@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images
+.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-deploy-backend-upgrade ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images
 
 ANSIBLE_VAULT_FILE := .vault_pass
 
@@ -18,6 +18,9 @@ ansible-bootstrap:
 
 ansible-deploy:
 	cd ansible && ansible-playbook playbooks/deploy.yml --vault-password-file $(ANSIBLE_VAULT_FILE)
+
+ansible-deploy-backend-upgrade:
+	cd ansible && ansible-playbook playbooks/deploy.yml --vault-password-file $(ANSIBLE_VAULT_FILE) -e backend_upgrade_quiesce=true
 
 ansible-verify:
 	cd ansible && ansible-playbook playbooks/verify.yml --vault-password-file $(ANSIBLE_VAULT_FILE)

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "manifest": "experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "stack-backend-upgrade-backs-up-before-quiescing",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-backend-upgrade-backs-up-before-quiescing.patch",
+      "description": "Take the migration rollback backup while old backends can still commit writes.",
+      "contract": "The coordinated-upgrade rollback backup must be taken after both old backend instances stop and before app convergence.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.371,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.025,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-55ss4il4/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 30, in <module>\n    main()\n    ~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-55ss4il4/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 21, in main\n    ordered(tasks, [\"postgres_backup_enabled | bool\", \"postgres_backup_pre_deploy | bool\",\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                    \"      - pull\", \"      - stop\", \"      - backend\\n\",\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                    \"      - aitesters-backend\", \"awesome-postgres-backup backend-upgrade-quiesced\"])\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-55ss4il4/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 11, in ordered\n    assert positions == sorted(positions), \"Unsafe upgrade ordering\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Unsafe upgrade ordering\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.549,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.02,
+          "outputTail": "Coordinated backend upgrade contract verified\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 1
+  }
+}

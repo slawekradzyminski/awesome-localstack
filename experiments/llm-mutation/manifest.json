@@ -580,6 +580,63 @@
         "python3",
         "scripts/verify-release-images.py"
       ]
+    },
+    {
+      "id": "mfa-legacy-read-uses-current-key",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/mfa-legacy-read-uses-current-key.patch",
+      "contract": "Existing unprefixed MFA ciphertext must remain readable with the original derivation.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dskip.jacoco=true",
+        "-Dtest=MfaSecretProtectorTest",
+        "test"
+      ]
+    },
+    {
+      "id": "traffic-read-skips-persistence-flush",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/traffic-read-skips-persistence-flush.patch",
+      "contract": "A traffic read must persist previously queued records before querying the database.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dskip.jacoco=true",
+        "-Dtest=TrafficLogBufferTest",
+        "test"
+      ]
+    },
+    {
+      "id": "stack-backend-upgrade-backs-up-before-quiescing",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-backend-upgrade-backs-up-before-quiescing.patch",
+      "description": "Take the migration rollback backup while old backends can still commit writes.",
+      "contract": "The coordinated-upgrade rollback backup must be taken after both old backend instances stop and before app convergence.",
+      "compile": [
+        "bash",
+        "-lc",
+        "cd ansible && ansible-playbook playbooks/deploy.yml --syntax-check --vault-password-file .vault_pass -e backend_upgrade_quiesce=true"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-backend-upgrade.py"
+      ]
     }
   ]
 }

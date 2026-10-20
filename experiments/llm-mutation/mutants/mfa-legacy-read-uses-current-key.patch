@@ -1,0 +1,10 @@
+--- a/src/main/java/com/awesome/testing/security/mfa/VersionedMfaTextEncryptor.java
++++ b/src/main/java/com/awesome/testing/security/mfa/VersionedMfaTextEncryptor.java
+@@ -48,6 +48,6 @@
+                     current.decrypt(HexFormat.of().parseHex(encryptedText.substring(PREFIX.length()))),
+                     StandardCharsets.UTF_8);
+         }
+-        return new String(legacy.decrypt(HexFormat.of().parseHex(encryptedText)), StandardCharsets.UTF_8);
++        return new String(current.decrypt(HexFormat.of().parseHex(encryptedText)), StandardCharsets.UTF_8);
+     }
+ }

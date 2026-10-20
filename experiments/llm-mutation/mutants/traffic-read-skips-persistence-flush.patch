@@ -1,0 +1,11 @@
+--- a/src/main/java/com/awesome/testing/traffic/TrafficLogBuffer.java
++++ b/src/main/java/com/awesome/testing/traffic/TrafficLogBuffer.java
+@@ -73,7 +73,7 @@
+     public synchronized void flushForRead() {
+         int batches = Math.ceilDiv(pending.size(), properties.getPersistenceBatchSize());
+         for (int i = 0; i < batches; i++) {
+-            flush();
++            pending.clear();
+         }
+     }
+ 

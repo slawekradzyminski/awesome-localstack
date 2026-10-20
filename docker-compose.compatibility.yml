@@ -2,7 +2,7 @@
 name: awesome-compatibility
 
 x-backend: &backend
-  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.7.17@sha256:1828d15e4344f397ff5b03067b43fd3bbedcd5d46939184e6afbb9bef020693b}
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.9.0@sha256:5c824b0f9fdd7a4c27b709d9da4e874a23efaee1a42acd6b75ea5aab82b24eae}
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     PASSWORD_RESET_EXPOSE_TOKEN_IN_RESPONSE: "false"
@@ -48,7 +48,7 @@ services:
     image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
   frontend:
     profiles: [graphql-preview]
-    image: slawekradzyminski/frontend:3.7.14@sha256:e76e75bb6228a746e0685b9efb3a6ec71bde2cbbb330afbd231d91c02fcbd67b
+    image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
   gateway:
     profiles: [graphql-preview]
     image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
