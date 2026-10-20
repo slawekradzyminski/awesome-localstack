@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "manifest": "experiments/llm-mutation/manifest.json",
+  "generationMode": "reviewed requirement-driven candidates frozen before execution",
+  "results": [
+    {
+      "id": "mfa-legacy-read-uses-current-key",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/mfa-legacy-read-uses-current-key.patch",
+      "contract": "Existing unprefixed MFA ciphertext must remain readable with the original derivation.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 4.757,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 4.887,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\n[ERROR] Tests run: 3, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.258 s <<< FAILURE! -- in com.awesome.testing.security.mfa.MfaSecretProtectorTest\n[ERROR] com.awesome.testing.security.mfa.MfaSecretProtectorTest.readsAnExistingSecretFromTheRetiredEncryptionFactory -- Time elapsed: 0.009 s <<< ERROR!\njava.lang.IllegalStateException: Unable to invoke Cipher due to bad padding\n\tat org.springframework.security.crypto.encrypt.CipherUtils.doFinal(CipherUtils.java:144)\n\tat org.springframework.security.crypto.encrypt.AesGcmBytesEncryptor.decrypt(AesGcmBytesEncryptor.java:123)\n\tat com.awesome.testing.security.mfa.VersionedMfaTextEncryptor.decrypt(VersionedMfaTextEncryptor.java:51)\n\tat com.awesome.testing.security.mfa.MfaSecretProtector.reveal(MfaSecretProtector.java:18)\n\tat com.awesome.testing.security.mfa.MfaSecretProtectorTest.readsAnExistingSecretFromTheRetiredEncryptionFactory(MfaSecretProtectorTest.java:34)\nCaused by: javax.crypto.AEADBadTagException: Tag mismatch\n\tat java.base/com.sun.crypto.provider.GaloisCounterMode$GCMDecrypt.doFinal(GaloisCounterMode.java:1505)\n\tat java.base/com.sun.crypto.provider.GaloisCounterMode.engineDoFinal(GaloisCounterMode.java:402)\n\tat java.base/javax.crypto.Cipher.doFinal(Cipher.java:2281)\n\tat org.springframework.security.crypto.encrypt.CipherUtils.doFinal(CipherUtils.java:138)\n\t... 4 more\n\n[ERROR] Errors: \n[ERROR]   MfaSecretProtectorTest.readsAnExistingSecretFromTheRetiredEncryptionFactory:34 \u00bb IllegalState Unable to invoke Cipher due to bad padding\n[ERROR] Tests run: 3, Failures: 0, Errors: 1, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.6.0:test (default-test) on project jwt-auth-service: \n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-0zzkk034/mfa-legacy-read-uses-current-key/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 5.263,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 5.069,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "traffic-read-skips-persistence-flush",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/traffic-read-skips-persistence-flush.patch",
+      "contract": "A traffic read must persist previously queued records before querying the database.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 4.853,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 4.612,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nCould not persist 1 traffic records; batch discarded\n[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.340 s <<< FAILURE! -- in com.awesome.testing.traffic.TrafficLogBufferTest\n[ERROR] com.awesome.testing.traffic.TrafficLogBufferTest.readFlushDrainsAllPreviouslyQueuedBatches -- Time elapsed: 0.004 s <<< FAILURE!\nWanted but not invoked:\ntrafficLogRepository.saveAll(<any List>);\n-> at com.awesome.testing.traffic.TrafficLogBufferTest.readFlushDrainsAllPreviouslyQueuedBatches(TrafficLogBufferTest.java:46)\nActually, there were zero interactions with this mock.\n\n\tat com.awesome.testing.traffic.TrafficLogBufferTest.readFlushDrainsAllPreviouslyQueuedBatches(TrafficLogBufferTest.java:46)\n\n[ERROR] Failures: \n[ERROR]   TrafficLogBufferTest.readFlushDrainsAllPreviouslyQueuedBatches:46 \nWanted but not invoked:\ntrafficLogRepository.saveAll(<any List>);\n-> at com.awesome.testing.traffic.TrafficLogBufferTest.readFlushDrainsAllPreviouslyQueuedBatches(TrafficLogBufferTest.java:46)\nActually, there were zero interactions with this mock.\n\n[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.6.0:test (default-test) on project jwt-auth-service: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-a184e3fg/traffic-read-skips-persistence-flush/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 4.863,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 4.809,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\nCould not persist 1 traffic records; batch discarded\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 2
+  }
+}

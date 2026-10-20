@@ -8,6 +8,8 @@
     - postgres_backup
     - role: deployment_silence
       deployment_silence_state: present
+    - role: backend_upgrade
+      when: backend_upgrade_quiesce | default(false) | bool
     - app
     - verify
     - role: deployment_silence

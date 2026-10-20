@@ -342,6 +342,7 @@ make ansible-reset-aitesters-state
 
 - `make ansible-ssh`: open a shell on the VPS using the Ansible/Vault connection settings
 - `make ansible-deploy`: converge the server stack and run post-deploy verification
+- `make ansible-deploy-backend-upgrade`: pull the reviewed backend image, stop both old backends, take a quiesced encrypted PostgreSQL backup, then converge and verify; use for incompatible database or ciphertext upgrades
 - `make ansible-verify`: run health checks without changing deployment state
 - `make ansible-cleanup`: run the checksum- and retention-guarded container cleanup
 - `make ansible-reset-demo-state`: destructively reset Postgres and Mailpit-backed demo state, then redeploy

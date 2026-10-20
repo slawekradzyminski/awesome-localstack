@@ -1,0 +1,24 @@
+--- a/ansible/roles/backend_upgrade/tasks/main.yml
++++ b/ansible/roles/backend_upgrade/tasks/main.yml
+@@ -18,6 +18,12 @@
+       - "{{ backend_upgrade_image }}"
+   changed_when: false
+ 
++- name: Create encrypted PostgreSQL backup after backend writes have stopped
++  ansible.builtin.command:
++    cmd: /usr/local/sbin/awesome-postgres-backup backend-upgrade-quiesced
++  register: backend_upgrade_quiesced_backup
++  changed_when: true
++
+ - name: Stop both old backend instances before applying incompatible migrations
+   ansible.builtin.command:
+     argv:
+@@ -32,8 +38,3 @@
+       - aitesters-backend
+     chdir: "{{ app_dir }}"
+ 
+-- name: Create encrypted PostgreSQL backup after backend writes have stopped
+-  ansible.builtin.command:
+-    cmd: /usr/local/sbin/awesome-postgres-backup backend-upgrade-quiesced
+-  register: backend_upgrade_quiesced_backup
+-  changed_when: true
