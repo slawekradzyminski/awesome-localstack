@@ -46,10 +46,29 @@ Dependabot monitors the `github-actions` ecosystem in every source repository. R
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.9.0@sha256:5c824b0f9fdd7a4c27b709d9da4e874a23efaee1a42acd6b75ea5aab82b24eae` |
+| Backend | `slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3` |
 | Frontend | `slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15` |
 | Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
+
+## Backend 3.9.1 traffic preview patch
+
+Backend [PR #76](https://github.com/slawekradzyminski/test-secure-backend/pull/76)
+normalizes NUL control characters to visible U+2400 markers in traffic previews.
+This keeps preview character lengths consistent and preserves ordinary Unicode.
+A guarded Flyway callback prepares legacy OID payloads before the unchanged V6
+conversion; it is a no-op for already-migrated text columns. Newly queued payloads
+use the same normalization. No business schema or MFA-key change is added by this
+patch.
+
+The source checks passed 592 unit and 46 integration tests, including repeated,
+leading, and trailing null bytes, all four payload columns, idempotence, and
+PostgreSQL persistence/read-back. Targeted persistence mutation feedback detected
+23 of 25 mutants with no reachability gaps; the two residual boundary cases remain
+equivalent (equal-length clipping and an extra empty flush). A compiling semantic
+mutation that normalizes only the first null byte was detected by the migration
+regression. Use the coordinated backend-upgrade target and encrypted-backup
+procedure described below whenever applying V6.
 
 ## Backend 3.9.0 upgrade
 
