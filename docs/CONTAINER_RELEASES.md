@@ -70,6 +70,25 @@ mutation that normalizes only the first null byte was detected by the migration
 regression. Use the coordinated backend-upgrade target and encrypted-backup
 procedure described below whenever applying V6.
 
+Production rollout completed on 2026-10-20 using the coordinated upgrade target:
+122 Ansible tasks passed, with zero failures or unreachable hosts. Both backend
+instances matched the reviewed 3.9.1 image digest. Authenticated direct/proxied
+GraphQL, anonymous rejection, gRPC listeners, authentication isolation, JMS,
+monitoring, and public HTTPS checks passed. PostgreSQL reports successful V1–V6
+migrations and all four traffic payload columns as text; the eight products and
+one existing order remain present. The quiesced encrypted rollback backup is
+`awesome-testdb-20261020T202854Z-backend-upgrade-quiesced.sql.gz.enc` in the
+production PostgreSQL daily backup directory.
+
+The published 3.9.1 image also passed all 311 unchanged latest `l20` course tests
+against PostgreSQL, with no skips, retries, or failures, at course revision
+`c6f7aee44150ee3e46aa27aad7b340e729e8fada`. Direct/proxied GraphQL and the
+native gRPC listener passed in the same disposable stack. The
+[release workflow](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/39488051264),
+[backend CI](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/39492360830),
+and [LocalStack CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/39492106973)
+are green.
+
 ## Backend 3.9.0 upgrade
 
 [Release workflow](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/39480058223) passed all source-owned gates and published both supported architectures with SBOM and provenance.
