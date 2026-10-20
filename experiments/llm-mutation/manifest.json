@@ -637,6 +637,29 @@
         "python3",
         "scripts/verify-backend-upgrade.py"
       ]
+    },
+    {
+      "id": "legacy-preview-normalizes-only-first-null",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/normalize-only-the-first-null.patch",
+      "contract": "Every NUL in every legacy preview must be normalized so immutable V6 can migrate repeated and boundary NULs.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Pintegration-tests",
+        "-Dskip.jacoco=true",
+        "-Dit.test=CommerceIndexMigrationIT",
+        "test-compile",
+        "failsafe:integration-test",
+        "failsafe:verify"
+      ]
     }
   ]
 }

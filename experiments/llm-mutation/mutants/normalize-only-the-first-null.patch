@@ -1,0 +1,17 @@
+--- a/src/main/resources/db/migration/beforeMigrate.sql
++++ b/src/main/resources/db/migration/beforeMigrate.sql
+@@ -22,12 +22,12 @@
+                 payload := lo_get(payload_object);
+                 null_position := position(decode('00', 'hex') IN payload);
+                 IF null_position > 0 THEN
+-                    WHILE null_position > 0 LOOP
++                    IF null_position > 0 THEN
+                         payload := substring(payload FROM 1 FOR null_position - 1)
+                             || convert_to(chr(9216), 'UTF8')
+                             || substring(payload FROM null_position + 1);
+                         null_position := position(decode('00', 'hex') IN payload);
+-                    END LOOP;
++                    END IF;
+                     PERFORM lo_put(payload_object, 0, payload);
+                 END IF;
+             END LOOP;
