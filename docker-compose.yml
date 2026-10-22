@@ -38,6 +38,13 @@ services:
         condition: service_started
     networks:
       - my-private-ntwk
+    volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /opt/java/openjdk/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
 
   ollama-dmr-adapter:
     image: awesome-localstack/ollama-dmr-adapter:local
@@ -83,6 +90,12 @@ services:
     ports:
       - "8082:8080"
     volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /usr/lib/jvm/jre-21/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
       - ./keycloak:/opt/keycloak/data/import:ro
     networks:
       - my-private-ntwk
@@ -176,6 +189,12 @@ services:
       - "8161:8161"
       - "5672:5672"
     volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /opt/java/openjdk/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
       - activemq-data:/var/lib/artemis-instance
     hostname: activemq
     networks:
@@ -211,6 +230,13 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - my-private-ntwk
+    volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /opt/java/openjdk/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
 
   influxdb:
     image: influxdb:1.12.4@sha256:7f65020ddef923f0366dfee0ce753adc0d20b97b0b110b0988c03e0426932396

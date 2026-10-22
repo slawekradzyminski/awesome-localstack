@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "stack-certificate-sandbox-omitted",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-certificate-sandbox-omitted.patch",
+      "contract": "Every JVM including the disposable sandbox must block the compromised CAs.",
+      "observableDifference": "The sandbox JVM accepts a certificate rejected by the stable backend.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.048,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.153,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-msyinyic/stack-certificate-sandbox-omitted/scripts/verify-java-security.py\", line 68, in <module>\n    verify()\n    ~~~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-msyinyic/stack-certificate-sandbox-omitted/scripts/verify-java-security.py\", line 53, in verify\n    raise ValueError(f'{profile}/{name}: JVM blocklist mount missing or duplicated')\nValueError: ['docker-compose.server.yml']/aitesters-backend: JVM blocklist mount missing or duplicated\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.048,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.27,
+          "outputTail": "Verified upstream certificate artifacts and 23 fail-closed JVM mounts\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-certificate-mutable-source",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-certificate-mutable-source.patch",
+      "contract": "Certificate-file updates must change the bind source so Compose recreates JVMs and remounts new inodes.",
+      "observableDifference": "A later atomic file update leaves old running JVMs reading the old blocklist.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.048,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.145,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-gokhgk5i/stack-certificate-mutable-source/scripts/verify-java-security.py\", line 68, in <module>\n    verify()\n    ~~~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-gokhgk5i/stack-certificate-mutable-source/scripts/verify-java-security.py\", line 57, in verify\n    raise ValueError(f'{profile}/{name}: blocklist must use the exact existing read-only file')\nValueError: ['docker-compose.server.yml']/activemq: blocklist must use the exact existing read-only file\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.047,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.262,
+          "outputTail": "Verified upstream certificate artifacts and 23 fail-closed JVM mounts\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 2
+  }
+}

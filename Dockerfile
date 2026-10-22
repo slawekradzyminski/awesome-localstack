@@ -2,6 +2,10 @@ FROM jenkins/jenkins:2.568.3-lts@sha256:c1e4c349365f6d16d88595b2c5f7e8ff39b8ae1d
 
 USER root
 
+# OpenJDK mitigation for compromised intermediate CA certificates.
+COPY security/java/blocked.certs ${JAVA_HOME}/lib/security/blocked.certs
+RUN echo "2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10  ${JAVA_HOME}/lib/security/blocked.certs" | sha256sum --check -
+
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
     apt-transport-https \

@@ -3,6 +3,13 @@ name: awesome-compatibility
 
 x-backend: &backend
   image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3}
+  volumes:
+    - type: bind
+      source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+      target: /opt/java/openjdk/lib/security/blocked.certs
+      read_only: true
+      bind:
+        create_host_path: false
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     PASSWORD_RESET_EXPOSE_TOKEN_IN_RESPONSE: "false"
@@ -46,6 +53,14 @@ services:
       - "127.0.0.1:14002:4001"
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
+    volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /opt/java/openjdk/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
+
   frontend:
     profiles: [graphql-preview]
     image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15

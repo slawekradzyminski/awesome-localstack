@@ -1,0 +1,16 @@
+--- a/docker-compose.server.yml
++++ b/docker-compose.server.yml
+@@ -136,13 +136,6 @@
+     mem_limit: 768m
+     networks:
+       - my-private-ntwk
+-    volumes:
+-      - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+-        target: /opt/java/openjdk/lib/security/blocked.certs
+-        read_only: true
+-        bind:
+-          create_host_path: false
+ 
+   aitesters-frontend:
+     image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15

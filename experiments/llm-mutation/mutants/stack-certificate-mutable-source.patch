@@ -1,0 +1,47 @@
+--- a/docker-compose.server.yml
++++ b/docker-compose.server.yml
+@@ -67,7 +67,7 @@
+       - my-private-ntwk
+     volumes:
+       - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
++        source: ./security/java/blocked.certs
+         target: /opt/java/openjdk/lib/security/blocked.certs
+         read_only: true
+         bind:
+@@ -138,7 +138,7 @@
+       - my-private-ntwk
+     volumes:
+       - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
++        source: ./security/java/blocked.certs
+         target: /opt/java/openjdk/lib/security/blocked.certs
+         read_only: true
+         bind:
+@@ -370,7 +370,7 @@
+       - "8161"
+     volumes:
+       - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
++        source: ./security/java/blocked.certs
+         target: /opt/java/openjdk/lib/security/blocked.certs
+         read_only: true
+         bind:
+@@ -422,7 +422,7 @@
+       - my-private-ntwk
+     volumes:
+       - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
++        source: ./security/java/blocked.certs
+         target: /opt/java/openjdk/lib/security/blocked.certs
+         read_only: true
+         bind:
+@@ -441,7 +441,7 @@
+       - my-private-ntwk
+     volumes:
+       - type: bind
+-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
++        source: ./security/java/blocked.certs
+         target: /opt/java/openjdk/lib/security/blocked.certs
+         read_only: true
+         bind:

@@ -1,3 +1,32 @@
+- name: Verify the Java certificate mitigation in every production JVM
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - "{{ item }}"
+      - sha256sum
+      - /opt/java/openjdk/lib/security/blocked.certs
+    chdir: "{{ app_dir }}"
+  vars:
+    java_security_expected_sha256: "{{ (lookup('ansible.builtin.file', repo_root ~ '/security/java/provenance.json') | from_json).blockedSha256 }}"
+  loop:
+    - backend
+    - aitesters-backend
+    - consumer
+    - ollama-mock
+    - activemq
+  register: java_security_runtime_check
+  changed_when: false
+  failed_when: >-
+    java_security_runtime_check.rc != 0 or
+    not java_security_runtime_check.stdout.startswith(java_security_expected_sha256 ~ ' ')
+  tags:
+    - java_security
+
 - name: Show Docker Compose service status
   ansible.builtin.command:
     cmd: docker compose -f {{ app_compose_file }} ps

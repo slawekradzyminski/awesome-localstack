@@ -1,0 +1,15 @@
+{
+  "advisory": "https://openjdk.org/groups/vulnerability/advisories/2026-10-21",
+  "cve": "CVE-2026-91403",
+  "upstreamCommit": "22bc7357ce6bc5f1ed2f1e83e0544b2c25f781d4",
+  "sourceUrl": "https://raw.githubusercontent.com/openjdk/jdk/22bc7357ce6bc5f1ed2f1e83e0544b2c25f781d4/src/java.base/share/data/blockedcertsconverter/blocked.certs.pem",
+  "converterUrl": "https://raw.githubusercontent.com/openjdk/jdk/22bc7357ce6bc5f1ed2f1e83e0544b2c25f781d4/make/jdk/src/classes/build/tools/blockedcertsconverter/BlockedCertsConverter.java",
+  "sourceSha256": "23daaddff18ed3800bf38937b51cd91045777719baa19437d812afeb9b44b64e",
+  "converterSha256": "e7d5480d3b1b5f4d5d49aa5e03555c9909e428745ea1e3d9e11b75c800e8c068",
+  "blockedSha256": "2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10",
+  "certificateCount": 35,
+  "fingerprintCount": 86,
+  "generatedAt": "2026-10-22",
+  "mitigation": "OpenJDK-recommended blocked.certs replacement; Java version alone is not proof of this mitigation.",
+  "composeSourceFilename": "blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs"
+}

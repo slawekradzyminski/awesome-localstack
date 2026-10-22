@@ -42,6 +42,74 @@ The workflows use action generations whose JavaScript entrypoints target Node.js
 
 Dependabot monitors the `github-actions` ecosystem in every source repository. Review updates as ordinary supply-chain changes; do not suppress runner deprecation warnings by relying on GitHub's temporary forced runtime migration.
 
+## October 2026 JVM and Node security maintenance
+
+[CVE-2026-91403](https://openjdk.org/groups/vulnerability/advisories/2026-10-21)
+concerns compromised intermediate CA certificates. The reviewed mitigation is a
+frozen upstream `blocked.certs` file, not an unsupported claim that the old Java
+version has become a patched distribution. See [provenance, reproduction and
+renewal](../security/java/README.md).
+
+Every JVM in the full, lightweight, server, model-mock and compatibility profiles
+has a read-only, content-addressed blocklist mount. Missing source files fail;
+new content changes the bind source path so Compose recreates the JVM and remounts
+the new inode. Ansible copies the artifact before convergence. The optional
+Jenkins build and the backend/consumer/model-mock source Dockerfiles copy the
+same checked artifact into their JVMs. The first-party image references below
+are retained; no application version, schema or encryption key migration is
+introduced by this mitigation.
+
+`python3 scripts/verify-java-security.py` validates the frozen upstream inputs,
+23 JVM mounts, Ansible asset copy and Jenkins coverage. All modified Compose
+profiles pass config validation. The existing image-pin and release-set checks
+pass. Two frozen configuration mutants compiled and were killed (sandbox JVM
+omission, mutable bind source); zero survived/invalid/equivalent candidates were
+reported. No PIT/Stryker-selected application logic changed.
+
+All three installed Homebrew JVMs (25.0.2, 21.0.12.1 and 25.0.4.1) now reject all
+35 certificates in the upstream fixture. Previous files were backed up before
+replacement, and all existing vendor blocks were preserved. Disposable Temurin
+25.0.3 and Red Hat Keycloak 21.0.12 runtimes pass the same check with the mount.
+Running Java processes must be recreated to reload cached certificate state.
+
+Frontend source now selects Node >=24.22.1 <25, pins the 24.22.1 Alpine build
+image, and refreshes the vulnerable npm packages. Full and production-only npm
+audits report zero findings. Lint, TypeScript, all 533 coverage tests and the
+production build passed, and the built nginx image served login, products,
+WebMCP and their entry assets. These frontend source changes still require a
+normal source-owned application image release before its published image pin
+can change; existing immutable tags are not overwritten.
+
+### Production verification — 22 October 2026
+
+The Ansible rollout completed with 117 successful tasks, 14 changes, zero
+failures and zero unreachable hosts. Its encrypted PostgreSQL pre-deployment
+backup completed before app convergence. Published application references stayed
+unchanged. Both backends, the consumer, model mock and Artemis were recreated
+with the content-addressed read-only mount. All five runtime checksums match
+`2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10`.
+
+Offline probes inside all five running production services reject all 35 upstream
+fixture certificates: Java 25.0.4 on both backends and Java 25.0.3 on the other
+three services. Probe helpers were temporary and removed from the containers.
+No customer data was needed for these checks. The normal deployment checks passed
+exact image IDs, heap budgets, PostgreSQL, authentication isolation, direct and
+proxied GraphQL/gRPC, Artemis/consumer/Mailpit delivery and monitoring.
+Public login and OpenAPI routes return 200 on both domains; the private Mailpit
+route remains 404. There was no GitHub Actions dispatch or image publication.
+
+A tagged `java_security` Ansible verification now checks the frozen blocklist
+checksum in each JVM on future deploys and standalone verification runs. The
+running local lightweight stack still uses its existing containers: recreating
+its in-memory H2 backend resets local demo data, so that action is pending the
+owner's choice. The reviewed source configuration is ready, but do not describe
+those existing local containers as mitigated until they are recreated.
+
+Private deployment/runtime receipts are stored under
+`~/.config/awesome-localstack-security/`. Source changes in this maintenance
+remain local; the server received the verified Compose/configuration artifacts
+through the normal Ansible copy/convergence procedure.
+
 ## Current compatibility set
 
 | Service | Immutable image |
