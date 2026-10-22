@@ -13,4 +13,4 @@
 -          create_host_path: false
  
    aitesters-frontend:
-     image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
+     image: slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17

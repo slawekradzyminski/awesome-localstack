@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3
+    image: slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8
     restart: always
     expose:
       - "4001"
@@ -45,7 +45,7 @@ services:
           create_host_path: false
 
   frontend:
-    image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
+    image: slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17
     restart: always
     expose:
       - "80"
@@ -107,7 +107,7 @@ services:
       - my-private-ntwk
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
+    image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29
     restart: always
     ports:
       - "11434:11434"

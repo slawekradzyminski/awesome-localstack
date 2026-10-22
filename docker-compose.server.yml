@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3
+    image: slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -74,7 +74,7 @@ services:
           create_host_path: false
 
   frontend:
-    image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
+    image: slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -84,7 +84,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3
+    image: slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -145,7 +145,7 @@ services:
           create_host_path: false
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15
+    image: slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -397,7 +397,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61
+    image: slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60
     restart: unless-stopped
     logging: *default-logging
     env_file:
@@ -429,7 +429,7 @@ services:
           create_host_path: false
 
   ollama-mock:
-    image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
+    image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29
     restart: unless-stopped
     logging: *default-logging
     environment:

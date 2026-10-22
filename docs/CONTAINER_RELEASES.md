@@ -55,9 +55,9 @@ has a read-only, content-addressed blocklist mount. Missing source files fail;
 new content changes the bind source path so Compose recreates the JVM and remounts
 the new inode. Ansible copies the artifact before convergence. The optional
 Jenkins build and the backend/consumer/model-mock source Dockerfiles copy the
-same checked artifact into their JVMs. The first-party image references below
-are retained; no application version, schema or encryption key migration is
-introduced by this mitigation.
+same checked artifact into their JVMs. The initial mitigation retained the existing first-party image references.
+The follow-up image release is recorded below; neither step introduces a schema
+or encryption key migration.
 
 `python3 scripts/verify-java-security.py` validates the frozen upstream inputs,
 23 JVM mounts, Ansible asset copy and Jenkins coverage. All modified Compose
@@ -76,11 +76,10 @@ Frontend source now selects Node >=24.22.1 <25, pins the 24.22.1 Alpine build
 image, and refreshes the vulnerable npm packages. Full and production-only npm
 audits report zero findings. Lint, TypeScript, all 533 coverage tests and the
 production build passed, and the built nginx image served login, products,
-WebMCP and their entry assets. These frontend source changes still require a
-normal source-owned application image release before its published image pin
-can change; existing immutable tags are not overwritten.
+WebMCP and their entry assets. The frontend source-owned release publishes a new immutable image version;
+existing image tags are not overwritten.
 
-### Production verification — 22 October 2026
+### Initial production mitigation verification — 22 October 2026
 
 The Ansible rollout completed with 117 successful tasks, 14 changes, zero
 failures and zero unreachable hosts. Its encrypted PostgreSQL pre-deployment
@@ -106,18 +105,66 @@ owner's choice. The reviewed source configuration is ready, but do not describe
 those existing local containers as mitigated until they are recreated.
 
 Private deployment/runtime receipts are stored under
-`~/.config/awesome-localstack-security/`. Source changes in this maintenance
-remain local; the server received the verified Compose/configuration artifacts
-through the normal Ansible copy/convergence procedure.
+`~/.config/awesome-localstack-security/`. The mitigation is committed in `36b9f4a`; the server received the verified
+Compose/configuration artifacts through the normal Ansible copy/convergence
+procedure. Follow-up application images use their own source-owned releases.
+
+## Additional dependency check from cve.now — 22 October 2026
+
+The supplemental check covered 699 unique public npm production package/version
+pairs across the five website/frontend dependency sets. It matched only the
+known, unpatched braces 3.0.3 issue (CVE-2026-93687). Awesome Testing declares
+fast-glob as a production dependency, but the inspected content/store and README
+synchronization calls use fixed repository glob patterns; no visitor-controlled
+pattern path was found. Development tooling also retains the same advisory.
+
+The initial Maven runtime inventory (272 unique package/version pairs) matched
+Jackson 2.21.5 and Tomcat 11.0.24 advisories. Upstream ranges also affect Jackson
+3.1.5, although this catalog did not return that coordinate. The Java source
+releases therefore move together to Spring Boot 4.1.2 / Tomcat 11.0.27 and aligned
+Jackson 2.21.8 and 3.1.8 BOMs. The resolved replacement runtime inventory has
+274 pairs and zero matches in cve.now. Backend local verification passed all
+592 tests, and consumer/model-mock verification also passed. Source-owned image publication is recorded below; production rollout has its
+own verification receipt.
+
+This catalog result is scoped dependency evidence, not an assessment of OS
+packages or provider-managed runtimes. In particular, the inspected Convex
+services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
+are under `~/.config/awesome-localstack-security/`.
+
+## Source-owned security image releases — 22 October 2026
+
+Final releases are backend 3.9.4 (`fd4c015`), frontend 3.9.1 (`607fe6b`),
+consumer 3.3.9 (`b801fa3`) and model mock 1.0.11 (`0a77d42`). Their source-owned
+release pipelines passed before immutable Docker Hub digests were selected.
+Both AMD64 and ARM64 manifests, SBOM and provenance were published. Every Java
+application image passes the offline 35-certificate lookup probe without a
+Compose mount. The frontend image serves login, products, WebMCP and entry assets.
+
+The backend's release checks include unit, PostgreSQL integration, local-app and
+Docker smoke verification; the frontend includes three browser shards plus
+commerce/WebMCP flows. Consumer publication verifies Artemis-to-Mailpit delivery;
+model-mock publication verifies its API/container contract. Login checks now use
+here-strings under `pipefail`, preserving the token assertion while avoiding a
+producer SIGPIPE false failure when grep finishes early. No auth behavior changed.
+
+Image pins are synchronized across full, lightweight, server, model-mock, gRPC
+and course profiles, and sibling backend/frontend development Compose files.
+Static image/certificate checks, remote manifests and Ansible syntax pass. The
+default-branch l20 suite at `a3b2802a070f` passed all 190 tests with no skips or
+retries, plus direct/proxied authenticated GraphQL, anonymous denial and a native
+gRPC listener. The newer GraphQL course branch at `c6f7aee44150` also passed all 311 tests
+with no failures, skips or retries, using the same final images and direct/proxied
+GraphQL plus gRPC checks. Both course runs used isolated disposable local fixtures.
 
 ## Current compatibility set
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.9.1@sha256:b1931ada6be3b1d5a5ef75837a146ae32f4fa8739b51011b8ec81ce9b70c6ed3` |
-| Frontend | `slawekradzyminski/frontend:3.9.0@sha256:fffc051a17fec76a4323facbe97aa29490d71ec33f156dd5ee0f1020c5e68e15` |
-| Consumer | `slawekradzyminski/consumer:3.3.7@sha256:545e2a091318e04d738915f19ba8a22220f943db108f76a9a31b296ca2cf1d61` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab` |
+| Backend | `slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8` |
+| Frontend | `slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17` |
+| Consumer | `slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
 
 ## Backend 3.9.1 traffic preview patch
 

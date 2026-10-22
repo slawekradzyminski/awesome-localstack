@@ -14,7 +14,7 @@ services:
       - dmr
 
   ollama:
-    image: slawekradzyminski/ollama-mock:1.0.9@sha256:24852d0f78eb7ed208bb1eaaab1d912d29e5e74d6c28c2e6a31dd1cbcdedbdab
+    image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29
     restart: unless-stopped
     ports:
       - "11434:11434"
