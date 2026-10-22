@@ -157,6 +157,30 @@ gRPC listener. The newer GraphQL course branch at `c6f7aee44150` also passed all
 with no failures, skips or retries, using the same final images and direct/proxied
 GraphQL plus gRPC checks. Both course runs used isolated disposable local fixtures.
 
+### Final production image rollout — 22 October 2026
+
+Ansible completed 118 successful tasks with 15 changes, zero failures and zero
+unreachable hosts. The encrypted PostgreSQL pre-deployment backup completed.
+Both backend and frontend instances, the consumer and model mock now use the
+reviewed image set below. Flyway validated the existing migrations and reported
+the schema up to date; no migration or encryption-key change was needed.
+
+Post-deployment checks passed exact image IDs, all five JVM blocklist checksums,
+heap budgets, PostgreSQL authentication, stable/sandbox token isolation, direct
+and proxied GraphQL, anonymous query denial, native gRPC listeners, JMS delivery
+to private Mailpit, monitoring and public HTTPS probes. Public curl login and
+OpenAPI GETs return 200 on both domains. The stable host rejects Mailpit paths
+with 404. The sandbox returns the identical frontend SPA HTML for those unknown
+prefixes, including the would-be mailbox API; it exposes no Mailpit UI or data.
+An initial Python urllib login request returned 403 while curl checks passed;
+no access policy was changed to obtain these results.
+
+Deployment evidence is saved privately in
+`~/.config/awesome-localstack-security/deploy-images-20261022-final.log`, with
+course, registry, offline-certificate and public-smoke receipts beside it.
+The existing local H2 stack was not reset and still needs its separately
+approved restart; production PostgreSQL is independent and preserved.
+
 ## Current compatibility set
 
 | Service | Immutable image |
