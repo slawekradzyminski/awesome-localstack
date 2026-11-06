@@ -131,16 +131,17 @@ It performs seven steps in order:
    and low swappiness on capable hosts; it reports a tracked reason and makes no
    swap changes on the current MIKR.US LXC host.
 2. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
-3. Creates a 15-minute Alertmanager silence for the warning-level
-   `PublicEndpointProbeFailed` alert when the existing monitoring stack is
-   reachable. The five-minute critical alert remains active.
+3. Creates 15-minute Alertmanager silences for the warning-level
+   `PublicEndpointProbeFailed` alert and the backend and consumer
+   `PrometheusTargetDown` warnings when the existing monitoring stack is
+   reachable. The five-minute critical alerts remain active.
 4. Runs the `app` role to reconcile the existing PostgreSQL role with the
    Vault-managed password, render the protected runtime environment, and
    converge files and Docker Compose state in `/opt/awesome-localstack`.
 5. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
-6. Expires the warning silence immediately after verification succeeds. If a
-   deploy fails first, the silence expires automatically after 15 minutes.
+6. Expires the warning silences immediately after verification succeeds. If a
+   deploy fails first, the silences expire automatically after 15 minutes.
 7. Runs the guarded `cleanup` role only after verification succeeds.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
@@ -216,7 +217,7 @@ For that reason, HTTP verification uses retries and delay rather than failing im
   because the provider rejects `swapon`
 - `postgres_backup`: encrypted backups, restore checks, and the pre-deploy backup
 - `deployment_silence`: bounded suppression of planned warning-level public
-  endpoint alerts; critical endpoint alerts are never silenced
+  endpoint and backend/consumer scrape alerts; critical alerts are never silenced
 - `app`: file sync, runtime env rendering, Compose convergence
 - `verify`: operational checks after deploy
 - `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume

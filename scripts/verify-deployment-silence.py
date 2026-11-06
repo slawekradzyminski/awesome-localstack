@@ -44,22 +44,29 @@ def main() -> None:
         "the automatic safety expiry must remain 15 minutes",
     )
     require(
-        "'value': 'PublicEndpointProbeFailed'" in present,
-        "the warning alert must be silenced",
+        "value: PublicEndpointProbeFailed\n" in present,
+        "the public endpoint warning alert must be silenced",
     )
     require(
-        "'value': 'PublicEndpointProbeFailedCritical'" not in present,
-        "the critical alert must never be silenced",
+        "value: PrometheusTargetDown\n" in present,
+        "the scrape target warning alert must be silenced",
     )
-    require("'value': 'public_https'" in present, "silence must target the public probe job")
-    require("'value': 'public-edge'" in present, "silence must target the public edge service")
+    for critical in ("PublicEndpointProbeFailedCritical", "PrometheusTargetDownCritical"):
+        require(critical not in present, f"the critical {critical} alert must never be silenced")
+    require("value: public_https" in present, "silence must target the public probe job")
+    require("value: public-edge" in present, "silence must target the public edge service")
+    require(
+        "value: spring_backend_micrometer|spring_consumer_micrometer" in present,
+        "target silence must cover only the restarted backend and consumer scrapes",
+    )
     require(
         "(deployment_silence_duration_minutes | int) * 60" in present,
         "Alertmanager endsAt must use the bounded duration",
     )
     require(
-        "/api/v2/silence/{{ deployment_silence_id }}" in absent,
-        "successful verification must expire the exact created silence",
+        "/api/v2/silence/{{ item }}" in absent
+        and 'loop: "{{ deployment_silence_ids }}"' in absent,
+        "successful verification must expire every exact created silence",
     )
 
     print("Deployment silence contract verified")

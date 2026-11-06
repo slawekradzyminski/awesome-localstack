@@ -13,6 +13,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: container-memory
         annotations:
           summary: Container memory working set is above 85% of its limit
           description: Container {{ $labels.name }} has remained above 85% of its configured memory limit for 10 minutes.
@@ -29,6 +30,7 @@ groups:
         for: 2m
         labels:
           severity: critical
+          alert_family: container-memory
         annotations:
           summary: Container memory working set is above 95% of its limit
           description: Container {{ $labels.name }} has remained above 95% of its configured memory limit for 2 minutes.

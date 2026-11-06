@@ -16,15 +16,19 @@ route:
   repeat_interval: 4h
 
 inhibit_rules:
+  # Warning and critical rules of one condition have different alertnames, so pair them by alert_family.
   - source_matchers:
       - severity="critical"
+      - alert_family=~".+"
     target_matchers:
       - severity="warning"
     equal:
-      - alertname
+      - alert_family
       - job
       - service
       - instance
+      - name
+      - id
 
 receivers:
   - name: production-telegram

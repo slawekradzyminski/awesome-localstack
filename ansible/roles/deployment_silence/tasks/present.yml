@@ -77,41 +77,43 @@
       }}
   when: deployment_silence_available | bool
 
-- name: Build deployment silence payload
+- name: Build deployment silence payloads
   ansible.builtin.set_fact:
-    deployment_silence_payload: >-
-      {{
-        {
-          'matchers': [
-            {
-              'name': 'alertname',
-              'value': 'PublicEndpointProbeFailed',
-              'isRegex': false,
-              'isEqual': true
-            },
-            {
-              'name': 'job',
-              'value': 'public_https',
-              'isRegex': false,
-              'isEqual': true
-            },
-            {
-              'name': 'service',
-              'value': 'public-edge',
-              'isRegex': false,
-              'isEqual': true
-            }
-          ],
-          'startsAt': deployment_silence_starts_at,
-          'endsAt': deployment_silence_ends_at,
-          'createdBy': deployment_silence_created_by,
-          'comment': deployment_silence_comment
-        }
-        | to_json
-      }}
+    deployment_silence_payloads:
+      - matchers:
+          - name: alertname
+            value: PublicEndpointProbeFailed
+            isRegex: false
+            isEqual: true
+          - name: job
+            value: public_https
+            isRegex: false
+            isEqual: true
+          - name: service
+            value: public-edge
+            isRegex: false
+            isEqual: true
+        startsAt: "{{ deployment_silence_starts_at }}"
+        endsAt: "{{ deployment_silence_ends_at }}"
+        createdBy: "{{ deployment_silence_created_by }}"
+        comment: "{{ deployment_silence_comment }}"
+      # Backend and consumer restarts during convergence briefly fail their metrics scrape.
+      - matchers:
+          - name: alertname
+            value: PrometheusTargetDown
+            isRegex: false
+            isEqual: true
+          - name: job
+            value: spring_backend_micrometer|spring_consumer_micrometer
+            isRegex: true
+            isEqual: true
+        startsAt: "{{ deployment_silence_starts_at }}"
+        endsAt: "{{ deployment_silence_ends_at }}"
+        createdBy: "{{ deployment_silence_created_by }}"
+        comment: "{{ deployment_silence_comment }}"
   when: deployment_silence_available | bool
 
-- name: Silence planned public endpoint warnings during deployment
+- name: Silence planned deployment warnings
   ansible.builtin.command:
     argv:
       - docker
@@ -131,28 +133,40 @@
       - --header
       - "Content-Type: application/json"
       - --data
-      - "{{ deployment_silence_payload }}"
+      - "{{ item | to_json }}"
     chdir: "{{ app_dir }}"
+  loop: "{{ deployment_silence_payloads }}"
+  loop_control:
+    label: "{{ item.matchers[0].value }}"
   register: deployment_silence_create
   changed_when: true
   when: deployment_silence_available | bool
 
-- name: Record the deployment silence identifier
+- name: Record the deployment silence identifiers
   ansible.builtin.set_fact:
-    deployment_silence_id: "{{ (deployment_silence_create.stdout | from_json).silenceID }}"
+    deployment_silence_ids: >-
+      {{
+        deployment_silence_create.results
+        | map(attribute='stdout')
+        | map('from_json')
+        | map(attribute='silenceID')
+        | list
+      }}
   when: deployment_silence_available | bool
 
-- name: Verify the deployment silence was created
+- name: Verify the deployment silences were created
   ansible.builtin.assert:
     that:
-      - deployment_silence_id | length > 0
-    fail_msg: Alertmanager did not return a deployment silence identifier
+      - deployment_silence_ids | length == deployment_silence_payloads | length
+      - deployment_silence_ids | select('string') | select() | list | length == deployment_silence_payloads | length
+    fail_msg: Alertmanager did not return an identifier for every deployment silence
     quiet: true
   when: deployment_silence_available | bool
 
 - name: Report deployment silence
   ansible.builtin.debug:
     msg: >-
-      Silenced PublicEndpointProbeFailed warnings until
-      {{ deployment_silence_ends_at }}; critical endpoint alerts remain active.
+      Silenced PublicEndpointProbeFailed and backend/consumer
+      PrometheusTargetDown warnings until {{ deployment_silence_ends_at }};
+      critical alerts remain active.
   when: deployment_silence_available | bool

@@ -321,7 +321,8 @@ Special behavior:
   through public DNS and validated TLS
 - Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
 - Alertmanager stores silences and notification state in a named volume and
-  sends grouped notifications to a Vault-configured Telegram chat
+  sends grouped notifications to a Vault-configured Telegram chat; a firing
+  critical alert suppresses the warning that shares its `alert_family` label
 - Grafana provisions the private `Production Resources` and
   `Production Availability & Safeguards` dashboards from the repository
 - Blackbox checks, alert delivery, and dashboards are server-profile-only;

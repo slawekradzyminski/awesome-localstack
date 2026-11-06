@@ -6,6 +6,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-memory-ratio
           service: host
         annotations:
           summary: Host available memory is below 15%
@@ -16,6 +17,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-memory-ratio
           service: host
         annotations:
           summary: Host available memory is below 8%
@@ -26,6 +28,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-memory-absolute
           service: host
         annotations:
           summary: Host available memory is below 600 MiB
@@ -36,6 +39,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-memory-absolute
           service: host
         annotations:
           summary: Host available memory is below 300 MiB
@@ -46,6 +50,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-memory-waiting
           service: host
         annotations:
           summary: VPS tasks are waiting on memory pressure
@@ -56,6 +61,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-memory-waiting
           service: host
         annotations:
           summary: Severe VPS task waiting caused by memory pressure
@@ -66,6 +72,7 @@ groups:
         for: 5m
         labels:
           severity: warning
+          alert_family: host-memory-stalls
           service: host
         annotations:
           summary: VPS is experiencing full memory stalls
@@ -76,6 +83,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-memory-stalls
           service: host
         annotations:
           summary: VPS is experiencing severe full memory stalls
@@ -97,6 +105,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-swap-usage
           service: host
         annotations:
           summary: More than 128 MiB of emergency swap is in use
@@ -107,13 +116,15 @@ groups:
         for: 5m
         labels:
           severity: critical
+          alert_family: host-swap-usage
           service: host
         annotations:
           summary: More than half of the emergency swap is in use
           description: Swap use has exceeded 50% for 5 minutes and the memory safety buffer is nearly exhausted.
 
       - alert: HostSwapThrashing
-        expr: rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 50
+        # On LXC, node_vmstat_pswp* reports the shared provider host, so only page on a swap-capable VPS.
+        expr: (rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 50) and node_memory_SwapTotal_bytes > 0
         for: 5m
         labels:
           severity: critical
@@ -129,6 +140,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-root-disk
           service: host
         annotations:
           summary: Root filesystem has less than 20% available
@@ -139,6 +151,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-root-disk
           service: host
         annotations:
           summary: Root filesystem has less than 10% available
@@ -149,6 +162,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: host-root-inodes
           service: host
         annotations:
           summary: Root filesystem has less than 15% free inodes
@@ -159,6 +173,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          alert_family: host-root-inodes
           service: host
         annotations:
           summary: Root filesystem has less than 8% free inodes

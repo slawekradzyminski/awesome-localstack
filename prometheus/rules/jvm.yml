@@ -10,6 +10,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: jvm-heap
         annotations:
           summary: JVM heap usage is above 75%
           description: JVM heap usage for {{ $labels.job }} has remained above 75% for 10 minutes.
@@ -23,6 +24,7 @@ groups:
         for: 5m
         labels:
           severity: critical
+          alert_family: jvm-heap
         annotations:
           summary: JVM heap usage is above 90%
           description: JVM heap usage for {{ $labels.job }} has remained above 90% for 5 minutes.
@@ -32,6 +34,7 @@ groups:
         for: 10m
         labels:
           severity: warning
+          alert_family: jvm-gc
         annotations:
           summary: JVM is spending over 10% of time in garbage collection
           description: GC pause time for {{ $labels.job }} has remained above 10% for 10 minutes.
@@ -41,6 +44,7 @@ groups:
         for: 5m
         labels:
           severity: critical
+          alert_family: jvm-gc
         annotations:
           summary: JVM is spending over 20% of time in garbage collection
           description: GC pause time for {{ $labels.job }} has remained above 20% for 5 minutes.

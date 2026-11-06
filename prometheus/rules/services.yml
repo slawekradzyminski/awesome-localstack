@@ -6,6 +6,7 @@ groups:
         for: 2m
         labels:
           severity: warning
+          alert_family: target-down
         annotations:
           summary: Prometheus scrape target is unavailable
           description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 2 minutes.
@@ -15,6 +16,7 @@ groups:
         for: 5m
         labels:
           severity: critical
+          alert_family: target-down
         annotations:
           summary: Prometheus scrape target is persistently unavailable
           description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 5 minutes.
@@ -44,6 +46,7 @@ groups:
         for: 2m
         labels:
           severity: warning
+          alert_family: public-probe
           service: public-edge
         annotations:
           summary: Public HTTPS endpoint probe is failing
@@ -54,6 +57,7 @@ groups:
         for: 5m
         labels:
           severity: critical
+          alert_family: public-probe
           service: public-edge
         annotations:
           summary: Public HTTPS endpoint is persistently unavailable
@@ -74,6 +78,7 @@ groups:
         for: 1h
         labels:
           severity: warning
+          alert_family: public-tls-expiry
           service: public-edge
         annotations:
           summary: Public TLS certificate expires within 21 days
@@ -84,6 +89,7 @@ groups:
         for: 15m
         labels:
           severity: critical
+          alert_family: public-tls-expiry
           service: public-edge
         annotations:
           summary: Public TLS certificate expires within 7 days
