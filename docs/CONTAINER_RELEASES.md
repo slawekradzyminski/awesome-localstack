@@ -132,6 +132,24 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Frontend 3.9.3 data-testid coverage — 7 November 2026
+
+Frontend 3.9.3 (`a9ecc11`) ships
+[PR #87](https://github.com/slawekradzyminski/vite-react-frontend/pull/87).
+It adds the missing `data-testid`s on Admin Inventory, the two-factor security
+panel, the WebMCP lab and a few smaller controls. A unit test now fails when a
+button, link, form control, form or alert has none. The PR also fixes a race in
+which an agent search could restore the product category it had just cleared.
+No existing test ID was renamed. No backend, consumer, model-mock, database or
+secret change is required.
+
+The [release workflow](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42366228943)
+passed validation, three browser shards, image verification and publication
+for `linux/amd64` and `linux/arm64`.
+
+Previous frontend reference for rollback:
+`slawekradzyminski/frontend:3.9.2@sha256:03f85c1195381927f4a7fb0f1db424680327555e8cc4f2664878327d3042e545`.
+
 ## Frontend 3.9.2 accessibility and training fixes — 7 November 2026
 
 Frontend 3.9.2 (`d13b94e`) combines three merged changes:
@@ -232,7 +250,7 @@ approved restart; production PostgreSQL is independent and preserved.
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8` |
-| Frontend | `slawekradzyminski/frontend:3.9.2@sha256:03f85c1195381927f4a7fb0f1db424680327555e8cc4f2664878327d3042e545` |
+| Frontend | `slawekradzyminski/frontend:3.9.3@sha256:e573282a98e98c19055ff865edfb027d286648a61086a0a5837005af6a2885ed` |
 | Consumer | `slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
 
