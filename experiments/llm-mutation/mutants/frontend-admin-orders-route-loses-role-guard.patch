@@ -1,0 +1,11 @@
+--- a/src/AppRoutes.tsx
++++ b/src/AppRoutes.tsx
+@@ -204,7 +204,7 @@
+       <Route
+         path="/admin/orders"
+         element={
+-          <ProtectedRoute requiredRole="ADMIN">
++          <ProtectedRoute>
+             <AdminOrdersPage />
+           </ProtectedRoute>
+         }

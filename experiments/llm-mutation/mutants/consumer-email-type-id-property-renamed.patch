@@ -1,0 +1,13 @@
+diff --git a/src/main/java/com/awesome/testing/listener/JmsConfig.java b/src/main/java/com/awesome/testing/listener/JmsConfig.java
+index 6d635a3..35ed726 100644
+--- a/src/main/java/com/awesome/testing/listener/JmsConfig.java
++++ b/src/main/java/com/awesome/testing/listener/JmsConfig.java
+@@ -31,7 +31,7 @@ public class JmsConfig {
+     public MessageConverter jacksonJmsMessageConverter() {
+         JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
+         converter.setTargetType(MessageType.TEXT);
+-        converter.setTypeIdPropertyName("_awesome_");
++        converter.setTypeIdPropertyName("_type");
+         converter.setTypeIdMappings(Map.of(
+             "EmailDTO", EmailDto.class,
+             "com.awesome.testing.dto.email.EmailDTO", EmailDto.class

@@ -1,0 +1,14 @@
+--- a/src/main/java/com/awesome/testing/security/oidc/OidcTokenVerifier.java
++++ b/src/main/java/com/awesome/testing/security/oidc/OidcTokenVerifier.java
+@@ -59,10 +59,7 @@
+                 ? NimbusJwtDecoder.withJwkSetUri(ssoProperties.getJwkSetUri()).build()
+                 : JwtDecoders.fromIssuerLocation(ssoProperties.getIssuerUri());
+         if (decoder instanceof NimbusJwtDecoder nimbusJwtDecoder) {
+-            nimbusJwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+-                    JwtValidators.createDefaultWithIssuer(ssoProperties.getIssuerUri()),
+-                    audienceValidator()
+-            ));
++            nimbusJwtDecoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(ssoProperties.getIssuerUri()));
+         }
+         return decoder;
+     }

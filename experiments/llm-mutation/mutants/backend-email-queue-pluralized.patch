@@ -1,0 +1,69 @@
+diff --git a/src/main/resources/application-aitesters.yml b/src/main/resources/application-aitesters.yml
+index a0cbb9c..d32adca 100644
+--- a/src/main/resources/application-aitesters.yml
++++ b/src/main/resources/application-aitesters.yml
+@@ -22,7 +22,7 @@ spring:
+       indent-output: false
+ 
+ activemq:
+-  destination: email
++  destination: emails
+ 
+ server:
+   port: 4001
+diff --git a/src/main/resources/application-docker.yml b/src/main/resources/application-docker.yml
+index a24a77d..4ccba40 100644
+--- a/src/main/resources/application-docker.yml
++++ b/src/main/resources/application-docker.yml
+@@ -32,7 +32,7 @@ spring:
+       indent-output: true
+ 
+ activemq:
+-  destination: email
++  destination: emails
+ 
+ server:
+   port: 4001
+diff --git a/src/main/resources/application-local.yml b/src/main/resources/application-local.yml
+index 5b5d7dc..6245fe3 100644
+--- a/src/main/resources/application-local.yml
++++ b/src/main/resources/application-local.yml
+@@ -23,7 +23,7 @@ spring:
+       indent-output: true
+ 
+ activemq:
+-  destination: email
++  destination: emails
+ 
+ server:
+   port: 4001
+diff --git a/src/test/resources/application-test.yml b/src/test/resources/application-test.yml
+index 8be4216..61063ae 100644
+--- a/src/test/resources/application-test.yml
++++ b/src/test/resources/application-test.yml
+@@ -20,7 +20,7 @@ spring:
+     mode: embedded
+     embedded:
+       enabled: true
+-      queues: email
++      queues: emails
+       persistent: false
+     broker-url: vm://0
+     user: admin
+@@ -28,14 +28,14 @@ spring:
+   jms:
+     pub-sub-domain: false
+     template:
+-      default-destination: email
++      default-destination: emails
+       receive-timeout: 2000
+   main:
+     allow-bean-definition-overriding: true
+     banner-mode: "off"
+ 
+ activemq:
+-  destination: email
++  destination: emails
+ 
+ server:
+   port: 0
