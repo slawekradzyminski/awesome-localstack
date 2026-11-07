@@ -158,6 +158,26 @@ for `linux/amd64` and `linux/arm64`; the manifest list digest matches Docker Hub
 Previous frontend reference for rollback:
 `slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17`.
 
+### Production rollout — 7 November 2026
+
+[Stack CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/42356466870)
+passed all eight jobs on the pinned set. The same PR fixed `verifyOllamaConfig`,
+which still expected ollama-mock 1.0.9 after the 22 October release moved every
+profile to 1.0.11. `make ansible-deploy` created the encrypted pre-deploy
+PostgreSQL backup and completed 118 tasks with 14 changes, zero failures and
+zero unreachable hosts; the playbook's verification passed and the warning
+silences expired. No backend, database or secret change was made.
+
+External checks passed on both `awesome.byst.re` and `aitesters.byst.re`: `/`,
+`/login`, `/products`, `/qr` and `/webmcp` return 200 and serve the 3.9.2
+bundle. A headless 390px browser saw an anonymous deep link redirect to
+`/login?returnTo=%2Fproducts%2F7%3Fref%3Dsmoke`, the page title
+"Sign in – Awesome Testing" with an `h1`, `username`/`current-password`
+autocomplete, a field-linked validation error, no page errors and no horizontal
+overflow. The checks did not sign in or write data. The deployment log is
+saved privately in
+`~/.config/awesome-localstack-security/deploy-frontend-3.9.2-20261107.log`.
+
 ## Source-owned security image releases — 22 October 2026
 
 Final releases are backend 3.9.4 (`fd4c015`), frontend 3.9.1 (`607fe6b`),
