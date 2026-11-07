@@ -45,7 +45,7 @@ services:
           create_host_path: false
 
   frontend:
-    image: slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17
+    image: slawekradzyminski/frontend:3.9.2@sha256:03f85c1195381927f4a7fb0f1db424680327555e8cc4f2664878327d3042e545
     restart: always
     expose:
       - "80"

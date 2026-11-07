@@ -132,6 +132,32 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Frontend 3.9.2 accessibility and training fixes — 7 November 2026
+
+Frontend 3.9.2 (`d13b94e`) combines three merged changes:
+[PR #84](https://github.com/slawekradzyminski/vite-react-frontend/pull/84)
+(npm audit fixes and nginx 1.31.8),
+[PR #85](https://github.com/slawekradzyminski/vite-react-frontend/pull/85)
+(WCAG 2.2 AA fixes from the playwright-2026 BUG-004 report) and
+[PR #86](https://github.com/slawekradzyminski/vite-react-frontend/pull/86)
+(frontend bugs BUG-001, BUG-003, BUG-005 to BUG-007 and BUG-010 to BUG-013).
+The backend training bugs BUG-002, BUG-008 and BUG-009 are intentionally
+unchanged for the AI Testers course. No backend, consumer, model-mock, database
+or secret change is required.
+
+User-visible behaviour changes: `/login` and `/register` keep an existing
+session, protected routes pass `returnTo`, product filters live in the URL,
+prices use thousands separators, invalid product ids are not requested, cart
+stock comes from the cart payload, and the admin dashboard aggregates every
+order page and marks failed data as unavailable.
+
+The [release workflow](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42355655377)
+passed validation, three browser shards, image verification and publication
+for `linux/amd64` and `linux/arm64`; the manifest list digest matches Docker Hub.
+
+Previous frontend reference for rollback:
+`slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17`.
+
 ## Source-owned security image releases — 22 October 2026
 
 Final releases are backend 3.9.4 (`fd4c015`), frontend 3.9.1 (`607fe6b`),
@@ -186,7 +212,7 @@ approved restart; production PostgreSQL is independent and preserved.
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8` |
-| Frontend | `slawekradzyminski/frontend:3.9.1@sha256:b19566ee4bdf1fcd04baeb1c5d7cf967d902d39d999bc68951b02822ba90ee17` |
+| Frontend | `slawekradzyminski/frontend:3.9.2@sha256:03f85c1195381927f4a7fb0f1db424680327555e8cc4f2664878327d3042e545` |
 | Consumer | `slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
 
