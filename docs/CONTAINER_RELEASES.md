@@ -150,6 +150,20 @@ for `linux/amd64` and `linux/arm64`.
 Previous frontend reference for rollback:
 `slawekradzyminski/frontend:3.9.2@sha256:03f85c1195381927f4a7fb0f1db424680327555e8cc4f2664878327d3042e545`.
 
+### Production rollout — 7 November 2026
+
+[Stack CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/42366833611)
+passed all eight jobs on the pinned set. `make ansible-deploy` created the
+encrypted pre-deploy PostgreSQL backup and completed 118 tasks with 14 changes,
+zero failures and zero unreachable hosts; the playbook's verification passed.
+No backend, database or secret change was made.
+
+External checks passed on both `awesome.byst.re` and `aitesters.byst.re`: `/`,
+`/login`, `/products`, `/qr` and `/webmcp` return 200 and serve the 3.9.3
+bundle, which contains the new test IDs. The checks did not sign in or write
+data. The deployment log is saved privately in
+`~/.config/awesome-localstack-security/deploy-frontend-3.9.3-20261107.log`.
+
 ## Frontend 3.9.2 accessibility and training fixes — 7 November 2026
 
 Frontend 3.9.2 (`d13b94e`) combines three merged changes:
