@@ -694,6 +694,217 @@
         "python3",
         "scripts/verify-java-security.py"
       ]
+    },
+    {
+      "id": "backend-oidc-drops-audience-validation",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-oidc-drops-audience-validation.patch",
+      "description": "Simplify the OIDC decoder to the default issuer validator and lose the custom audience check.",
+      "contract": "An SSO ID token is accepted only when it is signed by the trusted JWK set, issued by the configured issuer, unexpired, and addressed to the configured audience.",
+      "observableDifference": "A correctly signed token issued for another client is accepted instead of returning HTTP 401.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dskip.jacoco=true",
+        "-Dtest=OidcTokenVerifierJwksTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-traffic-legacy-access-opens-session-topics",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-traffic-legacy-access-opens-session-topics.patch",
+      "description": "Generalize legacy anonymous traffic access from the global topic to every traffic topic prefix.",
+      "contract": "Legacy public access may open only /topic/traffic; per-browser-session topics always require an authenticated, bound session.",
+      "observableDifference": "An anonymous STOMP client subscribes to another browser's /topic/traffic/<session> stream.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dskip.jacoco=true",
+        "-Dtest=TrafficWebSocketAuthorizationInterceptorTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-outbox-key-optional-when-absent",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-outbox-key-optional-when-absent.patch",
+      "description": "Treat X-Local-Outbox-Key as optional by validating it only when the header is supplied.",
+      "contract": "When protected outbox access is enabled, every outbox read or clear requires an administrator and the exact configured access key.",
+      "observableDifference": "An administrator without X-Local-Outbox-Key receives the outbox instead of HTTP 403.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dskip.jacoco=true",
+        "-Dtest=LocalEmailOutboxControllerTest",
+        "test"
+      ]
+    },
+    {
+      "id": "frontend-admin-orders-route-loses-role-guard",
+      "component": "frontend",
+      "repository": "../vite-react-frontend",
+      "patch": "mutants/frontend-admin-orders-route-loses-role-guard.patch",
+      "description": "Keep the sign-in guard on /admin/orders but drop its ADMIN role requirement.",
+      "contract": "Every /admin route must render only for users with the ADMIN role; a signed-in client is sent home.",
+      "observableDifference": "A client opening /admin/orders sees the admin orders page instead of being redirected to the home page.",
+      "compile": [
+        "npm",
+        "exec",
+        "--",
+        "tsc",
+        "-b",
+        "--pretty",
+        "false"
+      ],
+      "test": [
+        "npm",
+        "test",
+        "--",
+        "--run",
+        "src/AppRoutes.test.tsx"
+      ]
+    },
+    {
+      "id": "backend-email-queue-pluralized",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-email-queue-pluralized.patch",
+      "description": "Rename the email queue to 'emails' consistently across every backend profile, including the test profile.",
+      "contract": "test-secure-backend publishes email events to the 'email' queue that jms-email-consumer listens on by default.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsProducerContractTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-email-message-field-renamed",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-email-message-field-renamed.patch",
+      "description": "Serialize EmailDto.message as 'body' on the wire, as a REST-style naming cleanup.",
+      "contract": "The JMS email payload carries to, subject, message, template and properties under the names the consumer's EmailDto binds.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsProducerContractTest",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-email-type-id-simple-name",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-email-type-id-simple-name.patch",
+      "description": "Write the simple class name 'EmailDto' into the _awesome_ type header instead of the fully qualified name.",
+      "contract": "The _awesome_ header carries a type identifier the consumer resolves to its EmailDto; the consumer maps only EmailDTO aliases and otherwise loads the FQCN.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsProducerContractTest",
+        "test"
+      ]
+    },
+    {
+      "id": "consumer-email-queue-pluralized",
+      "component": "consumer",
+      "repository": "../jms-email-consumer",
+      "patch": "mutants/consumer-email-queue-pluralized.patch",
+      "description": "Change the default listener destination to 'emails'.",
+      "contract": "Without an ACTIVEMQ_DESTINATION override the consumer listens on the 'email' queue the backend publishes to.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsBrokerContractTest",
+        "test"
+      ]
+    },
+    {
+      "id": "consumer-email-message-field-renamed",
+      "component": "consumer",
+      "repository": "../jms-email-consumer",
+      "patch": "mutants/consumer-email-message-field-renamed.patch",
+      "description": "Bind EmailDto.message from a 'body' JSON property.",
+      "contract": "The consumer binds every producer payload field, including message, under the backend's names.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsBrokerContractTest",
+        "test"
+      ]
+    },
+    {
+      "id": "consumer-email-type-id-property-renamed",
+      "component": "consumer",
+      "repository": "../jms-email-consumer",
+      "patch": "mutants/consumer-email-type-id-property-renamed.patch",
+      "description": "Read the JMS type identifier from a '_type' property instead of '_awesome_'.",
+      "contract": "The consumer reads the type identifier from the _awesome_ header the backend writes.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailJmsBrokerContractTest",
+        "test"
+      ]
     }
   ]
 }

@@ -76,3 +76,49 @@ All four baseline copies passed, every mutant compiled, and the focused tests
 killed each mutant. Raw records are in
 [`results/inventory-backend.json`](./results/inventory-backend.json) and
 [`results/inventory-frontend.json`](./results/inventory-frontend.json).
+
+## JMS email broker contract (2026-11-07)
+
+Generator: Claude (test-aware, white-box). Scope: the email event that
+`test-secure-backend` publishes and `jms-email-consumer` consumes. Before this
+change both sides mocked JMS (`EmailServiceTest`, `EmailConsumerTest`), so a
+destination, type-header or payload rename on either side passed both suites.
+
+New tests share one fixture, `src/test/resources/contracts/email-jms-contract.json`,
+kept byte-identical in both repositories:
+
+- backend `EmailJmsProducerContractTest`: the real `EmailService` publishes the
+  fixture's email to the embedded Artemis broker; the raw `TextMessage` on the
+  fixture's queue must carry the fixture's `_awesome_` type id and a JSON body
+  equal to the fixture payload. It also checks `activemq.destination` in
+  `application-docker.yml`, the profile awesome-localstack runs.
+- consumer `EmailJmsBrokerContractTest`: a Testcontainers `apache/artemis:2.55.0`
+  broker (the compose image) receives the fixture through the backend's Artemis
+  core client; the application's own OpenWire listener, converter and default
+  destination must bind the full `EmailDto` and send the rendered email.
+
+| Mutant | Initial | After strengthening | Contract |
+| --- | --- | --- | --- |
+| backend queue renamed to `emails` in every profile | killed | killed | publish to the queue the consumer listens on |
+| backend serializes `message` as `body` | killed | killed | payload field names match the consumer's DTO |
+| backend type header uses the simple class name | killed | killed | `_awesome_` carries an id the consumer resolves |
+| consumer default destination renamed to `emails` | killed | killed | listen on the queue the backend publishes to |
+| consumer binds `message` from `body` | survived | killed | every producer field is bound, not only rendered ones |
+| consumer reads the type id from `_type` | killed | killed | read the header the backend writes |
+
+Invalid: 0 (all six baselines passed and every mutant compiled). Equivalent: 0.
+The survivor was meaningful: the fixture uses `PASSWORD_RESET_REQUESTED`,
+whose rendering ignores `subject` and `message`, so asserting only the sent
+email missed a rename that would blank every `GENERIC` email from `/email`.
+The consumer test now also compares the bound `EmailDto` with the fixture.
+
+Residual risk: the two fixture copies can drift if one repository edits its
+copy alone; keep them identical (`cmp` the two files) when changing the
+contract. The run used temporary manifest paths pointing at feature
+worktrees; `manifest.json` records the default sibling checkouts.
+
+Raw records:
+[`results/email-jms-contract-initial.json`](./results/email-jms-contract-initial.json)
+(5 killed / 1 survived) and
+[`results/email-jms-contract-after-strengthening.json`](./results/email-jms-contract-after-strengthening.json)
+(6 killed / 0 survived).

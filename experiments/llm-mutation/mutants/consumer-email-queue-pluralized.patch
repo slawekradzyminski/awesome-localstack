@@ -1,0 +1,13 @@
+diff --git a/src/main/resources/application.yml b/src/main/resources/application.yml
+index 54dc93c..746400e 100644
+--- a/src/main/resources/application.yml
++++ b/src/main/resources/application.yml
+@@ -9,7 +9,7 @@ spring:
+     port: ${SPRING_MAIL_PORT:1025}
+ 
+ activemq:
+-  destination: ${ACTIVEMQ_DESTINATION:email}
++  destination: ${ACTIVEMQ_DESTINATION:emails}
+ 
+ email:
+   from: ${EMAIL_FROM:awesome@testing.com}
