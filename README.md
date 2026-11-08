@@ -18,8 +18,9 @@ For the local SSO flow, standard-login comparison, and local credentials, see [d
 For repository-owned image publishing and the complete four-image compatibility
 set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
 
-For the coupon, review, wishlist, CSV, warehouse fulfilment, returns and
-purchasing training features (pending release), see
+For the coupon, review, wishlist, CSV, idempotent checkout and conditional
+update training features (pending release; warehouse fulfilment, returns and
+purchasing follow in a later release), see
 [docs/COMMERCE_FULFILMENT.md](docs/COMMERCE_FULFILMENT.md).
 
 For the empirical mutation-testing results and the workflow used by coding

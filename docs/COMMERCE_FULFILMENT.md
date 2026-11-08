@@ -1,4 +1,4 @@
-# Commerce and warehouse fulfilment training features
+# Commerce training features
 
 > **Status: pending release.** The features below live on the
 > `feature/commerce-fulfilment` branches of `test-secure-backend`,
@@ -7,9 +7,18 @@
 > endpoints or screens until the new images are released and pinned. The
 > release checklist at the end lists what to update here at that point.
 
-All features run inside the existing backend and frontend containers. No new
-service is added, so the memory budget of every profile, including the
-4.25 GiB production VPS, is unchanged.
+The commerce work ships in two waves:
+
+1. **Wave 1 (this page): shop features.** Coupons, reviews, wishlist, product
+   CSV, idempotent checkout, conditional product updates, and the `warehouse`
+   demo user with `ROLE_WAREHOUSE`. They run inside the existing backend and
+   frontend containers. No new service is added, so the memory budget of every
+   profile, including the 4.25 GiB production VPS, is unchanged.
+2. **Wave 2: warehouse fulfilment, returns and purchasing.** Shipments, the
+   pick/pack/ship workflow, returns (RMA), suppliers, purchase orders and
+   reorder suggestions arrive with the separate `warehouse-service` in a later
+   release. Until then the `warehouse` user can sign in, but the warehouse,
+   returns and purchasing screens and endpoints are not available.
 
 The backend design and every business rule are documented in
 [`test-secure-backend/docs/COMMERCE_AND_FULFILMENT.md`](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/COMMERCE_AND_FULFILMENT.md).
@@ -24,17 +33,19 @@ The backend design and every business rule are documented in
 | Product CSV | `/admin/products` CSV panel | `/api/v1/admin/products/export`, `/api/v1/admin/products/import` | File upload and download, all-or-nothing validation, dry run, CSV formula injection |
 | Idempotent checkout | Checkout | `POST /api/v1/orders` with `Idempotency-Key` | Safe retries, replay header, conflicting reuse, per-user scope |
 | Conditional updates | Admin product form | `GET/PUT /api/v1/products/{id}` with `ETag`, `If-None-Match`, `If-Match` | 304, 412 lost-update protection |
-| Warehouse | `/warehouse` (warehouse or admin role) | `/api/v1/warehouse/**`, `GET /api/v1/orders/{id}/shipment` | State machine, carrier-specific tracking formats, role-based access, cancellation rules |
-| Returns | Order page return form, `/returns`, `/admin/returns` | `/api/v1/orders/{id}/returns`, `/api/v1/returns`, `/api/v1/admin/returns` | 30-day window, returnable quantities, restocking, proportional refunds with coupons |
-| Purchasing | `/admin/purchasing` | `/api/v1/admin/suppliers`, `/api/v1/admin/purchase-orders`, `/api/v1/admin/inventory/reorder-suggestions` | Partial receipts, over-receipt, receipt idempotency, reorder arithmetic |
+| Warehouse role | Sign-in as `warehouse` | `POST /api/v1/users/signin` | Role claims in the access token; admin-only endpoints return 403 for the warehouse role |
 
-A typical end-to-end scenario touches every role:
+A typical end-to-end scenario:
 
-1. `client` adds products, applies `WELCOME10` and checks out.
-2. `admin` marks the order `PAID`.
-3. `warehouse` releases, picks, packs and ships it with a valid tracking number, then confirms delivery.
-4. `client` reviews the product and opens a return.
-5. `admin` moderates the review, approves, receives and refunds the return; resellable stock comes back.
+1. `client` adds products, applies `WELCOME10` and checks out with an
+   `Idempotency-Key`, then retries the same request safely.
+2. `admin` marks the order `PAID`, then `DELIVERED` through the existing
+   status endpoint.
+3. `client` reviews the product and adds an out-of-stock item to the wishlist.
+4. `admin` moderates the review and restocks the wishlisted product; the
+   back-in-stock email arrives.
+
+Shipping, returns and purchasing scenarios join this flow in wave 2.
 
 ## Demo data
 
@@ -43,8 +54,9 @@ the full profile) add:
 
 - user `warehouse` / `warehouse` with `ROLE_WAREHOUSE`;
 - coupons `WELCOME10` (10 % from 50.00), `SAVE50` (50.00 off from 300.00,
-  100 uses), `EXPIRED20` (expired) and `SPRING25` (starts in a week);
-- suppliers `Nordic Electronics` (7-day lead time) and `Baltic Gadgets` (14 days).
+  100 uses), `EXPIRED20` (expired) and `SPRING25` (starts in a week).
+
+Demo suppliers arrive with warehouse-service in wave 2.
 
 The server profile does not seed demo data.
 
@@ -62,7 +74,7 @@ The server profile does not seed demo data.
   exposes `ETag`, `Idempotent-Replayed` and `Content-Disposition`; requests
   through the gateway are same-origin and unaffected.
 
-## Release checklist for this repository
+## Release checklist for this repository (wave 1)
 
 1. Release `jms-email-consumer` first (it tolerates unknown templates), then
    `test-secure-backend`, then `vite-react-frontend` with its OpenAPI snapshot
@@ -72,5 +84,7 @@ The server profile does not seed demo data.
 3. Add `warehouse` / `warehouse` to the demo user lists in `README.md`,
    `docs/STUDENT_GUIDE.md` and `docs/SSO_FLOW.md`, and remove the status note
    at the top of this page.
-4. Verify through the gateway: `/warehouse` as `warehouse`,
+4. Verify through the gateway: sign-in as `warehouse`,
    `GET /api/v1/admin/coupons` as `admin`, and a CSV export download.
+
+Wave 2 (warehouse-service) has its own deployment notes and checklist.

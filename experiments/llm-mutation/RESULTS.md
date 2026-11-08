@@ -151,3 +151,12 @@ once the feature branch is merged.
 Raw record:
 [`results/commerce-fulfilment-2026-11-08.json`](./results/commerce-fulfilment-2026-11-08.json)
 (3 killed).
+
+**Moved to warehouse-service.** Returns, refunds and shipment cancellation
+leave the backend for the new `warehouse-service` (see
+`docs/WAREHOUSE_SERVICE_CONTRACT.md` on the warehouse-service branch). The
+"refund ignores the coupon discount" and "customer cancels a picked shipment"
+mutants therefore no longer apply to `test-secure-backend`: their patches and
+manifest entries are removed, and they will be re-authored against
+warehouse-service. The raw record above keeps the original 3-killed run; only
+the idempotency-key mutant remains active for the backend.
