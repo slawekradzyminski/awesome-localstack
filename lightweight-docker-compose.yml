@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.10.1@sha256:45ac5391eadfd41e1a4df010700bd6073d1d16bcec0fec2b50fe4f2bea3cf8c0
+    image: slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d
     restart: always
     expose:
       - "4001"
@@ -18,6 +18,10 @@ services:
       APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
       APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
+      # Shared with warehouse-service: it validates backend-issued access tokens
+      # and authenticates to the backend internal API with the service token.
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
+      WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
     depends_on:
       - keycloak
     healthcheck:
@@ -44,8 +48,82 @@ services:
         bind:
           create_host_path: false
 
+  warehouse-service:
+    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    restart: always
+    expose:
+      - "4003"
+    hostname: warehouse-service
+    environment:
+      # The native image is Postgres-only, so the lightweight profile gives it
+      # a small dedicated database; demo seeds the training suppliers.
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://warehouse-postgres:5432/warehouse?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SPRING_DATASOURCE_PASSWORD: warehouse
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      BACKEND_BASE_URL: http://backend:4001
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
+      WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
+    depends_on:
+      backend:
+        condition: service_healthy
+      warehouse-postgres:
+        condition: service_healthy
+    mem_limit: 160m
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4003;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks:
+      - my-private-ntwk
+
+  warehouse-postgres:
+    # Minimal Postgres for warehouse-service only; tuned for a ~96 MB footprint.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    restart: always
+    environment:
+      POSTGRES_DB: warehouse
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - max_connections=10
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=48MB
+    expose:
+      - "5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    mem_limit: 96m
+    shm_size: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d warehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - my-private-ntwk
+
   frontend:
-    image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
+    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
     restart: always
     expose:
       - "80"

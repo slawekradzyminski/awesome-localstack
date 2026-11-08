@@ -18,6 +18,7 @@ PRODUCTION_SERVICES = (
     "frontend",
     "consumer",
     "ollama-mock",
+    "warehouse-service",
 )
 SERVICE_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
 SERVICE_KEY = re.compile(r"^    ([A-Za-z0-9_-]+):\s*$")
@@ -70,6 +71,17 @@ def declared_env_files(service: str, compose_file: Path = ROOT / "docker-compose
         if short_match:
             files.append(Path(short_match.group(1)).name)
     return files
+
+
+def gateway_warehouse_upstreams(config: Path) -> dict[str, str]:
+    """Map each server block's first server_name to its $warehouse_upstream."""
+    upstreams: dict[str, str] = {}
+    for block in re.split(r"^server \{", config.read_text(), flags=re.MULTILINE)[1:]:
+        name = re.search(r"^\s*server_name\s+([^\s;]+)", block, flags=re.MULTILINE)
+        upstream = re.findall(r"^\s*set \$warehouse_upstream\s+([^\s;]+);", block, flags=re.MULTILINE)
+        if name:
+            upstreams[name.group(1)] = upstream[0] if len(upstream) == 1 else ",".join(upstream)
+    return upstreams
 
 
 def compose_images(*files: str) -> dict[str, str]:
@@ -126,13 +138,13 @@ def main() -> int:
         )
         release_images[service] = image
 
-    for service in ("backend", "frontend", "consumer"):
+    for service in ("backend", "frontend", "consumer", "warehouse-service"):
         require(
             full.get(service) == release_images[service],
             f"full and server profiles must use the same {service} release",
             failures,
         )
-    for service in ("backend", "frontend", "ollama-mock"):
+    for service in ("backend", "frontend", "ollama-mock", "warehouse-service"):
         require(
             lightweight.get(service) == release_images[service],
             f"lightweight and server profiles must use the same {service} release",
@@ -146,6 +158,11 @@ def main() -> int:
     require(
         server.get("aitesters-frontend") == release_images["frontend"],
         "the aitesters frontend must reuse the current frontend release",
+        failures,
+    )
+    require(
+        server.get("aitesters-warehouse-service") == release_images["warehouse-service"],
+        "the aitesters warehouse-service must reuse the current warehouse-service release",
         failures,
     )
     require(
@@ -204,6 +221,31 @@ def main() -> int:
         and "JWT_SECRET_KEY" not in server_services["aitesters-backend"].get("environment", {}),
         f"sandbox must use its own runtime env file instead of the stable signing key "
         f"(sandbox files: {sandbox_env_files}, stable files: {stable_env_files})",
+        failures,
+    )
+
+    sandbox_warehouse_env_files = declared_env_files("aitesters-warehouse-service")
+    require(
+        sandbox_warehouse_env_files == [".env.aitesters-warehouse"]
+        and ".env.aitesters-warehouse" not in declared_env_files("warehouse-service")
+        and not {"JWT_SECRET_KEY", "WAREHOUSE_SERVICE_TOKEN"}
+        & set(server_services["aitesters-warehouse-service"].get("environment", {})),
+        "the sandbox warehouse-service must use its own runtime env file instead of the stable "
+        f"signing key and service token (files: {sandbox_warehouse_env_files})",
+        failures,
+    )
+    require(
+        server_services["aitesters-warehouse-service"].get("environment", {}).get("BACKEND_BASE_URL")
+        == "http://aitesters-backend:4001",
+        "the sandbox warehouse-service must call the sandbox backend",
+        failures,
+    )
+
+    gateway_upstreams = gateway_warehouse_upstreams(ROOT / "nginx" / "conf.d" / "app-gateway.conf")
+    require(
+        gateway_upstreams.get("awesome.byst.re") == "http://warehouse-service:4003"
+        and gateway_upstreams.get("aitesters.byst.re") == "http://aitesters-warehouse-service:4003",
+        f"each gateway host must route warehouse paths to its own warehouse-service: {gateway_upstreams}",
         failures,
     )
 

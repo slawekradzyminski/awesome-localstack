@@ -339,6 +339,7 @@ The critical-service list should include at least:
 
 - `backend`;
 - `consumer`;
+- `warehouse-service`;
 - `gateway`;
 - `edge`;
 - `postgres`;
@@ -400,8 +401,10 @@ must be reviewed after controlled load tests or material traffic growth:
 | Service | JVM target | Container limit |
 | --- | --- | --- |
 | `backend` | `-Xms256m -Xmx896m` | 1.5 GiB |
-| `consumer` | `-Xms192m -Xmx768m` | 1.125 GiB |
+| `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
 | `aitesters-backend` | Existing percentage-based limit | Existing 768 MiB |
+| `warehouse-service`, `aitesters-warehouse-service` | `-Xmx64m` runtime argument (GraalVM native image, ~58 MiB RSS measured) | 160 MiB each |
+| `aitesters-warehouse-postgres` | Not applicable (tmpfs, `shared_buffers=16MB`, ~69 MiB measured) | 96 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
 | `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
 | `grafana` | Not applicable | 640 MiB |
@@ -471,7 +474,8 @@ Do not restart services based solely on a high provider-style RAM percentage.
 The on-VPS Blackbox Exporter monitors:
 
 - `https://awesome.byst.re/login`;
-- `https://awesome.byst.re/v3/api-docs`.
+- `https://awesome.byst.re/v3/api-docs`;
+- `https://awesome.byst.re/warehouse/v3/api-docs`.
 
 The VPS should eventually send a heartbeat every minute to a separate external
 endpoint. Missing heartbeats for five minutes must generate an off-server

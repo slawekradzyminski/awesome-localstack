@@ -25,8 +25,11 @@ That gateway is the intended public surface for:
 
 - frontend pages
 - backend API under `/api/v1/...`
+- warehouse-service API under its `/api/v1/...` paths (see
+  [Warehouse-service routes](#warehouse-service-routes))
 - Swagger UI under `/swagger-ui/...`
-- OpenAPI under `/v3/api-docs`
+- OpenAPI under `/v3/api-docs` (backend) and `/warehouse/v3/api-docs`
+  (warehouse-service)
 - actuator under `/actuator/...`
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
@@ -40,6 +43,8 @@ flowchart LR
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
+    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003, H2]
+    W -->|/internal/v1| B
     B --> O[Ollama Mock 11434]
 ```
 
@@ -50,6 +55,9 @@ flowchart LR
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
+    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003]
+    W -->|/internal/v1| B
+    W --> DB
     B --> DB[(Postgres 5432)]
     B --> MQ[ActiveMQ 8161/61616/5672]
     MQ --> C[Consumer 4002]
@@ -57,6 +65,7 @@ flowchart LR
     B --> O[Ollama 11434]
     P[Prometheus 9090] --> B
     P --> C
+    P --> W
     GR[Grafana 3000] --> P
     GR --> I[InfluxDB 8086]
 ```
@@ -70,6 +79,9 @@ flowchart LR
 
     G -->|awesome.byst.re| F[Frontend]
     G -->|awesome.byst.re /api| B[Backend<br/>docker,server profile]
+    G -->|awesome.byst.re warehouse paths| W[Warehouse Service<br/>internal, 160 MiB]
+    W -->|/internal/v1| B
+    W -->|schema warehouse| DB
     B --> DB[(Postgres internal)]
     B --> MQ[ActiveMQ internal]
     MQ --> C[Consumer internal]
@@ -108,6 +120,7 @@ Recommended app URLs:
 - frontend: `http://localhost:8081/login`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
 - Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
@@ -134,6 +147,7 @@ Published host ports:
 What is internal only:
 
 - backend raw port `4001`
+- warehouse-service raw port `4003`
 - frontend raw port `80`
 
 ## Lightweight Profile
@@ -159,6 +173,7 @@ Recommended app URLs:
 - frontend: `http://localhost:8081/login`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
 - Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
@@ -211,6 +226,7 @@ For the full SSO flow and the difference between password login and SSO, see [SS
 What is internal only:
 
 - backend raw port `4001`
+- warehouse-service raw port `4003`
 - frontend raw port `80`
 
 ## Server Profile
@@ -238,6 +254,7 @@ Stable public playground:
 - frontend: `https://awesome.byst.re/login`
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
+- warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - authenticated email events: `https://awesome.byst.re/api/v1/users/me/email-events`
 - images through gateway: `https://awesome.byst.re/images/iphone.png`
@@ -295,6 +312,7 @@ Not published on the host:
 - ActiveMQ JMS `61616`
 - consumer `4002`
 - backend `4001`
+- warehouse-service `4003`
 - Prometheus `9090`
 - Alertmanager `9093`
 - Blackbox Exporter `9115`
@@ -317,8 +335,14 @@ Special behavior:
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus
-- Blackbox Exporter probes the public login and OpenAPI URLs every 30 seconds
-  through public DNS and validated TLS
+- Blackbox Exporter probes the public login, backend OpenAPI and
+  warehouse-service OpenAPI URLs every 30 seconds through public DNS and
+  validated TLS
+- warehouse fulfilment, returns and purchasing exist only on `awesome.byst.re`;
+  `aitesters.byst.re` has no warehouse-service, so those paths fall through to
+  the sandbox backend there
+- `/internal/` returns `404` on every host; the backend internal API is reachable
+  only from warehouse-service on the Compose network
 - Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
 - Alertmanager stores silences and notification state in a named volume and
   sends grouped notifications to a Vault-configured Telegram chat; a firing
@@ -332,9 +356,12 @@ Special behavior:
 
 ### Local Gateway
 
-`nginx/conf.d/lightweight-app-gateway.conf` handles:
+`nginx/conf.d/lightweight-app-gateway.conf` (used by the lightweight and full
+profiles) handles:
 
 - `/api/v1/ws-traffic` -> backend
+- [warehouse-service routes](#warehouse-service-routes) -> warehouse-service
+- `/internal/` -> `404`
 - `/api/v1/` -> backend
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
@@ -349,6 +376,8 @@ Special behavior:
 For `awesome.byst.re`:
 
 - `/api/v1/ws-traffic` -> backend
+- [warehouse-service routes](#warehouse-service-routes) -> warehouse-service
+- `/internal/` -> `404`
 - `/api/v1/` -> backend
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
@@ -360,12 +389,34 @@ For `awesome.byst.re`:
 For `aitesters.byst.re`:
 
 - `/api/v1/ws-traffic` -> aitesters-backend
+- `/internal/` -> `404`
 - `/api/v1/` -> aitesters-backend
 - `/swagger-ui/` -> aitesters-backend
 - `/v3/api-docs` -> aitesters-backend
 - `/actuator/` -> aitesters-backend
 - `/images/` -> gateway static files
 - `/` -> aitesters-frontend
+
+### Warehouse-service routes
+
+Both application gateways send these paths to `warehouse-service:4003`. They
+take precedence over the generic `/api/v1/` backend route:
+
+| Gateway location | Example |
+| --- | --- |
+| `/api/v1/warehouse/` | `/api/v1/warehouse/queue` |
+| `= /api/v1/returns`, `/api/v1/returns/` | `/api/v1/returns/7` |
+| `= /api/v1/admin/returns`, `/api/v1/admin/returns/` | `/api/v1/admin/returns/3/approve` |
+| `= /api/v1/admin/suppliers`, `/api/v1/admin/suppliers/` | `/api/v1/admin/suppliers/2` |
+| `= /api/v1/admin/purchase-orders`, `/api/v1/admin/purchase-orders/` | `/api/v1/admin/purchase-orders/9/receipts` |
+| `= /api/v1/admin/inventory/reorder-suggestions` | exact path only |
+| `~ ^/api/v1/orders/\d+/(shipment\|returns)$` | `/api/v1/orders/42/shipment` |
+| `^~ /warehouse/v3/api-docs` | rewritten to warehouse-service `/v3/api-docs` |
+
+`/warehouse` and `/warehouse/...` (other than the OpenAPI path) remain frontend
+routes. The gateway addresses warehouse-service through Docker DNS at request
+time, so it starts and keeps serving the backend when warehouse-service is
+absent; warehouse paths then return `502`.
 
 ## Verification Commands
 
@@ -374,9 +425,14 @@ Full local:
 ```bash
 curl -i http://localhost:8081/login
 curl -i http://localhost:8081/v3/api-docs
+curl -i http://localhost:8081/warehouse/v3/api-docs
+curl -i http://localhost:8081/internal/v1/orders/1
 curl -i http://localhost:8081/images/iphone.png
 curl -i http://localhost:8025/
+docker compose exec warehouse-service bash -c 'exec 3<>/dev/tcp/127.0.0.1/4003; printf "GET /actuator/health HTTP/1.0\r\n\r\n" >&3; cat <&3'
 ```
+
+The internal URL must return `404`; the other gateway URLs return `200`.
 
 Lightweight local:
 
@@ -415,6 +471,8 @@ Server:
 ```bash
 curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
+curl -i https://awesome.byst.re/warehouse/v3/api-docs
+curl -i https://awesome.byst.re/internal/v1/orders/1
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
@@ -427,6 +485,8 @@ Expected:
 
 - `awesome.byst.re/login` returns `200`
 - `awesome.byst.re/v3/api-docs` returns `200`
+- `awesome.byst.re/warehouse/v3/api-docs` returns `200`
+- `awesome.byst.re/internal/v1/orders/1` returns `404`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
@@ -440,6 +500,8 @@ Internal-only checks on the VPS:
 cd /opt/awesome-localstack
 docker compose -f docker-compose.server.yml exec backend curl -i http://backend:4001/actuator/health
 docker compose -f docker-compose.server.yml exec consumer curl -i http://consumer:4002/actuator/prometheus
+docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/actuator/health
+docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/v3/api-docs
 docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://cadvisor:8080/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://prometheus:9090/-/ready

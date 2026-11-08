@@ -8,11 +8,12 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.10.1@sha256:45ac5391eadfd41e1a4df010700bd6073d1d16bcec0fec2b50fe4f2bea3cf8c0
+    image: slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
     env_file:
+      # Supplies JWT_SECRET_KEY and WAREHOUSE_SERVICE_TOKEN from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -73,8 +74,134 @@ services:
         bind:
           create_host_path: false
 
+  warehouse-service:
+    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    restart: unless-stopped
+    hostname: warehouse-service
+    logging: *default-logging
+    env_file:
+      # Only JWT_SECRET_KEY, WAREHOUSE_SERVICE_TOKEN and SPRING_DATASOURCE_PASSWORD,
+      # rendered by Ansible from the same Vault values the backend receives.
+      - path: .env.warehouse
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: postgres
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      BACKEND_BASE_URL: http://backend:4001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    expose:
+      - "4003"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4003;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    command: ["-Xmx64m"]
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
+
+  aitesters-warehouse-service:
+    # The sandbox's own warehouse-service, paired with the in-memory aitesters-backend.
+    # It uses a tmpfs Postgres so both forget their data together on recreation.
+    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    restart: unless-stopped
+    hostname: aitesters-warehouse-service
+    logging: *default-logging
+    env_file:
+      # Only the sandbox JWT key, its own service token and its database password.
+      - path: .env.aitesters-warehouse
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-warehouse-postgres:5432/warehouse?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      BACKEND_BASE_URL: http://aitesters-backend:4001
+    depends_on:
+      aitesters-warehouse-postgres:
+        condition: service_healthy
+        restart: true
+      aitesters-backend:
+        condition: service_healthy
+        restart: true
+    expose:
+      - "4003"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4003;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    command: ["-Xmx64m"]
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
+  aitesters-warehouse-postgres:
+    # Minimal tmpfs Postgres for the sandbox warehouse only; tuned for a ~96 MB footprint.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    restart: unless-stopped
+    logging: *default-logging
+    env_file:
+      - path: .env.aitesters-warehouse-postgres
+        required: false
+    environment:
+      POSTGRES_DB: warehouse
+      POSTGRES_USER: warehouse
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - max_connections=10
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=48MB
+    expose:
+      - "5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    mem_limit: 96m
+    shm_size: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d warehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - my-private-ntwk
   frontend:
-    image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
+    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -84,7 +211,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.10.1@sha256:45ac5391eadfd41e1a4df010700bd6073d1d16bcec0fec2b50fe4f2bea3cf8c0
+    image: slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -145,7 +272,7 @@ services:
           create_host_path: false
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
+    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -397,14 +524,13 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.4.0@sha256:30cfbd3fdb861d7085c4c8a3ac9fbbc68ec9cd3c1d19befa196a155186cee297
+    image: slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0
     restart: unless-stopped
     logging: *default-logging
     env_file:
       - path: .env.runtime
         required: false
     environment:
-      JAVA_TOOL_OPTIONS: "-Xms192m -Xmx768m"
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
     expose:
@@ -417,16 +543,11 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    mem_limit: 1152m
+    # GraalVM native image (~70 MB RSS measured); the heap cap is a runtime argument.
+    command: ["-Xmx64m"]
+    mem_limit: 160m
     networks:
       - my-private-ntwk
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /opt/java/openjdk/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
 
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29

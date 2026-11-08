@@ -18,7 +18,7 @@
       - "{{ backend_upgrade_image }}"
   changed_when: false
 
-- name: Stop both old backend instances before applying incompatible migrations
+- name: Stop both old backend instances and warehouse-service before applying incompatible migrations
   ansible.builtin.command:
     argv:
       - docker
@@ -30,6 +30,7 @@
       - "60"
       - backend
       - aitesters-backend
+      - warehouse-service
     chdir: "{{ app_dir }}"
 
 - name: Create encrypted PostgreSQL backup after backend writes have stopped

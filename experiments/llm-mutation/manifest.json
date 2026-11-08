@@ -927,6 +927,46 @@
         "-Djacoco.skip=true",
         "test"
       ]
+    },
+    {
+      "id": "stack-sandbox-warehouse-reuses-stable-env",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-warehouse-reuses-stable-env.patch",
+      "description": "The sandbox warehouse-service must not read the stable warehouse runtime env file.",
+      "contract": "Stable-site JWTs and the stable service token must not authenticate at the aitesters warehouse-service.",
+      "compile": [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.server.yml",
+        "config",
+        "--quiet"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-release-images.py"
+      ]
+    },
+    {
+      "id": "stack-sandbox-gateway-routes-to-stable-warehouse",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-gateway-routes-to-stable-warehouse.patch",
+      "description": "The aitesters host must route warehouse paths to its own warehouse-service.",
+      "contract": "Warehouse requests on aitesters.byst.re reach aitesters-warehouse-service, never the stable warehouse-service.",
+      "compile": [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.server.yml",
+        "config",
+        "--quiet"
+      ],
+      "test": [
+        "python3",
+        "scripts/verify-release-images.py"
+      ]
     }
   ]
 }

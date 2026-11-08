@@ -3,6 +3,7 @@
 .env
 .env.runtime
 .env.aitesters
+.env.warehouse
 .playwright-cli
 GTP56_SOL_AUDIT.md
 ansible/.vault_pass

@@ -16,7 +16,6 @@
   loop:
     - backend
     - aitesters-backend
-    - consumer
     - ollama-mock
     - activemq
   register: java_security_runtime_check
@@ -307,6 +306,33 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify the direct warehouse-service routes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop:
+    - http://warehouse-service:4003/actuator/health
+    - http://warehouse-service:4003/v3/api-docs
+    - http://aitesters-warehouse-service:4003/actuator/health
+    - http://aitesters-warehouse-service:4003/v3/api-docs
+  register: verify_warehouse_direct
+  changed_when: false
+  until: verify_warehouse_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Read active Prometheus targets
   ansible.builtin.command:
     argv:
@@ -327,6 +353,7 @@
     expected_prometheus_jobs:
       - spring_backend_micrometer
       - spring_consumer_micrometer
+      - spring_warehouse_micrometer
       - node
       - cadvisor
       - alertmanager
@@ -366,6 +393,7 @@
   loop:
     - spring_backend_micrometer
     - spring_consumer_micrometer
+    - spring_warehouse_micrometer
     - node
     - cadvisor
     - alertmanager
@@ -494,7 +522,7 @@
   changed_when: false
   until:
     - public_probe_response.rc == 0
-    - ((public_probe_response.stdout | from_json).data.result | length) == 2
+    - ((public_probe_response.stdout | from_json).data.result | length) == 3
     - >-
       (
         (public_probe_response.stdout | from_json).data.result
@@ -590,8 +618,6 @@
   loop:
     - job: spring_backend_micrometer
       maximum_bytes: 939524096
-    - job: spring_consumer_micrometer
-      maximum_bytes: 805306368
   loop_control:
     label: "{{ item.job }}"
   register: jvm_maximum_heap_responses
@@ -613,6 +639,31 @@
   loop: "{{ jvm_maximum_heap_responses.results }}"
   loop_control:
     label: "{{ item.item.job }}"
+
+# GraalVM native images (consumer, warehouse-service) report an unknown (-1)
+# heap maximum, so their bound is checked on the running process arguments.
+- name: Read native-image runtime arguments
+  ansible.builtin.shell:
+    cmd: >-
+      docker inspect --format '{{ '{{json .Args}}' }}'
+      "$(docker compose -f {{ app_compose_file }} ps -q {{ item }})"
+    chdir: "{{ app_dir }}"
+  loop:
+    - consumer
+    - warehouse-service
+    - aitesters-warehouse-service
+  register: native_runtime_args
+  changed_when: false
+
+- name: Verify native-image heaps are bounded
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - "'-Xmx64m' in (item.stdout | from_json)"
+    fail_msg: "{{ item.item }} must run with -Xmx64m"
+  loop: "{{ native_runtime_args.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Verify the production resource dashboard is provisioned
   ansible.builtin.command:
@@ -708,6 +759,24 @@
     return_content: true
   register: verify_aitesters_openapi
   until: verify_aitesters_openapi.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify aitesters warehouse-service routes through gateway host routing
+  ansible.builtin.uri:
+    url: "http://127.0.0.1{{ item.path }}"
+    headers:
+      Host: "{{ aitesters_hostname }}"
+    status_code: "{{ item.status }}"
+  loop:
+    - path: /warehouse/v3/api-docs
+      status: 200
+    - path: /internal/v1/orders/1
+      status: 404
+  loop_control:
+    label: "{{ item.path }}"
+  register: verify_aitesters_warehouse
+  until: verify_aitesters_warehouse.status == item.status
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 

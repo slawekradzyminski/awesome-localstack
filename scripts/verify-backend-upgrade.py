@@ -20,7 +20,8 @@ def main():
     assert "when: backend_upgrade_quiesce | default(false) | bool" in playbook
     ordered(tasks, ["postgres_backup_enabled | bool", "postgres_backup_pre_deploy | bool",
                     "      - pull", "      - stop", "      - backend\n",
-                    "      - aitesters-backend", "awesome-postgres-backup backend-upgrade-quiesced"])
+                    "      - aitesters-backend", "      - warehouse-service",
+                    "awesome-postgres-backup backend-upgrade-quiesced"])
     assert "lookup('file', repo_root ~ '/' ~ app_compose_src)" in tasks
     assert "      - \"60\"" in tasks
     print("Coordinated backend upgrade contract verified")

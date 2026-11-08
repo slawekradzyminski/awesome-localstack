@@ -313,3 +313,24 @@ receives the same required service settings with its own JWT key, and never
 inherits the stable runtime file. Both files are root-owned mode 0600 and ignored
 by Git. Ansible rejects missing or equal signing keys and verifies that tokens
 issued by one site return HTTP 401 at the other.
+
+## warehouse-service secrets and image gate
+
+Configure `warehouse_service_token` in Ansible Vault (at least 32 random
+characters, for example `openssl rand -hex 32`, distinct from both JWT keys).
+It reaches the stable backend through `.env.runtime` and warehouse-service
+through `.env.warehouse`, which contains only `JWT_SECRET_KEY`,
+`WAREHOUSE_SERVICE_TOKEN` and `SPRING_DATASOURCE_PASSWORD` (root-owned, mode
+0600). The aitesters sandbox pairs `aitesters-backend` with its own
+`aitesters-warehouse-service` and tmpfs `aitesters-warehouse-postgres`:
+`.env.aitesters` carries `aitesters_warehouse_service_token`, and
+`.env.aitesters-warehouse` / `.env.aitesters-warehouse-postgres` carry the
+sandbox JWT key, that token and `aitesters_warehouse_postgres_password`. The
+nightly reset recreates all three. Deployment fails unless both warehouse
+services use a published `tag@sha256` (the VPS cannot build the native image);
+set `warehouse_service_allow_unpinned_image=true` only for a deliberately
+pre-loaded image. Verification checks the direct `warehouse-service:4003` and
+`aitesters-warehouse-service:4003` health and OpenAPI routes, the aitesters
+host's `/warehouse/v3/api-docs` and `/internal/` routes, the `-Xmx64m` argument
+of every native image, the proxied `/warehouse/v3/api-docs` route, the `/internal/`
+404 guard, and the `spring_warehouse_micrometer` scrape job.

@@ -108,8 +108,29 @@ app_runtime_env:
   APP_MFA_ENCRYPTION_PASSWORD: "{{ app_mfa_encryption_password | default('', true) }}"
   APP_MFA_ENCRYPTION_SALT: "{{ app_mfa_encryption_salt | default('', true) }}"
   JWT_SECRET_KEY: "{{ jwt_secret_key | default('', true) }}"
+  WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
+
+# warehouse-service receives only what it needs, from the same Vault values as
+# the backend: the JWT verification key, the service token and the database
+# password (it uses the `warehouse` schema of the backend database).
+warehouse_runtime_env:
+  JWT_SECRET_KEY: "{{ jwt_secret_key | default('', true) }}"
+  WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ postgres_password | default('', true) }}"
+
+# The aitesters sandbox has its own warehouse-service and tmpfs Postgres, keyed
+# to the sandbox JWT key so stable-site tokens never authenticate there.
+aitesters_warehouse_runtime_env:
+  JWT_SECRET_KEY: "{{ aitesters_jwt_secret_key | default('', true) }}"
+  WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+
+# The server cannot build the GraalVM native image (memory, missing sibling
+# checkout). Deployments stop until docker-compose.server.yml pins a published
+# warehouse-service digest; override only for a deliberate pre-built local image.
+warehouse_service_allow_unpinned_image: false
 
 verify_urls:
   - url: http://127.0.0.1/login
@@ -118,6 +139,10 @@ verify_urls:
     status_code: 200
   - url: http://127.0.0.1/images/iphone.png
     status_code: 200
+  - url: http://127.0.0.1/warehouse/v3/api-docs
+    status_code: 200
+  - url: http://127.0.0.1/internal/v1/orders/1
+    status_code: 404
   - url: http://127.0.0.1/mailpit/api/v1/messages
     status_code: 404
   - url: http://127.0.0.1/mailpit/
