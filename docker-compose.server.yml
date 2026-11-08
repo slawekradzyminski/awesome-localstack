@@ -118,6 +118,7 @@ services:
       timeout: 5s
       retries: 18
       start_period: 30s
+    command: ["-Xmx64m"]
     mem_limit: 160m
     networks:
       - my-private-ntwk
@@ -164,6 +165,7 @@ services:
       timeout: 5s
       retries: 18
       start_period: 30s
+    command: ["-Xmx64m"]
     mem_limit: 160m
     networks:
       - my-private-ntwk

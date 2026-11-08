@@ -618,8 +618,6 @@
   loop:
     - job: spring_backend_micrometer
       maximum_bytes: 939524096
-    - job: spring_consumer_micrometer
-      maximum_bytes: 67108864
   loop_control:
     label: "{{ item.job }}"
   register: jvm_maximum_heap_responses
@@ -641,6 +639,31 @@
   loop: "{{ jvm_maximum_heap_responses.results }}"
   loop_control:
     label: "{{ item.item.job }}"
+
+# GraalVM native images (consumer, warehouse-service) report an unknown (-1)
+# heap maximum, so their bound is checked on the running process arguments.
+- name: Read native-image runtime arguments
+  ansible.builtin.shell:
+    cmd: >-
+      docker inspect --format '{{ '{{json .Args}}' }}'
+      "$(docker compose -f {{ app_compose_file }} ps -q {{ item }})"
+    chdir: "{{ app_dir }}"
+  loop:
+    - consumer
+    - warehouse-service
+    - aitesters-warehouse-service
+  register: native_runtime_args
+  changed_when: false
+
+- name: Verify native-image heaps are bounded
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - "'-Xmx64m' in (item.stdout | from_json)"
+    fail_msg: "{{ item.item }} must run with -Xmx64m"
+  loop: "{{ native_runtime_args.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Verify the production resource dashboard is provisioned
   ansible.builtin.command:
