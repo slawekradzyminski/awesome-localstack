@@ -182,3 +182,13 @@ changed in this repository.
 
 Raw record:
 [`results/wave2-warehouse-20261108.json`](./results/wave2-warehouse-20261108.json).
+
+**Upgrade stop-set fix (same day).** The first wave-2 deploy failed before stopping anything:
+the backend-upgrade role named `warehouse-service`, which the previously deployed
+Compose file does not define. The role now stops only the intersection of the
+backend/warehouse services with the deployed file's `config --services`.
+`stack-backend-upgrade-backs-up-before-quiescing` was regenerated against the new
+task layout (it had become `invalid-patch`) and is killed by the updated
+`scripts/verify-backend-upgrade.py`, together with two wave-2 cases re-run as a
+regression check. Killed: 3. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
+[`results/backend-upgrade-first-warehouse-20261108.json`](./results/backend-upgrade-first-warehouse-20261108.json).
