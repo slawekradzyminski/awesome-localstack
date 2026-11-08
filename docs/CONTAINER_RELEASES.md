@@ -166,6 +166,17 @@ an index; backend 3.10.1 does not map the column and still validates, so rolling
 back does not require restoring the backup. Rolling back also requires removing
 the warehouse services, or the screens will report errors.
 
+Production rollout (8 November 2026): the first `make ansible-deploy-backend-upgrade`
+stopped before quiescing because the deployed wave-1 Compose file did not define
+`warehouse-service` yet; only the pre-deploy backup and the deploy silence ran and
+wave 1 kept serving. After [#72](https://github.com/slawekradzyminski/awesome-localstack/pull/72)
+the retry finished with `failed=0`. Public checks on both hosts: `/login`,
+`/v3/api-docs` and `/warehouse/v3/api-docs` return 200, `/internal/v1/...` returns
+404 and warehouse endpoints return 401 without a token. Measured memory after the
+rollout: backend 458 MiB, aitesters-backend 431 MiB, consumer 44 MiB,
+warehouse-service 50 MiB, aitesters-warehouse-service 68 MiB,
+aitesters-warehouse-postgres 72 MiB; the host reported 2.3 GiB available.
+
 ## Commerce wave 1: backend 3.10.1, frontend 3.10.0, consumer 3.4.0 — 8 November 2026
 
 Wave 1 of the commerce extensions (see [COMMERCE_FULFILMENT.md](COMMERCE_FULFILMENT.md)):
