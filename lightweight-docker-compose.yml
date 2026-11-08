@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.10.1@sha256:45ac5391eadfd41e1a4df010700bd6073d1d16bcec0fec2b50fe4f2bea3cf8c0
+    image: slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d
     restart: always
     expose:
       - "4001"
@@ -49,13 +49,7 @@ services:
           create_host_path: false
 
   warehouse-service:
-    # TODO pin published digest: replace this local build with
-    # slawekradzyminski/warehouse-service:<version>@sha256:<digest> after the
-    # source-owned release (docs/CONTAINER_RELEASES.md). Set
-    # WAREHOUSE_SERVICE_BUILD_CONTEXT when the sibling checkout lives elsewhere.
-    image: warehouse-service:local
-    build:
-      context: ${WAREHOUSE_SERVICE_BUILD_CONTEXT:-../warehouse-service}
+    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
     restart: always
     expose:
       - "4003"
@@ -129,7 +123,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
+    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
     restart: always
     expose:
       - "80"

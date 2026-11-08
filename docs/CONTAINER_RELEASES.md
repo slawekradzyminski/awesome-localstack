@@ -10,7 +10,7 @@ Awesome LocalStack consumes application images but does not build another reposi
 | `vite-react-frontend` | `slawekradzyminski/frontend` | unit tests, production build, browser tests, Docker smoke |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | API contract tests and container smoke |
 | `jms-email-consumer` | `slawekradzyminski/consumer` | Maven tests and Artemis-to-Mailpit integration smoke |
-| `warehouse-service` (pending first release) | `slawekradzyminski/warehouse-service` (proposed) | Maven tests, GraalVM native build and container smoke |
+| `warehouse-service` | `slawekradzyminski/warehouse-service` | Maven tests, GraalVM native build and container smoke |
 
 The same build is also published under the source repository name in GitHub Container Registry. Docker Hub remains the deployment registry during the migration because existing Compose releases already use those names. Do not assume two registries have the same manifest digest; record and pin the digest resolved from the registry used by Compose.
 
@@ -132,6 +132,39 @@ This catalog result is scoped dependency evidence, not an assessment of OS
 packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
+
+## Commerce wave 2: warehouse-service 1.0.0, backend 3.11.0, frontend 3.11.0, consumer 3.5.0 — 8 November 2026
+
+Wave 2 moves fulfilment, returns and purchasing into the new GraalVM native
+`warehouse-service` (see [WAREHOUSE_SERVICE_CONTRACT.md](WAREHOUSE_SERVICE_CONTRACT.md))
+and switches the consumer to a native image.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9` | [warehouse-service](https://github.com/slawekradzyminski/warehouse-service), `c496ad3` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/42510213289) |
+| `slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d` | [PR #86](https://github.com/slawekradzyminski/test-secure-backend/pull/86), `699a81c` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42509255213) |
+| `slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0` | [PR #92](https://github.com/slawekradzyminski/vite-react-frontend/pull/92), `164a546` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42510696494) |
+| `slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0` | [PR #30](https://github.com/slawekradzyminski/jms-email-consumer/pull/30), `d557f12` | [run](https://github.com/slawekradzyminski/jms-email-consumer/actions/runs/42509987298) |
+
+Backend 3.11.0 adds the token-guarded `/internal/v1` API for warehouse-service
+and Flyway migration V8: `orders.fulfilment_state varchar(16) NOT NULL DEFAULT
+'NONE'` with a check constraint and an index. `fulfilmentState` is omitted from
+order bodies while it is `NONE`, so the unchanged course suite (`l20`) passed
+311/311 against the published image with no skips or flaky tests.
+
+warehouse-service and the consumer are native executables: `-Xmx64m` runtime
+heaps inside 160 MiB containers (measured RSS about 58 MiB and 34–70 MiB). Their
+JDK blocklist is baked in from the builder stage, so they have no runtime
+blocklist mount, and their Micrometer heap maximum is unknown (`-1`); Ansible
+checks their `-Xmx64m` argument instead. The aitesters sandbox runs its own
+`aitesters-warehouse-service` with a tmpfs Postgres (96 MiB). Both frontends run
+3.11.0 with the warehouse screens enabled.
+
+Previous references for rollback: backend 3.10.1, frontend 3.10.0 and consumer
+3.4.0 from the wave-1 table below. V8 only adds a defaulted column, a check and
+an index; backend 3.10.1 does not map the column and still validates, so rolling
+back does not require restoring the backup. Rolling back also requires removing
+the warehouse services, or the screens will report errors.
 
 ## Commerce wave 1: backend 3.10.1, frontend 3.10.0, consumer 3.4.0 — 8 November 2026
 
@@ -307,12 +340,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8` |
-| Frontend | `slawekradzyminski/frontend:3.9.3@sha256:e573282a98e98c19055ff865edfb027d286648a61086a0a5837005af6a2885ed` |
-| Consumer | `slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60` |
+| Backend | `slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d` |
+| Frontend | `slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0` |
+| Consumer | `slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | Not published yet: Compose builds `warehouse-service:local` from `../warehouse-service` (`# TODO pin published digest`) |
-
+| Warehouse service | `slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9` |
 ## Backend 3.9.1 traffic preview patch
 
 Backend [PR #76](https://github.com/slawekradzyminski/test-secure-backend/pull/76)

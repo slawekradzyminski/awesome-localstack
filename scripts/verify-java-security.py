@@ -8,7 +8,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-NATIVE_IMAGES = ('slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:', 'warehouse-service:local')
+NATIVE_IMAGES = ('slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:')
 
 
 def verify(root=ROOT):

@@ -18,6 +18,7 @@ PRODUCTION_SERVICES = (
     "frontend",
     "consumer",
     "ollama-mock",
+    "warehouse-service",
 )
 SERVICE_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
 SERVICE_KEY = re.compile(r"^    ([A-Za-z0-9_-]+):\s*$")
@@ -126,13 +127,13 @@ def main() -> int:
         )
         release_images[service] = image
 
-    for service in ("backend", "frontend", "consumer"):
+    for service in ("backend", "frontend", "consumer", "warehouse-service"):
         require(
             full.get(service) == release_images[service],
             f"full and server profiles must use the same {service} release",
             failures,
         )
-    for service in ("backend", "frontend", "ollama-mock"):
+    for service in ("backend", "frontend", "ollama-mock", "warehouse-service"):
         require(
             lightweight.get(service) == release_images[service],
             f"lightweight and server profiles must use the same {service} release",
@@ -146,6 +147,11 @@ def main() -> int:
     require(
         server.get("aitesters-frontend") == release_images["frontend"],
         "the aitesters frontend must reuse the current frontend release",
+        failures,
+    )
+    require(
+        server.get("aitesters-warehouse-service") == release_images["warehouse-service"],
+        "the aitesters warehouse-service must reuse the current warehouse-service release",
         failures,
     )
     require(

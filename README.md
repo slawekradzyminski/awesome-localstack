@@ -40,10 +40,9 @@ This does not mean the profiles can run side by side on the same machine. `light
 Use this most of the time for local work.
 
 It uses the same immutable backend, frontend, and model-mock releases as the
-reviewed server compatibility set. `warehouse-service` is built locally from the
-sibling `../warehouse-service` checkout until its first image is published
-(override the path with `WAREHOUSE_SERVICE_BUILD_CONTEXT`); it runs its `local`
-profile with in-memory H2 and calls the backend at `http://backend:4001`.
+reviewed server compatibility set, including the GraalVM native
+`warehouse-service` image. It runs the `docker,demo` profiles against a small
+dedicated tmpfs Postgres and calls the backend at `http://backend:4001`.
 
 Start it with:
 

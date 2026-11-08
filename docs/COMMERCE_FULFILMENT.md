@@ -138,10 +138,11 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
 - **Memory.** The server's container limits grow by 160 MiB. Watch
   `MemAvailable` after the rollout against the 600 MiB warning threshold in
   [PRODUCTION_MONITORING_PLAN.md](PRODUCTION_MONITORING_PLAN.md).
-- **Image.** Until the first release, Compose builds `warehouse-service:local`
-  from `../warehouse-service`, and the server deployment refuses to run.
+- **Image.** Every profile pins
+  `slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9`;
+  the server deployment refuses an unpinned image.
 
-### Release checklist for this repository (wave 2)
+### Release checklist for this repository (wave 2, completed 8 November 2026)
 
 1. Release `test-secure-backend` with the internal API and
    `orders.fulfilment_state` (it must accept `WAREHOUSE_SERVICE_TOKEN`).
