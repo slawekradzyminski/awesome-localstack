@@ -31,7 +31,8 @@
       - "{{ app_compose_file }}"
       - exec
       - -T
-      - "{{ item.service }}"
+      # The GraalVM native backends ship without curl; call them directly from the gateway.
+      - gateway
       - curl
       - --fail-with-body
       - --silent
@@ -42,7 +43,7 @@
       - 'Content-Type: application/json'
       - --data
       - '{"query":"{ products(limit: 1) { items { id } } inventory(size: 1) { total } }"}'
-      - http://127.0.0.1:4001/api/v1/graphql
+      - "http://{{ item.service }}:4001/api/v1/graphql"
     chdir: "{{ app_dir }}"
   loop:
     - service: backend
