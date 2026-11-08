@@ -152,6 +152,15 @@ C1-only JIT on both backends and a `HostCpuSaturated` warning (CPU PSI waiting
 above 90% for 30 minutes). Backward compatibility with older images is not a
 goal; only the `l20` suite is. Previous reference: `slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d`.
 
+Production rollout (8 November 2026): `make ansible-deploy` finished with
+`failed=0`. Both hosts serve `/login`, `/v3/api-docs` and
+`/warehouse/v3/api-docs` (200), keep `/internal/` at 404 and return 401 for
+unauthenticated warehouse calls; `/h2-console` now falls through to the
+frontend. `aitesters-postgres` holds 8 applied backend migrations, the seeded
+catalogue and the `warehouse` schema. Measured memory: backend 409 MiB,
+aitesters-backend 363 MiB, aitesters-postgres 83 MiB; 2.3 GiB available and a
+load average of 0.3 after the rollout.
+
 ## Commerce wave 2: warehouse-service 1.0.0, backend 3.11.0, frontend 3.11.0, consumer 3.5.0 — 8 November 2026
 
 Wave 2 moves fulfilment, returns and purchasing into the new GraalVM native
