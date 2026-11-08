@@ -29,6 +29,13 @@ scrape_configs:
       - targets:
           - consumer:4002
 
+  - job_name: spring_warehouse_micrometer
+    metrics_path: /actuator/prometheus
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - warehouse-service:4003
+
   - job_name: node
     scrape_interval: 15s
     static_configs:
@@ -64,6 +71,7 @@ scrape_configs:
       - targets:
           - https://awesome.byst.re/login
           - https://awesome.byst.re/v3/api-docs
+          - https://awesome.byst.re/warehouse/v3/api-docs
         labels:
           service: public-edge
     relabel_configs:

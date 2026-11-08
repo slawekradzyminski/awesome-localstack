@@ -64,6 +64,16 @@ groups:
           description: cAdvisor has not reported the consumer container for at least 5 minutes.
 
       - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-warehouse-service-1"})
+        for: 5m
+        labels:
+          severity: critical
+          service: warehouse-service
+        annotations:
+          summary: Critical warehouse-service container is missing
+          description: cAdvisor has not reported the warehouse-service container for at least 5 minutes.
+
+      - alert: CriticalContainerMissing
         expr: absent(container_last_seen{name=~".*awesome-server-gateway-1"})
         for: 5m
         labels:

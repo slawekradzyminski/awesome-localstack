@@ -10,6 +10,7 @@ Awesome LocalStack consumes application images but does not build another reposi
 | `vite-react-frontend` | `slawekradzyminski/frontend` | unit tests, production build, browser tests, Docker smoke |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | API contract tests and container smoke |
 | `jms-email-consumer` | `slawekradzyminski/consumer` | Maven tests and Artemis-to-Mailpit integration smoke |
+| `warehouse-service` (pending first release) | `slawekradzyminski/warehouse-service` (proposed) | Maven tests, GraalVM native build and container smoke |
 
 The same build is also published under the source repository name in GitHub Container Registry. Docker Hub remains the deployment registry during the migration because existing Compose releases already use those names. Do not assume two registries have the same manifest digest; record and pin the digest resolved from the registry used by Compose.
 
@@ -310,6 +311,7 @@ approved restart; production PostgreSQL is independent and preserved.
 | Frontend | `slawekradzyminski/frontend:3.9.3@sha256:e573282a98e98c19055ff865edfb027d286648a61086a0a5837005af6a2885ed` |
 | Consumer | `slawekradzyminski/consumer:3.3.9@sha256:cb4a2d8a5980da03562e85f7f5bed9d7162c3cf6ce3551bce4eb00d6ca13fc60` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
+| Warehouse service | Not published yet: Compose builds `warehouse-service:local` from `../warehouse-service` (`# TODO pin published digest`) |
 
 ## Backend 3.9.1 traffic preview patch
 
@@ -461,7 +463,12 @@ Rollback backend reference: `slawekradzyminski/backend:3.7.16@sha256:71cd8913a27
 
 ## LocalStack compatibility gate
 
-The production compatibility set is the four first-party services above.
+The production compatibility set is the four published first-party services
+above. `warehouse-service` becomes the fifth when its first release is pinned;
+until then the server deployment refuses to run (see `docs/ANSIBLE.md`). When
+pinning it, use the same reference in the lightweight, full and server
+profiles, add it to `PRODUCTION_SERVICES` in `scripts/verify-release-images.py`,
+and replace the table row above with the immutable reference.
 The main and `aitesters` variants do not have separate application release
 lines: `aitesters-backend` must use the exact current backend reference and
 `aitesters-frontend` must use the exact current frontend reference. Their

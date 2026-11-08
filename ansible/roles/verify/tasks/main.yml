@@ -307,6 +307,31 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify the direct warehouse-service routes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop:
+    - http://warehouse-service:4003/actuator/health
+    - http://warehouse-service:4003/v3/api-docs
+  register: verify_warehouse_direct
+  changed_when: false
+  until: verify_warehouse_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Read active Prometheus targets
   ansible.builtin.command:
     argv:
@@ -327,6 +352,7 @@
     expected_prometheus_jobs:
       - spring_backend_micrometer
       - spring_consumer_micrometer
+      - spring_warehouse_micrometer
       - node
       - cadvisor
       - alertmanager
@@ -366,6 +392,7 @@
   loop:
     - spring_backend_micrometer
     - spring_consumer_micrometer
+    - spring_warehouse_micrometer
     - node
     - cadvisor
     - alertmanager
@@ -494,7 +521,7 @@
   changed_when: false
   until:
     - public_probe_response.rc == 0
-    - ((public_probe_response.stdout | from_json).data.result | length) == 2
+    - ((public_probe_response.stdout | from_json).data.result | length) == 3
     - >-
       (
         (public_probe_response.stdout | from_json).data.result

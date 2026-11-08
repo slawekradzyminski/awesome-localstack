@@ -313,3 +313,19 @@ receives the same required service settings with its own JWT key, and never
 inherits the stable runtime file. Both files are root-owned mode 0600 and ignored
 by Git. Ansible rejects missing or equal signing keys and verifies that tokens
 issued by one site return HTTP 401 at the other.
+
+## warehouse-service secrets and image gate
+
+Configure `warehouse_service_token` in Ansible Vault (at least 32 random
+characters, for example `openssl rand -hex 32`, distinct from both JWT keys).
+It reaches the stable backend through `.env.runtime` and warehouse-service
+through `.env.warehouse`, which contains only `JWT_SECRET_KEY`,
+`WAREHOUSE_SERVICE_TOKEN` and `SPRING_DATASOURCE_PASSWORD` (root-owned, mode
+0600). `.env.aitesters` blanks the token, so the sandbox backend keeps its
+internal API disabled. Deployment fails while `docker-compose.server.yml` still
+builds `warehouse-service:local`: the VPS can neither build the native image nor
+see the sibling checkout. Pin the published `tag@sha256` first, or set
+`warehouse_service_allow_unpinned_image=true` only for a deliberately pre-loaded
+image. Verification checks the direct `warehouse-service:4003` health and
+OpenAPI routes, the proxied `/warehouse/v3/api-docs` route, the `/internal/`
+404 guard, and the `spring_warehouse_micrometer` scrape job.

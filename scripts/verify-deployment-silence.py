@@ -56,8 +56,8 @@ def main() -> None:
     require("value: public_https" in present, "silence must target the public probe job")
     require("value: public-edge" in present, "silence must target the public edge service")
     require(
-        "value: spring_backend_micrometer|spring_consumer_micrometer" in present,
-        "target silence must cover only the restarted backend and consumer scrapes",
+        "value: spring_backend_micrometer|spring_consumer_micrometer|spring_warehouse_micrometer\n" in present,
+        "target silence must cover only the restarted backend, consumer and warehouse-service scrapes",
     )
     require(
         "(deployment_silence_duration_minutes | int) * 60" in present,

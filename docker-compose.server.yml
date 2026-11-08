@@ -13,6 +13,7 @@ services:
     hostname: backend
     logging: *default-logging
     env_file:
+      # Supplies JWT_SECRET_KEY and WAREHOUSE_SERVICE_TOKEN from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -72,6 +73,54 @@ services:
         read_only: true
         bind:
           create_host_path: false
+
+  warehouse-service:
+    # TODO pin published digest: replace this local build with
+    # slawekradzyminski/warehouse-service:<version>@sha256:<digest> after the
+    # source-owned release (docs/CONTAINER_RELEASES.md). Set
+    # WAREHOUSE_SERVICE_BUILD_CONTEXT when the sibling checkout lives elsewhere.
+    image: warehouse-service:local
+    build:
+      context: ${WAREHOUSE_SERVICE_BUILD_CONTEXT:-../warehouse-service}
+    restart: unless-stopped
+    hostname: warehouse-service
+    logging: *default-logging
+    env_file:
+      # Only JWT_SECRET_KEY, WAREHOUSE_SERVICE_TOKEN and SPRING_DATASOURCE_PASSWORD,
+      # rendered by Ansible from the same Vault values the backend receives.
+      - path: .env.warehouse
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: postgres
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      BACKEND_BASE_URL: http://backend:4001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    expose:
+      - "4003"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4003;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
 
   frontend:
     image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff

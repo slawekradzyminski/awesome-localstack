@@ -47,6 +47,31 @@
     quiet: true
   no_log: true
 
+- name: Require a published warehouse-service image before deploying
+  ansible.builtin.assert:
+    that:
+      - >-
+        warehouse_service_allow_unpinned_image | bool
+        or ((lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['warehouse-service'].image is search('@sha256:[0-9a-f]{64}$'))
+    quiet: true
+    fail_msg: >-
+      docker-compose.server.yml still builds warehouse-service locally. Publish
+      the image from the warehouse-service repository and pin its tag@sha256
+      reference before deploying (docs/CONTAINER_RELEASES.md).
+
+- name: Require a dedicated warehouse service token
+  ansible.builtin.assert:
+    that:
+      - (warehouse_service_token | default('', true) | string | length) >= 32
+      - warehouse_service_token != jwt_secret_key
+      - warehouse_service_token != aitesters_jwt_secret_key
+    quiet: true
+    fail_msg: >-
+      Configure warehouse_service_token (at least 32 characters, distinct from
+      both JWT keys) in Ansible Vault.
+  no_log: true
+
 - name: Read deployed Prometheus configuration checksums
   ansible.builtin.stat:
     path: "{{ app_dir }}/{{ prometheus_config_file }}"
@@ -191,6 +216,15 @@
     owner: root
     group: root
     mode: "0600"
+
+- name: Render the warehouse-service runtime environment
+  ansible.builtin.template:
+    src: env.warehouse.j2
+    dest: "{{ app_dir }}/.env.warehouse"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
 
 - name: Normalize application directory ownership
   ansible.builtin.file:

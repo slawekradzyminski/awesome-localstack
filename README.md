@@ -1,7 +1,7 @@
 # Awesome LocalStack
 
 Docker orchestration for the training stack built from separate backend,
-frontend, JMS consumer, and model-mock repositories.
+frontend, warehouse-service, JMS consumer, and model-mock repositories.
 
 This README is organized by the three main profiles:
 
@@ -15,13 +15,17 @@ For classroom or workshop use focused on the lightweight stack, see [docs/STUDEN
 
 For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
 
-For repository-owned image publishing and the complete four-image compatibility
-set, see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
+For repository-owned image publishing and the first-party compatibility set
+(four published images, with warehouse-service joining as the fifth once its
+first release is pinned), see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
 
 For the coupon, review, wishlist, CSV, idempotent checkout and conditional
 update training features (pending release; warehouse fulfilment, returns and
 purchasing follow in a later release), see
-[docs/COMMERCE_FULFILMENT.md](docs/COMMERCE_FULFILMENT.md).
+[docs/COMMERCE_FULFILMENT.md](docs/COMMERCE_FULFILMENT.md). Warehouse
+fulfilment, returns and purchasing are served by `warehouse-service`; its API
+boundary is documented in
+[docs/WAREHOUSE_SERVICE_CONTRACT.md](docs/WAREHOUSE_SERVICE_CONTRACT.md).
 
 For the empirical mutation-testing results and the workflow used by coding
 agents, see [docs/MUTATION_TESTING_AI_STUDY.md](docs/MUTATION_TESTING_AI_STUDY.md)
@@ -36,7 +40,10 @@ This does not mean the profiles can run side by side on the same machine. `light
 Use this most of the time for local work.
 
 It uses the same immutable backend, frontend, and model-mock releases as the
-reviewed server compatibility set.
+reviewed server compatibility set. `warehouse-service` is built locally from the
+sibling `../warehouse-service` checkout until its first image is published
+(override the path with `WAREHOUSE_SERVICE_BUILD_CONTEXT`); it runs its `local`
+profile with in-memory H2 and calls the backend at `http://backend:4001`.
 
 Start it with:
 
@@ -52,6 +59,7 @@ Other useful lightweight URLs:
 
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - image through gateway: `http://localhost:8081/images/iphone.png`
 - Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
@@ -87,11 +95,14 @@ flowchart LR
     G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
+    W[Warehouse Service<br/>internal 4003, H2]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
     G --> F
     G --> B
+    G -->|warehouse paths| W
+    W -->|/internal/v1| B
     B --> O
 ```
 
@@ -166,6 +177,10 @@ messages before the first broker upgrade.
 
 This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
 
+`warehouse-service` runs its `docker` profile against the same PostgreSQL
+database in the `warehouse` schema, and Prometheus scrapes it as
+`spring_warehouse_micrometer`.
+
 Main app URL:
 
 - `http://localhost:8081/login`
@@ -174,6 +189,7 @@ Other useful full-profile URLs:
 
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+- warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - Prometheus: `http://localhost:9090/graph`
 - Grafana: `http://localhost:3000/login`
 - ActiveMQ console: `http://localhost:8161`
@@ -268,6 +284,7 @@ flowchart LR
     G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
+    W[Warehouse Service<br/>internal 4003]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
@@ -281,6 +298,9 @@ flowchart LR
     U --> G
     G --> F
     G --> B
+    G -->|warehouse paths| W
+    W -->|/internal/v1| B
+    W -->|schema warehouse| DB
     B --> DB
     B --> MQ
     MQ --> C
@@ -289,6 +309,7 @@ flowchart LR
     A --> O
     P --> B
     P --> C
+    P --> W
     GR --> P
     GR --> I
 ```
@@ -363,6 +384,7 @@ Other stable playground URLs:
 
 - Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
+- warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - image through gateway: `https://awesome.byst.re/images/iphone.png`
 
@@ -384,6 +406,7 @@ flowchart LR
     G[Gateway<br/>host-based routing<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
+    W[Warehouse Service<br/>internal, 160 MiB]
     AF[Aitesters Frontend]
     AB[Aitesters Backend<br/>local profile]
     DB[(Postgres<br/>internal only)]
@@ -402,6 +425,9 @@ flowchart LR
     U --> G
     G -->|awesome.byst.re| F
     G -->|awesome.byst.re /api| B
+    G -->|awesome.byst.re warehouse paths| W
+    W -->|/internal/v1| B
+    W -->|schema warehouse| DB
     G -->|aitesters.byst.re| AF
     G -->|aitesters.byst.re /api| AB
     B --> DB
@@ -416,6 +442,7 @@ flowchart LR
     BB --> P
     B --> P
     C --> P
+    W --> P
     P --> GR
     P --> AM
     AM --> T
@@ -432,9 +459,15 @@ Production hardening in this profile:
 - the production PostgreSQL password is supplied by Ansible Vault and is not
   stored in Compose
 - consumer metrics are internal-only
+- warehouse-service (`4003`) is internal-only behind the gateway, receives only
+  its JWT key, service token and database password through `.env.warehouse`,
+  and runs as a GraalVM native image within a 160 MiB container limit
+- the gateway answers `/internal/` with `404`; the backend internal API is
+  reachable only from warehouse-service on the Compose network
 - Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and Alertmanager are internal-only
 - Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
-- Blackbox Exporter checks the public login and OpenAPI routes every 30 seconds,
+- Blackbox Exporter checks the public login, backend OpenAPI and
+  warehouse-service OpenAPI routes every 30 seconds,
   including DNS, TLS, HTTP status, and latency
 - Alertmanager sends grouped warning, critical, and resolved notifications to
   a Vault-configured private Telegram chat
@@ -469,6 +502,7 @@ Quick public verification:
 ```bash
 curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
+curl -i https://awesome.byst.re/warehouse/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
@@ -482,6 +516,7 @@ Expected:
 - `awesome.byst.re/login` returns `200`
 - the AI Lab shell and recorded Attention deep route return `200`; this curl check does not verify the application session required to view course content
 - `awesome.byst.re/v3/api-docs` returns `200`
+- `awesome.byst.re/warehouse/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
@@ -520,8 +555,12 @@ Across the main profiles, the gateway serves:
 
 - frontend pages under `/`
 - backend API under `/api/v1/...`
+- warehouse fulfilment, returns and purchasing paths under `/api/v1/...`,
+  routed to warehouse-service (see `docs/PROFILE_URLS.md`)
 - Swagger UI under `/swagger-ui/...`
-- OpenAPI under `/v3/api-docs`
+- OpenAPI under `/v3/api-docs`, and warehouse-service OpenAPI under
+  `/warehouse/v3/api-docs`
+- `/internal/` always returns `404`
 - public health status at `/actuator/health`; other actuator routes are blocked by the gateway
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
@@ -531,6 +570,7 @@ Across the main profiles, the gateway serves:
 - [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend)
 - [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
 - [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
+- warehouse-service (new sibling repository; publication pending)
 - [ollama-mock](https://github.com/slawekradzyminski/ollama-mock)
 
 ## Troubleshooting
