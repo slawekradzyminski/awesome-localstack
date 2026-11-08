@@ -133,6 +133,34 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Backend 3.13.0: GraalVM native image — 9 November 2026
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4` | [PR #90](https://github.com/slawekradzyminski/test-secure-backend/pull/90), `eacad53` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42532503854) |
+
+The backend is now a GraalVM native executable, built per architecture on
+matching runners and smoke-tested under the production and local profiles before
+the manifest is published. Native images fix bean selection at build time, so the
+backend's bean graph no longer depends on the active profile: GraphQL and gRPC are
+always wired, `app.email.transport` selects Artemis or the local outbox, and the
+bootstrap and seed runners check their properties at runtime. Profiles only carry
+properties, so one image serves `docker,server`, `aitesters` and `local`.
+
+Both backends drop the JVM blocklist mounts (the blocklist is baked in at build
+time) and JVM options: `backend` runs with `-Xmx384m` in 640 MiB (was 1.5 GiB) and
+`aitesters-backend` with `-Xmx256m` in 448 MiB (was 768 MiB). Native images report
+an unknown heap maximum, so Ansible checks their `-Xmx` arguments. The unchanged
+course suite (`l20`) passed 311/311 against this image on the PostgreSQL
+compatibility stack, with both compatibility backends on the same image; the
+backends peaked at 164–184 MiB. The course's admin sign-in test accepts either
+opaque refresh-token format since `ai-testers-api` `b9ce4b7`.
+
+A first `v3.13.0` run built both images but stopped at the smoke step (the script
+was not executable); no image was tagged, and the tag was moved to the fix.
+Previous reference: `slawekradzyminski/backend:3.12.0@sha256:4ab420bfcf8fa94aff2cbe9917d37593e054aa616ae35751295112953686a13a`. No migration; rolling back only needs the previous
+image and the JVM Compose settings.
+
 ## Backend 3.12.0: PostgreSQL in every profile — 8 November 2026
 
 | Image | Source | Release workflow |
@@ -396,7 +424,7 @@ approved restart; production PostgreSQL is independent and preserved.
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.12.0@sha256:4ab420bfcf8fa94aff2cbe9917d37593e054aa616ae35751295112953686a13a` |
+| Backend | `slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4` |
 | Frontend | `slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0` |
 | Consumer | `slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |

@@ -14,8 +14,6 @@
   vars:
     java_security_expected_sha256: "{{ (lookup('ansible.builtin.file', repo_root ~ '/security/java/provenance.json') | from_json).blockedSha256 }}"
   loop:
-    - backend
-    - aitesters-backend
     - ollama-mock
     - activemq
   register: java_security_runtime_check
@@ -599,50 +597,8 @@
     alertmanager_secret_permissions.rc != 0
     or alertmanager_secret_permissions.stdout != "400:65534:65534"
 
-- name: Query effective Spring JVM maximum heaps
-  ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - -f
-      - "{{ app_compose_file }}"
-      - exec
-      - -T
-      - gateway
-      - curl
-      - -fsS
-      - -G
-      - --data-urlencode
-      - "query=sum(jvm_memory_max_bytes{area=\"heap\",job=\"{{ item.job }}\"})"
-      - http://prometheus:9090/api/v1/query
-    chdir: "{{ app_dir }}"
-  loop:
-    - job: spring_backend_micrometer
-      maximum_bytes: 939524096
-  loop_control:
-    label: "{{ item.job }}"
-  register: jvm_maximum_heap_responses
-  changed_when: false
-  until:
-    - jvm_maximum_heap_responses.rc == 0
-    - ((jvm_maximum_heap_responses.stdout | from_json).data.result | length) == 1
-  retries: "{{ verify_retries }}"
-  delay: "{{ verify_delay_seconds }}"
-
-- name: Verify Spring JVM maximum heaps are bounded
-  ansible.builtin.assert:
-    quiet: true
-    that:
-      - ((item.stdout | from_json).data.result[0].value[1] | float) <= (item.item.maximum_bytes | float)
-    fail_msg: >-
-      Effective maximum heap for {{ item.item.job }} exceeds
-      {{ item.item.maximum_bytes }} bytes
-  loop: "{{ jvm_maximum_heap_responses.results }}"
-  loop_control:
-    label: "{{ item.item.job }}"
-
-# GraalVM native images (consumer, warehouse-service) report an unknown (-1)
-# heap maximum, so their bound is checked on the running process arguments.
+# GraalVM native images (backends, consumer, warehouse-services) report an
+# unknown (-1) heap maximum, so their bound is checked on the process arguments.
 - name: Read native-image runtime arguments
   ansible.builtin.shell:
     cmd: >-
@@ -650,6 +606,8 @@
       "$(docker compose -f {{ app_compose_file }} ps -q {{ item }})"
     chdir: "{{ app_dir }}"
   loop:
+    - backend
+    - aitesters-backend
     - consumer
     - warehouse-service
     - aitesters-warehouse-service
@@ -660,11 +618,18 @@
   ansible.builtin.assert:
     quiet: true
     that:
-      - "'-Xmx64m' in (item.stdout | from_json)"
-    fail_msg: "{{ item.item }} must run with -Xmx64m"
+      - "native_heap_limits[item.item] in (item.stdout | from_json)"
+    fail_msg: "{{ item.item }} must run with {{ native_heap_limits[item.item] }}"
   loop: "{{ native_runtime_args.results }}"
   loop_control:
     label: "{{ item.item }}"
+  vars:
+    native_heap_limits:
+      backend: -Xmx384m
+      aitesters-backend: -Xmx256m
+      consumer: -Xmx64m
+      warehouse-service: -Xmx64m
+      aitesters-warehouse-service: -Xmx64m
 
 - name: Verify the production resource dashboard is provisioned
   ansible.builtin.command:

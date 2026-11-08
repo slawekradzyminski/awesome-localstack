@@ -988,6 +988,48 @@
         "-Djacoco.skip=true",
         "test"
       ]
+    },
+    {
+      "id": "backend-local-outbox-exposed-on-jms-transport",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-local-outbox-exposed-on-jms-transport.patch",
+      "description": "The local email outbox becomes available whenever its flag is on, even with the JMS transport.",
+      "contract": "Production (jms transport) never exposes the local email outbox endpoints or captures emails there.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=EmailTransportTest",
+        "-Djacoco.skip=true",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-bootstrap-admin-ignores-enabled-flag",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-bootstrap-admin-ignores-enabled-flag.patch",
+      "description": "The bootstrap admin runner runs although app.bootstrap-admin.enabled is false.",
+      "contract": "With the runtime-gated runner, a disabled bootstrap admin must not touch users or fail startup.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=BootstrapAdminTest",
+        "-Djacoco.skip=true",
+        "test"
+      ]
     }
   ]
 }

@@ -214,3 +214,29 @@ deployment-silence mutants had become `invalid-patch` (the playbook gained the
 `backend_upgrade` role and the matchers moved to YAML) and were regenerated with
 the same intent. Killed: 10. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
 [`results/postgres-everywhere-stack-20261108.json`](./results/postgres-everywhere-stack-20261108.json).
+
+## Backend as a GraalVM native image — 8 November 2026
+
+The backend bean graph became profile-independent (test-secure-backend#90): the
+email transport, the local outbox and the bootstrap runners are now decided at
+runtime. Two requirement-driven candidates were frozen before any test change:
+
+| Mutant | Violated requirement | Result |
+| --- | --- | --- |
+| `backend-local-outbox-exposed-on-jms-transport` | Production (JMS transport) never exposes or fills the local email outbox | killed by `EmailTransportTest` |
+| `backend-bootstrap-admin-ignores-enabled-flag` | A disabled bootstrap admin must not touch users or fail startup | killed by `BootstrapAdminTest` |
+
+The run used a temporary manifest pointing at the feature worktree. Killed: 2.
+Survived: 0. Invalid: 0. Equivalent: 0. Framework mutation is reported
+separately: PIT on the changed classes killed 75 of 75 after adding PNG chunk and
+password-boundary tests. Raw record:
+[`results/native-backend-20261108.json`](./results/native-backend-20261108.json).
+
+**Stack regression after the native backend (9 November 2026).** The backends no
+longer carry JVM blocklist mounts, so the two certificate mutants and the gRPC
+port mutant became `invalid-patch`. They were regenerated with the same intent
+against the remaining JVMs (the sandbox-shared `ollama-mock` loses its mount; all
+remaining mounts use the mutable source) and the backend's loopback gRPC port.
+All ten stack cases were re-run. Killed: 10. Survived: 0. Invalid: 0.
+Equivalent: 0. Raw record:
+[`results/native-backend-stack-20261109.json`](./results/native-backend-stack-20261109.json).

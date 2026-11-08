@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/private/tmp/claude-501/-Users-slawek--claude-spares-spare-PVIujY/681198ca-33ca-4612-b66c-91c92c707fc4/scratchpad/manifest-native.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "backend-local-outbox-exposed-on-jms-transport",
+      "component": "backend",
+      "repository": "/Users/slawek/IdeaProjects/test-secure-backend/.worktrees/native",
+      "patch": "/Users/slawek/IdeaProjects/awesome-localstack/.worktrees/commerce/experiments/llm-mutation/mutants/backend-local-outbox-exposed-on-jms-transport.patch",
+      "description": "The local email outbox becomes available whenever its flag is on, even with the JMS transport.",
+      "contract": "Production (jms transport) never exposes the local email outbox endpoints or captures emails there.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 6.044,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 8.15,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 1.130 s <<< FAILURE! -- in com.awesome.testing.jms.EmailTransportTest\n[ERROR] com.awesome.testing.jms.EmailTransportTest.outboxIsAvailableOnlyForTheLocalOutboxTransportWhenEnabled -- Time elapsed: 0.013 s <<< FAILURE!\norg.opentest4j.AssertionFailedError: \n\nExpecting value to be false but was true\n\tat com.awesome.testing.jms.EmailTransportTest.outboxIsAvailableOnlyForTheLocalOutboxTransportWhenEnabled(EmailTransportTest.java:73)\n\n[ERROR] Failures: \n[ERROR]   EmailTransportTest.outboxIsAvailableOnlyForTheLocalOutboxTransportWhenEnabled:73 \nExpecting value to be false but was true\n[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.6.1:test (default-test) on project jwt-auth-service: There are test failures.\n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-qa0uk6sy/backend-local-outbox-exposed-on-jms-transport/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 6.794,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 6.534,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "backend-bootstrap-admin-ignores-enabled-flag",
+      "component": "backend",
+      "repository": "/Users/slawek/IdeaProjects/test-secure-backend/.worktrees/native",
+      "patch": "/Users/slawek/IdeaProjects/awesome-localstack/.worktrees/commerce/experiments/llm-mutation/mutants/backend-bootstrap-admin-ignores-enabled-flag.patch",
+      "description": "The bootstrap admin runner runs although app.bootstrap-admin.enabled is false.",
+      "contract": "With the runtime-gated runner, a disabled bootstrap admin must not touch users or fail startup.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 7.081,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 7.157,
+        "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n[ERROR] Tests run: 6, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 1.022 s <<< FAILURE! -- in com.awesome.testing.fakedata.BootstrapAdminTest\n[ERROR] com.awesome.testing.fakedata.BootstrapAdminTest.shouldDoNothingWhenDisabled -- Time elapsed: 0.006 s <<< ERROR!\njava.lang.IllegalStateException: app.bootstrap-admin.password must be configured when bootstrap admin is enabled\n\tat com.awesome.testing.fakedata.BootstrapAdmin.validateConfiguration(BootstrapAdmin.java:94)\n\tat com.awesome.testing.fakedata.BootstrapAdmin.run(BootstrapAdmin.java:55)\n\tat com.awesome.testing.fakedata.BootstrapAdminTest.shouldDoNothingWhenDisabled(BootstrapAdminTest.java:100)\n\n[ERROR] Errors: \n[ERROR]   BootstrapAdminTest.shouldDoNothingWhenDisabled:100 \u00bb IllegalState app.bootstrap-admin.password must be configured when bootstrap admin is enabled\n[ERROR] Tests run: 6, Failures: 0, Errors: 1, Skipped: 0\n[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.6.1:test (default-test) on project jwt-auth-service: \n[ERROR] \n[ERROR] See /private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-9gn52dkj/backend-bootstrap-admin-ignores-enabled-flag/target/surefire-reports for the individual test results.\n[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.\n[ERROR] -> [Help 1]\n[ERROR] \n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.\n[ERROR] Re-run Maven using the -X switch to enable full debug logging.\n[ERROR] \n[ERROR] For more information about the errors and possible solutions, please read the following articles:\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 6.918,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 6.407,
+          "outputTail": "Picked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nWARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::objectFieldOffset has been called by lombok.permit.Permit\nWARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit\nWARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release\nPicked up JAVA_TOOL_OPTIONS: -Duser.language=en -Duser.country=US\nOpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 2
+  }
+}

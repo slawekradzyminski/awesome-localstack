@@ -473,7 +473,8 @@ Production hardening in this profile:
 - the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
   but swap remains disabled on the current MIKR.US LXC host because its
   virtualization layer rejects `swapon`
-- the main backend and consumer have explicit JVM heap and container memory limits
+- the backends, consumer and warehouse-services run as GraalVM native images with
+  explicit heap arguments and container memory limits
 - aitesters backend and frontend are internal-only behind the same gateway
 - both public training backends use explicitly increased rate-limit capacities
   for repeated parallel API regression suites while retaining the original
