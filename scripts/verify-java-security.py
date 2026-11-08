@@ -8,7 +8,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-NATIVE_IMAGES = ('slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:')
+NATIVE_IMAGES = ('slawekradzyminski/backend:', 'slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:')
 
 
 def verify(root=ROOT):
@@ -49,7 +49,6 @@ def verify(root=ROOT):
                     raise ValueError(f'{profile}/{name}: native image must not mount a JVM blocklist')
                 continue
             if not any(part in image for part in (
-                'slawekradzyminski/backend:',
                 'slawekradzyminski/ollama-mock:', 'apache/artemis:', 'quay.io/keycloak/keycloak:',
             )):
                 continue

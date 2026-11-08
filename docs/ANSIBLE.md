@@ -197,7 +197,8 @@ The role checks:
 - all expected Prometheus scrape jobs are healthy
 - both public Blackbox probes currently succeed
 - the emergency swap file and swappiness when `swap_enabled` is true
-- the main backend and consumer expose bounded JVM maximum heaps
+- every GraalVM native service (both backends, the consumer and both
+  warehouse-services) runs with its expected `-Xmx` argument
 - the `Production Resources` and `Production Availability & Safeguards`
   Grafana dashboards are mounted
 - bootstrap admin sign-in succeeds

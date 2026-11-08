@@ -42,13 +42,6 @@ services:
         condition: service_started
     networks:
       - my-private-ntwk
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /opt/java/openjdk/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
 
   warehouse-service:
     image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9

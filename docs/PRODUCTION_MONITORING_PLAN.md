@@ -400,9 +400,9 @@ must be reviewed after controlled load tests or material traffic growth:
 
 | Service | JVM target | Container limit |
 | --- | --- | --- |
-| `backend` | `-Xms256m -Xmx896m -XX:TieredStopAtLevel=1` (C1-only JIT for the single vCPU) | 1.5 GiB |
+| `backend` | `-Xmx384m` runtime argument (GraalVM native image since 3.13.0) | 640 MiB |
 | `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
-| `aitesters-backend` | Percentage-based heap, `-XX:TieredStopAtLevel=1` | 768 MiB |
+| `aitesters-backend` | `-Xmx256m` runtime argument (GraalVM native image since 3.13.0) | 448 MiB |
 | `warehouse-service`, `aitesters-warehouse-service` | `-Xmx64m` runtime argument (GraalVM native image, ~58 MiB RSS measured) | 160 MiB each |
 | `aitesters-postgres` | Not applicable (disk-backed sandbox database, `shared_buffers=32MB`) | 160 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
@@ -609,8 +609,8 @@ The full monitoring program is complete when:
 The Mikrus 3.5 VPS has one dynamically allocated vCPU; the provider may throttle
 sustained full load. On 8 November 2026 the host idled around 26% busy and
 saturated (CPU PSI waiting about 99%) during e2e suites and deployments. Spring
-scrapes run every 15s, both backends use the C1-only JIT
-(`-XX:TieredStopAtLevel=1`) to cut warm-up compilation, and `HostCpuSaturated`
+scrapes run every 15s, both backends run as GraalVM native images since 3.13.0
+(no JIT warm-up after deploys or the nightly reset), and `HostCpuSaturated`
 warns only when CPU PSI waiting stays above 90% for 30 minutes, so ordinary test
 runs and deploys stay silent. The only upgrade that adds CPU is the PRO 4.1 plan
 (2x CPU limit), which was out of stock; a back-in-stock alert is registered.

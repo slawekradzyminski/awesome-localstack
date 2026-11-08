@@ -17,8 +17,6 @@ services:
       - path: .env.runtime
         required: false
     environment:
-      # C1-only JIT: far less compilation CPU on the single shared vCPU after each restart.
-      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx896m -XX:TieredStopAtLevel=1"
       SPRING_PROFILES_ACTIVE: docker,server
       SPRING_PROFILES_INCLUDE: graphql,grpc
       GRPC_HOST: 0.0.0.0
@@ -64,16 +62,11 @@ services:
       - "127.0.0.1:9091:9091"
     expose:
       - "4001"
-    mem_limit: 1536m
+    # GraalVM native image: no JIT warm-up; the heap cap is a runtime argument.
+    command: ["-Xmx384m"]
+    mem_limit: 640m
     networks:
       - my-private-ntwk
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /opt/java/openjdk/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
 
   warehouse-service:
     image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
@@ -255,7 +248,6 @@ services:
       SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "200"
       SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "200"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
-      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=20 -XX:TieredStopAtLevel=1"
     depends_on:
       aitesters-postgres:
         condition: service_healthy
@@ -265,16 +257,11 @@ services:
       - "127.0.0.1:9092:9091"
     expose:
       - "4001"
-    mem_limit: 768m
+    # GraalVM native image: no JIT warm-up; the heap cap is a runtime argument.
+    command: ["-Xmx256m"]
+    mem_limit: 448m
     networks:
       - my-private-ntwk
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /opt/java/openjdk/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
 
   aitesters-frontend:
     image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
