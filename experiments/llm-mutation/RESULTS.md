@@ -207,3 +207,10 @@ requirement-driven candidate was frozen before writing tests:
 asserts applied migrations and `validate`. The run used a temporary manifest
 pointing at the feature worktree. Killed: 1. Survived: 0. Invalid: 0.
 Equivalent: 0. No PIT-scoped logic changed (one permit-list entry removed).
+
+**Stack regression run (same day).** After pinning backend 3.12.0 and moving the
+sandbox to `aitesters-postgres`, all ten stack cases were re-run. The two
+deployment-silence mutants had become `invalid-patch` (the playbook gained the
+`backend_upgrade` role and the matchers moved to YAML) and were regenerated with
+the same intent. Killed: 10. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
+[`results/postgres-everywhere-stack-20261108.json`](./results/postgres-everywhere-stack-20261108.json).

@@ -133,6 +133,25 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Backend 3.12.0: PostgreSQL in every profile — 8 November 2026
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.12.0@sha256:4ab420bfcf8fa94aff2cbe9917d37593e054aa616ae35751295112953686a13a` | [PR #88](https://github.com/slawekradzyminski/test-secure-backend/pull/88), `d7d2d0e` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42514223453) |
+
+The `local` and `aitesters` profiles now run on PostgreSQL with the production
+Flyway migrations and `ddl-auto: validate`; H2 remains only in the backend's
+unit tests. The aitesters sandbox gets `aitesters-postgres` (database
+`aitesters`, warehouse schema `warehouse`, disk-backed and renewed by the daily
+reset), and the lightweight and compatibility stacks get tmpfs PostgreSQL. The
+unchanged course suite (`l20`) passed 311/311 against this image on the
+PostgreSQL compatibility stack, with no skips or flaky tests.
+
+The same rollout lowers CPU load on the single vCPU: 15s Spring scrapes, the
+C1-only JIT on both backends and a `HostCpuSaturated` warning (CPU PSI waiting
+above 90% for 30 minutes). Backward compatibility with older images is not a
+goal; only the `l20` suite is. Previous reference: `slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d`.
+
 ## Commerce wave 2: warehouse-service 1.0.0, backend 3.11.0, frontend 3.11.0, consumer 3.5.0 — 8 November 2026
 
 Wave 2 moves fulfilment, returns and purchasing into the new GraalVM native
@@ -368,7 +387,7 @@ approved restart; production PostgreSQL is independent and preserved.
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.11.0@sha256:a6d0a499fd54071c46eb1930b72fd75cde8ed71ee5cfa745f00c8013130d736d` |
+| Backend | `slawekradzyminski/backend:3.12.0@sha256:4ab420bfcf8fa94aff2cbe9917d37593e054aa616ae35751295112953686a13a` |
 | Frontend | `slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0` |
 | Consumer | `slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
