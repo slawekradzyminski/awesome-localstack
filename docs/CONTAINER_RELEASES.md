@@ -175,6 +175,23 @@ previous backend still validates its entities against the migrated schema and
 Flyway ignores the applied future migration; rolling back the image does not
 require restoring the backup.
 
+### Production rollout — 8 November 2026
+
+[Stack CI](https://github.com/slawekradzyminski/awesome-localstack/actions/runs/42508232665)
+ran on the merged pin set (PR #70 passed all eight jobs). `make
+ansible-deploy-backend-upgrade` created the encrypted pre-deploy PostgreSQL
+backup, pulled backend 3.10.1 before interrupting requests, stopped both old
+backend instances, created a second encrypted backup after writes stopped, and
+applied V7 on start. The playbook completed 123 tasks with 16 changes, zero
+failures and zero unreachable hosts, and its verification passed.
+
+External checks passed on both `awesome.byst.re` and `aitesters.byst.re`: `/`,
+`/login`, `/products` and `/v3/api-docs` return 200; the OpenAPI document lists
+the coupon, cart-coupon, wishlist and CSV export endpoints and no warehouse
+paths; the served bundle contains the cart coupon panel. The checks did not sign
+in or write data. The deployment log is saved privately in
+`~/.config/awesome-localstack-security/deploy-commerce-wave1-20261108.log`.
+
 ## Frontend 3.9.3 data-testid coverage — 7 November 2026
 
 Frontend 3.9.3 (`a9ecc11`) ships
