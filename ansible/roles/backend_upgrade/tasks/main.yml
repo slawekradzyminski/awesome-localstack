@@ -18,20 +18,35 @@
       - "{{ backend_upgrade_image }}"
   changed_when: false
 
-- name: Stop both old backend instances and warehouse-service before applying incompatible migrations
+# The deployed Compose file is the previous release, so a service introduced by
+# this release (for example warehouse-service on its first rollout) is not
+# defined there yet and must not be named in the stop command.
+- name: Read the services defined by the currently deployed Compose file
   ansible.builtin.command:
     argv:
       - docker
       - compose
       - -f
       - "{{ app_compose_file }}"
-      - stop
-      - --timeout
-      - "60"
+      - config
+      - --services
+    chdir: "{{ app_dir }}"
+  register: backend_upgrade_deployed_services
+  changed_when: false
+
+- name: Stop both old backend instances and their warehouse-services before applying incompatible migrations
+  ansible.builtin.command:
+    argv: >-
+      {{ ['docker', 'compose', '-f', app_compose_file, 'stop', '--timeout', '60']
+         + (backend_upgrade_stop_services
+            | intersect(backend_upgrade_deployed_services.stdout_lines)) }}
+    chdir: "{{ app_dir }}"
+  vars:
+    backend_upgrade_stop_services:
       - backend
       - aitesters-backend
       - warehouse-service
-    chdir: "{{ app_dir }}"
+      - aitesters-warehouse-service
 
 - name: Create encrypted PostgreSQL backup after backend writes have stopped
   ansible.builtin.command:

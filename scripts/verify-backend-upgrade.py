@@ -19,11 +19,13 @@ def main():
                        "deployment_silence_state: absent"])
     assert "when: backend_upgrade_quiesce | default(false) | bool" in playbook
     ordered(tasks, ["postgres_backup_enabled | bool", "postgres_backup_pre_deploy | bool",
-                    "      - pull", "      - stop", "      - backend\n",
-                    "      - aitesters-backend", "      - warehouse-service",
+                    "      - pull", "      - --services", "'stop'",
+                    "intersect(backend_upgrade_deployed_services.stdout_lines)",
+                    "      - backend\n", "      - aitesters-backend", "      - warehouse-service",
+                    "      - aitesters-warehouse-service",
                     "awesome-postgres-backup backend-upgrade-quiesced"])
     assert "lookup('file', repo_root ~ '/' ~ app_compose_src)" in tasks
-    assert "      - \"60\"" in tasks
+    assert "'--timeout', '60'" in tasks
     print("Coordinated backend upgrade contract verified")
 
 
