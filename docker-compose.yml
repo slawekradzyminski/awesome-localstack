@@ -63,7 +63,7 @@ services:
       - "4003"
     hostname: warehouse-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: docker,demo
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres

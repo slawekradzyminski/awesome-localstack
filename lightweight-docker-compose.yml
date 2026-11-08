@@ -61,9 +61,12 @@ services:
       - "4003"
     hostname: warehouse-service
     environment:
-      # The local profile uses in-memory H2; only its backend URL needs the
-      # Compose service name instead of the profile's localhost default.
-      SPRING_PROFILES_ACTIVE: local
+      # The native image is Postgres-only, so the lightweight profile gives it
+      # a small dedicated database; demo seeds the training suppliers.
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://warehouse-postgres:5432/warehouse?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SPRING_DATASOURCE_PASSWORD: warehouse
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       BACKEND_BASE_URL: http://backend:4001
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
@@ -71,6 +74,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      warehouse-postgres:
+        condition: service_healthy
+    mem_limit: 160m
     healthcheck:
       test:
         - CMD
@@ -85,6 +91,40 @@ services:
       timeout: 5s
       retries: 18
       start_period: 30s
+    networks:
+      - my-private-ntwk
+
+  warehouse-postgres:
+    # Minimal Postgres for warehouse-service only; tuned for a ~96 MB footprint.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    restart: always
+    environment:
+      POSTGRES_DB: warehouse
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - max_connections=10
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=48MB
+    expose:
+      - "5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    mem_limit: 96m
+    shm_size: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d warehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - my-private-ntwk
 
