@@ -1,0 +1,12 @@
+--- a/src/main/java/com/awesome/testing/service/returns/ReturnService.java
++++ b/src/main/java/com/awesome/testing/service/returns/ReturnService.java
+@@ -215,8 +215,7 @@
+         BigDecimal itemsValue = request.getItems().stream()
+                 .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+-        OrderEntity order = request.getOrder();
+-        return CouponPricing.proportionalRefund(itemsValue, order.getTotalAmount(), order.getSubtotalAmount());
++        return itemsValue.setScale(2, java.math.RoundingMode.HALF_UP);
+     }
+ 
+     private ReturnDto saveAndNotify(ReturnRequestEntity request) {

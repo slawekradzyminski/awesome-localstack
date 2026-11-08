@@ -1,0 +1,24 @@
+--- a/src/main/java/com/awesome/testing/repository/OrderIdempotencyKeyRepository.java
++++ b/src/main/java/com/awesome/testing/repository/OrderIdempotencyKeyRepository.java
+@@ -13,6 +13,8 @@
+ 
+     Optional<OrderIdempotencyKeyEntity> findByUsernameAndKey(String username, String key);
+ 
++    Optional<OrderIdempotencyKeyEntity> findFirstByKeyOrderByIdDesc(String key);
++
+     @Modifying
+     @Query("delete from OrderIdempotencyKeyEntity k where k.username = :username and k.key = :key and k.createdAt < :cutoff")
+     int deleteExpired(@Param("username") String username, @Param("key") String key, @Param("cutoff") LocalDateTime cutoff);
+--- a/src/main/java/com/awesome/testing/service/OrderService.java
++++ b/src/main/java/com/awesome/testing/service/OrderService.java
+@@ -81,8 +81,9 @@
+         if (idempotencyKey != null) {
+             idempotencyKeyRepository.deleteExpired(
+                     username, idempotencyKey, LocalDateTime.now(commerceClock).minus(IDEMPOTENCY_TTL));
++            // Keys are random UUIDs, so a lookup by key alone is unambiguous.
+             Optional<OrderIdempotencyKeyEntity> prior =
+-                    idempotencyKeyRepository.findByUsernameAndKey(username, idempotencyKey);
++                    idempotencyKeyRepository.findFirstByKeyOrderByIdDesc(idempotencyKey);
+             if (prior.isPresent()) {
+                 if (!prior.get().getRequestHash().equals(requestHash)) {
+                     throw new CustomException(

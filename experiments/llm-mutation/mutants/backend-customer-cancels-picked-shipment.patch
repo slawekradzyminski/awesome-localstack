@@ -1,0 +1,13 @@
+--- a/src/main/java/com/awesome/testing/service/OrderService.java
++++ b/src/main/java/com/awesome/testing/service/OrderService.java
+@@ -253,8 +253,9 @@
+         Optional<ShipmentEntity> shipment = activeShipment(order);
+         if (shipment.isPresent()) {
+             ShipmentStatus shipmentStatus = shipment.get().getStatus();
++            // Anything not yet packed can still be stopped.
+             boolean cancellable = shipmentStatus == ShipmentStatus.AWAITING_PICK
+-                    || (warehouseInitiated && shipmentStatus == ShipmentStatus.PICKED);
++                    || shipmentStatus == ShipmentStatus.PICKED;
+             if (!cancellable) {
+                 throw new CustomException(
+                         "Order is already being packed and cannot be cancelled", HttpStatus.CONFLICT);

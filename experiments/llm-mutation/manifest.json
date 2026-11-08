@@ -905,6 +905,72 @@
         "-Dtest=EmailJmsBrokerContractTest",
         "test"
       ]
+    },
+    {
+      "id": "backend-refund-ignores-coupon-discount",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-refund-ignores-coupon-discount.patch",
+      "description": "Refund the full list price of returned items instead of scaling it by the share of the order that was actually paid.",
+      "contract": "A refund returns coupon discounts proportionally: items value x order total / order subtotal, rounded half-up. A customer who paid 126.00 for 140.00 of goods and returns 120.00 of them receives 108.00, not 120.00.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=ReturnFlowTest",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-Djacoco.skip=true",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-customer-cancels-picked-shipment",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-customer-cancels-picked-shipment.patch",
+      "description": "Let customers cancel any shipment that is not packed yet, collapsing the customer and warehouse cancellation policies.",
+      "contract": "Customers may cancel only while the shipment is AWAITING_PICK; once picking has started only the warehouse may cancel (AWAITING_PICK or PICKED). A customer cancelling a PICKED order receives 409 and the order stays PAID.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=OrderServiceCommerceTest",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-Djacoco.skip=true",
+        "test"
+      ]
+    },
+    {
+      "id": "backend-idempotency-key-not-scoped-to-user",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-idempotency-key-not-scoped-to-user.patch",
+      "description": "Look up a checkout Idempotency-Key globally instead of per user, on the assumption that client keys are random UUIDs.",
+      "contract": "Idempotency keys are scoped per user. Two users who send the same key each get their own order; a different user's key must never replay or conflict with someone else's checkout.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=IdempotencyAndEtagTest",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-Djacoco.skip=true",
+        "test"
+      ]
     }
   ]
 }

@@ -122,3 +122,32 @@ Raw records:
 (5 killed / 1 survived) and
 [`results/email-jms-contract-after-strengthening.json`](./results/email-jms-contract-after-strengthening.json)
 (6 killed / 0 survived).
+
+## Commerce and warehouse fulfilment (2026-11-08)
+
+Three white-box semantic mutants target the coupon, returns, fulfilment and
+idempotent-checkout rules added to `test-secure-backend`. They were frozen
+after the feature tests existed, so this run measures whether those tests
+encode the requirements rather than strengthening them.
+
+| Mutant | Result | Requirement it violates |
+| --- | --- | --- |
+| refund ignores the coupon discount | killed | refunds return discounts proportionally (108.00 of a 126.00/140.00 order, not 120.00) |
+| customer cancels a picked shipment | killed | only the warehouse may cancel once picking started; customers get 409 |
+| idempotency key looked up globally | killed | keys are scoped per user; another user's key never replays or conflicts |
+
+Invalid: 0 (all baselines passed and every mutant compiled). Equivalent: 0.
+Survived: 0.
+
+The same change ran framework mutation separately (not merged into this
+score): PIT on the new and changed services went from 39 survivors to 3
+equivalent-or-removed survivors after targeted unit tests, and StrykerJS
+killed every mutant in the changed role and API-client code.
+
+The run used a temporary manifest pointing at the backend feature worktree;
+`manifest.json` records the default sibling checkout, so these patches apply
+once the feature branch is merged.
+
+Raw record:
+[`results/commerce-fulfilment-2026-11-08.json`](./results/commerce-fulfilment-2026-11-08.json)
+(3 killed).
