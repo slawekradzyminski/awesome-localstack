@@ -192,3 +192,25 @@ task layout (it had become `invalid-patch`) and is killed by the updated
 `scripts/verify-backend-upgrade.py`, together with two wave-2 cases re-run as a
 regression check. Killed: 3. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
 [`results/backend-upgrade-first-warehouse-20261108.json`](./results/backend-upgrade-first-warehouse-20261108.json).
+
+## Backend runtime profiles on PostgreSQL — 8 November 2026
+
+The backend's `local` and `aitesters` profiles moved from H2 `create-drop` to
+PostgreSQL with Flyway and `ddl-auto: validate` (test-secure-backend#88). One
+requirement-driven candidate was frozen before writing tests:
+
+| Mutant | Violated requirement | Result |
+| --- | --- | --- |
+| `backend-aitesters-profile-skips-flyway` | Every packaged profile runs the production Flyway migrations; Hibernate never generates a runtime schema | killed by `RuntimeProfilesUsePostgresTest` |
+
+`RuntimeProfilesPostgresIT` additionally boots both profiles on PostgreSQL and
+asserts applied migrations and `validate`. The run used a temporary manifest
+pointing at the feature worktree. Killed: 1. Survived: 0. Invalid: 0.
+Equivalent: 0. No PIT-scoped logic changed (one permit-list entry removed).
+
+**Stack regression run (same day).** After pinning backend 3.12.0 and moving the
+sandbox to `aitesters-postgres`, all ten stack cases were re-run. The two
+deployment-silence mutants had become `invalid-patch` (the playbook gained the
+`backend_upgrade` role and the matchers moved to YAML) and were regenerated with
+the same intent. Killed: 10. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
+[`results/postgres-everywhere-stack-20261108.json`](./results/postgres-everywhere-stack-20261108.json).

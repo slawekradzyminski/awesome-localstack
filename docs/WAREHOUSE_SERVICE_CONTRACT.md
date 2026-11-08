@@ -15,7 +15,7 @@ already specified in `test-secure-backend/docs/COMMERCE_AND_FULFILMENT.md`
 | Stack | Spring Boot 4 / Java 25, same conventions as the backend (Lombok, springdoc, `CustomException`-style errors with `ErrorDto {message}`) |
 | Image | GraalVM native image (Spring AOT), target RSS ≤ 120 MB |
 | Port | 4003 |
-| Database | Postgres schema `warehouse` in the existing database (`spring.flyway.schemas=warehouse`, `currentSchema=warehouse`); H2 in-memory for the `local` profile and tests |
+| Database | Postgres schema `warehouse` in the existing database (`spring.flyway.schemas=warehouse`, `currentSchema=warehouse`); H2 in-memory only for the `local` profile and tests |
 | Profiles | `local` (H2, backend at `http://localhost:4001`), `docker` (Postgres, backend at `http://backend:4001`) |
 | Deployed in | lightweight, full and server Compose profiles |
 
@@ -155,10 +155,10 @@ becomes 503 `{message: "Backend unavailable"}`.
   `/api/v1/` location, plus `/warehouse/v3/api-docs`.
 - The aitesters sandbox runs its own `aitesters-warehouse-service` (same
   image, 160m) paired with `aitesters-backend`. It verifies the sandbox JWT key,
-  uses its own `aitesters_warehouse_service_token`, and stores data in a tmpfs
-  `aitesters-warehouse-postgres` (96m), so warehouse state is as ephemeral as the
-  in-memory sandbox backend. The nightly `aitesters-reset` unit recreates all
-  three together. The aitesters gateway block routes the same public paths to
+  uses its own `aitesters_warehouse_service_token`, and stores data in the
+  `warehouse` schema of `aitesters-postgres` (160m), the sandbox backend's
+  database. The nightly `aitesters-reset` unit recreates all three with a fresh
+  database volume. The aitesters gateway block routes the same public paths to
   it and keeps `/internal/` at 404.
 - The consumer runs the GraalVM native image (3.5.0+): `command: ["-Xmx64m"]`,
   `mem_limit: 160m`, no JVM blocklist mount (the blocklist is baked in at build

@@ -400,11 +400,11 @@ must be reviewed after controlled load tests or material traffic growth:
 
 | Service | JVM target | Container limit |
 | --- | --- | --- |
-| `backend` | `-Xms256m -Xmx896m` | 1.5 GiB |
+| `backend` | `-Xms256m -Xmx896m -XX:TieredStopAtLevel=1` (C1-only JIT for the single vCPU) | 1.5 GiB |
 | `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
-| `aitesters-backend` | Existing percentage-based limit | Existing 768 MiB |
+| `aitesters-backend` | Percentage-based heap, `-XX:TieredStopAtLevel=1` | 768 MiB |
 | `warehouse-service`, `aitesters-warehouse-service` | `-Xmx64m` runtime argument (GraalVM native image, ~58 MiB RSS measured) | 160 MiB each |
-| `aitesters-warehouse-postgres` | Not applicable (tmpfs, `shared_buffers=16MB`, ~69 MiB measured) | 96 MiB |
+| `aitesters-postgres` | Not applicable (disk-backed sandbox database, `shared_buffers=32MB`) | 160 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
 | `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
 | `grafana` | Not applicable | 640 MiB |
@@ -603,3 +603,14 @@ The full monitoring program is complete when:
 - [GitHub Actions included usage](https://docs.github.com/en/billing/reference/product-usage-included)
 - [GitHub Actions job-time billing](https://docs.github.com/en/actions/how-tos/monitor-workflows/view-job-execution-time)
 - [k6 Prometheus remote write](https://grafana.com/docs/k6/latest/results-output/real-time/prometheus-remote-write/)
+
+### CPU on the single shared vCPU
+
+The Mikrus 3.5 VPS has one dynamically allocated vCPU; the provider may throttle
+sustained full load. On 8 November 2026 the host idled around 26% busy and
+saturated (CPU PSI waiting about 99%) during e2e suites and deployments. Spring
+scrapes run every 15s, both backends use the C1-only JIT
+(`-XX:TieredStopAtLevel=1`) to cut warm-up compilation, and `HostCpuSaturated`
+warns only when CPU PSI waiting stays above 90% for 30 minutes, so ordinary test
+runs and deploys stay silent. The only upgrade that adds CPU is the PRO 4.1 plan
+(2x CPU limit), which was out of stock; a back-in-stock alert is registered.

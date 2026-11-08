@@ -1,0 +1,370 @@
+{
+  "schemaVersion": 1,
+  "manifest": "/Users/slawek/IdeaProjects/awesome-localstack/.worktrees/commerce/experiments/llm-mutation/manifest.json",
+  "generationMode": "white-box semantic pilot",
+  "results": [
+    {
+      "id": "stack-deploy-silences-critical-endpoint-alert",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-silences-critical-endpoint-alert.patch",
+      "description": "Silence the critical endpoint alert during a planned deployment instead of the warning alert.",
+      "contract": "Deployments may suppress the two-minute public endpoint warning, but the five-minute critical alert must remain active.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.382,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.019,
+        "outputTail": "Deployment silence contract failed: the public endpoint warning alert must be silenced\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.416,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.019,
+          "outputTail": "Deployment silence contract verified\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-deploy-expires-silence-before-verification",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-deploy-expires-silence-before-verification.patch",
+      "description": "Expire the maintenance silence immediately after Compose convergence while verification is still running.",
+      "contract": "The planned warning silence must remain active until post-deployment verification succeeds.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.406,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.019,
+        "outputTail": "Deployment silence contract failed: silence must wrap app convergence and verification\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.41,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.02,
+          "outputTail": "Deployment silence contract verified\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-lightweight-grpc-publishes-on-all-interfaces",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-lightweight-grpc-publishes-on-all-interfaces.patch",
+      "description": "The optional lightweight gRPC listener must not publish on public host interfaces.",
+      "contract": "Training gRPC is available only on host loopback; the Compose toggle must not expose it on the network.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.045,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.437,
+        "outputTail": "ERROR: lightweight-docker-compose.yml gRPC override must publish only on host loopback\nERROR: docker-compose.yml gRPC override must publish only on host loopback\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.049,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.445,
+          "outputTail": "Verified local pins for 5 first-party images\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-grpc-publishes-on-all-interfaces",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-grpc-publishes-on-all-interfaces.patch",
+      "description": "Native inventory gRPC must be exposed only on host loopback, not all interfaces.",
+      "contract": "Production native gRPC is available through SSH tunnelling; public native listeners violate deployment isolation.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.049,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.444,
+        "outputTail": "ERROR: backend native gRPC must publish only on 127.0.0.1:9091\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.048,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.45,
+          "outputTail": "Verified local pins for 5 first-party images\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-sandbox-reuses-stable-signing-key",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-reuses-stable-signing-key.patch",
+      "description": "The disposable sandbox must not inherit the stable site JWT signing key.",
+      "contract": "JWTs issued by either deployment must fail authentication at the other deployment.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.049,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.445,
+        "outputTail": "ERROR: sandbox must use its own runtime env file instead of the stable signing key (sandbox files: ['.env.runtime'], stable files: ['.env.runtime'])\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.055,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.451,
+          "outputTail": "Verified local pins for 5 first-party images\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-backend-upgrade-backs-up-before-quiescing",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-backend-upgrade-backs-up-before-quiescing.patch",
+      "description": "Take the migration rollback backup while old backends can still commit writes.",
+      "contract": "The coordinated-upgrade rollback backup must be taken after both old backend instances stop and before app convergence.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.428,
+        "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.028,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-v2r0mth5/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 33, in <module>\n    main()\n    ~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-v2r0mth5/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 21, in main\n    ordered(tasks, [\"postgres_backup_enabled | bool\", \"postgres_backup_pre_deploy | bool\",\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                    \"      - pull\", \"      - --services\", \"'stop'\",\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<2 lines>...\n                    \"      - aitesters-warehouse-service\",\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                    \"awesome-postgres-backup backend-upgrade-quiesced\"])\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-v2r0mth5/stack-backend-upgrade-backs-up-before-quiescing/scripts/verify-backend-upgrade.py\", line 11, in ordered\n    assert positions == sorted(positions), \"Unsafe upgrade ordering\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Unsafe upgrade ordering\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.409,
+          "outputTail": "\nplaybook: playbooks/deploy.yml\n",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.02,
+          "outputTail": "Coordinated backend upgrade contract verified\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-certificate-sandbox-omitted",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-certificate-sandbox-omitted.patch",
+      "contract": "Every JVM including the disposable sandbox must block the compromised CAs.",
+      "observableDifference": "The sandbox JVM accepts a certificate rejected by the stable backend.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.052,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.17,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-6yd98zqc/stack-certificate-sandbox-omitted/scripts/verify-java-security.py\", line 74, in <module>\n    verify()\n    ~~~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-6yd98zqc/stack-certificate-sandbox-omitted/scripts/verify-java-security.py\", line 59, in verify\n    raise ValueError(f'{profile}/{name}: JVM blocklist mount missing or duplicated')\nValueError: ['docker-compose.server.yml']/aitesters-backend: JVM blocklist mount missing or duplicated\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.054,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.299,
+          "outputTail": "Verified upstream certificate artifacts and 20 fail-closed JVM mounts\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-certificate-mutable-source",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-certificate-mutable-source.patch",
+      "contract": "Certificate-file updates must change the bind source so Compose recreates JVMs and remounts new inodes.",
+      "observableDifference": "A later atomic file update leaves old running JVMs reading the old blocklist.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.052,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.17,
+        "outputTail": "Traceback (most recent call last):\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-5p_msjlk/stack-certificate-mutable-source/scripts/verify-java-security.py\", line 74, in <module>\n    verify()\n    ~~~~~~^^\n  File \"/private/var/folders/hc/_qs8lmtj3wldtbls_clrl0980000gn/T/llm-mutant-5p_msjlk/stack-certificate-mutable-source/scripts/verify-java-security.py\", line 63, in verify\n    raise ValueError(f'{profile}/{name}: blocklist must use the exact existing read-only file')\nValueError: ['docker-compose.server.yml']/activemq: blocklist must use the exact existing read-only file\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.054,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.313,
+          "outputTail": "Verified upstream certificate artifacts and 20 fail-closed JVM mounts\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-sandbox-warehouse-reuses-stable-env",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-warehouse-reuses-stable-env.patch",
+      "description": "The sandbox warehouse-service must not read the stable warehouse runtime env file.",
+      "contract": "Stable-site JWTs and the stable service token must not authenticate at the aitesters warehouse-service.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.047,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.451,
+        "outputTail": "ERROR: the sandbox warehouse-service must use its own runtime env file instead of the stable signing key and service token (files: ['.env.warehouse'])\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.051,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.444,
+          "outputTail": "Verified local pins for 5 first-party images\n",
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "id": "stack-sandbox-gateway-routes-to-stable-warehouse",
+      "component": "stack",
+      "repository": ".",
+      "patch": "mutants/stack-sandbox-gateway-routes-to-stable-warehouse.patch",
+      "description": "The aitesters host must route warehouse paths to its own warehouse-service.",
+      "contract": "Warehouse requests on aitesters.byst.re reach aitesters-warehouse-service, never the stable warehouse-service.",
+      "compile": {
+        "exitCode": 0,
+        "durationSeconds": 0.048,
+        "outputTail": "",
+        "timedOut": false
+      },
+      "test": {
+        "exitCode": 1,
+        "durationSeconds": 0.442,
+        "outputTail": "ERROR: each gateway host must route warehouse paths to its own warehouse-service: {'awesome.byst.re': 'http://warehouse-service:4003', 'aitesters.byst.re': 'http://warehouse-service:4003'}\n",
+        "timedOut": false
+      },
+      "status": "killed",
+      "baseline": {
+        "status": "passed",
+        "compile": {
+          "exitCode": 0,
+          "durationSeconds": 0.048,
+          "outputTail": "",
+          "timedOut": false
+        },
+        "test": {
+          "exitCode": 0,
+          "durationSeconds": 0.454,
+          "outputTail": "Verified local pins for 5 first-party images\n",
+          "timedOut": false
+        }
+      }
+    }
+  ],
+  "summary": {
+    "killed": 10
+  }
+}

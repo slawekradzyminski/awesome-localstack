@@ -1,0 +1,22 @@
+diff --git a/src/main/resources/application-aitesters.yml b/src/main/resources/application-aitesters.yml
+index 892997d..6be8a62 100644
+--- a/src/main/resources/application-aitesters.yml
++++ b/src/main/resources/application-aitesters.yml
+@@ -7,7 +7,7 @@ spring:
+     password: ${SPRING_DATASOURCE_PASSWORD:}
+     driver-class-name: org.postgresql.Driver
+   flyway:
+-    enabled: true
++    enabled: false
+     baseline-on-migrate: true
+     baseline-version: 1
+     validate-migration-naming: true
+@@ -16,7 +16,7 @@ spring:
+       - org.springframework.boot.artemis.autoconfigure.ArtemisAutoConfiguration
+   jpa:
+     hibernate:
+-      ddl-auto: validate
++      ddl-auto: create-drop
+     properties:
+       hibernate:
+         format_sql: false

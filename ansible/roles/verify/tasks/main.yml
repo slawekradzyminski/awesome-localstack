@@ -469,6 +469,7 @@
   loop:
     - HostAvailableMemoryLow
     - HostAvailableMemoryCritical
+    - HostCpuSaturated
     - HostKernelOOMKill
     - HostSwapUsageHigh
     - HostSwapThrashing

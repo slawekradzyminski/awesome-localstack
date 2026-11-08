@@ -1,7 +1,8 @@
 # Local course compatibility verification
 
 The compatibility runner executes a frozen revision of `ai-testers-api` against
-two disposable H2-backed instances of the existing backend. It preserves the
+two disposable instances of the existing backend, each with its own tmpfs
+PostgreSQL running the production Flyway migrations. It preserves the
 lesson TypeScript files and assertions, recreates fixtures for each lesson,
 and stops its containers when finished. It does not use the running lightweight
 stack or either public deployment.
@@ -65,7 +66,7 @@ gateway configuration on `http://127.0.0.1:14081`. The runner checks equal Graph
 responses directly and through nginx, plus unauthenticated rejection on both
 routes. Browser, SSO, and PostgreSQL concurrency verification remain separate gates.
 
-The ordinary backend uses `local,server`: local H2 fixtures with the existing
+The ordinary backend uses `local,server`: local fixtures on PostgreSQL with the existing
 server profile's course-compatible UUID refresh tokens, public traffic routes,
 and traffic sanitization. The admin backend uses `local`, retains secure
 43-character refresh tokens and protected traffic routes, and enables traffic

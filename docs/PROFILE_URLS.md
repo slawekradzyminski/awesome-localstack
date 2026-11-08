@@ -43,7 +43,7 @@ flowchart LR
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003, H2]
+    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003, PostgreSQL]
     W -->|/internal/v1| B
     B --> O[Ollama Mock 11434]
 ```
@@ -90,7 +90,7 @@ flowchart LR
 
     G -->|aitesters.byst.re| AF[Aitesters Frontend]
     G -->|aitesters.byst.re /api| AB[Aitesters Backend<br/>local profile]
-    AB --> H2[(H2 in-memory)]
+    AB --> APG[(aitesters-postgres)]
     AB --> LO[Local email outbox]
     AB --> O
 ```
@@ -331,7 +331,7 @@ Special behavior:
 - Mailpit remains available only through SSH tunnelling to remote `127.0.0.1:8025`
 - `aitesters.byst.re` runs the current backend image with the Spring `aitesters` profile
 - its frontend is the same current frontend image used by `awesome.byst.re`
-- `aitesters.byst.re` uses H2 in-memory data and seeded local demo users, including the demo admin
+- `aitesters.byst.re` uses its own `aitesters-postgres` (Flyway migrations, like production) and seeded local demo users, including the demo admin; the daily reset starts it from a fresh volume
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus

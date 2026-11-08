@@ -45,6 +45,20 @@ groups:
           summary: Host available memory is below 300 MiB
           description: Linux MemAvailable has remained below 300 MiB for 3 minutes.
 
+      # Deliberately high and slow: test suites, deploys and the nightly reset saturate the single
+      # vCPU for minutes at a time. This fires only when tasks wait on CPU almost all the time for
+      # half an hour, which points to runaway load or the provider's CPU throttling.
+      - alert: HostCpuSaturated
+        expr: rate(container_pressure_cpu_waiting_seconds_total{job="cadvisor",id="/"}[10m]) > 0.90
+        for: 30m
+        labels:
+          severity: warning
+          alert_family: host-cpu-saturation
+          service: host
+        annotations:
+          summary: VPS tasks have been waiting on CPU almost continuously
+          description: VPS-root cgroup CPU PSI waiting time has exceeded 90% for 30 minutes; check for runaway load or provider CPU throttling.
+
       - alert: HostMemoryPressureWaiting
         expr: rate(container_pressure_memory_waiting_seconds_total{job="cadvisor",id="/"}[5m]) > 0.10
         for: 10m

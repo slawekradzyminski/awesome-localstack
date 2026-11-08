@@ -967,6 +967,27 @@
         "python3",
         "scripts/verify-release-images.py"
       ]
+    },
+    {
+      "id": "backend-aitesters-profile-skips-flyway",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-aitesters-profile-skips-flyway.patch",
+      "description": "The aitesters profile builds its schema with Hibernate create-drop instead of the Flyway migrations.",
+      "contract": "Every packaged profile runs the production Flyway migrations and validates entities against them; no runtime profile lets Hibernate generate the schema.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=RuntimeProfilesUsePostgresTest",
+        "-Djacoco.skip=true",
+        "test"
+      ]
     }
   ]
 }
