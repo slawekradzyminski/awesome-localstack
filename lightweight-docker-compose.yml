@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.9.4@sha256:4e96ac25991adde6f62c91b7feda88c83d0d35002a81d7169677b390e326d2e8
+    image: slawekradzyminski/backend:3.10.0@sha256:6c1eea68cbfdea3894cee414d9fbdbc425468e1f41c8cff9c764b6d18e3458ba
     restart: always
     expose:
       - "4001"
@@ -45,7 +45,7 @@ services:
           create_host_path: false
 
   frontend:
-    image: slawekradzyminski/frontend:3.9.3@sha256:e573282a98e98c19055ff865edfb027d286648a61086a0a5837005af6a2885ed
+    image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
     restart: always
     expose:
       - "80"

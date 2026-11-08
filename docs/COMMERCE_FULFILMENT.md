@@ -1,11 +1,8 @@
 # Commerce training features
 
-> **Status: pending release.** The features below live on the
-> `feature/commerce-fulfilment` branches of `test-secure-backend`,
-> `vite-react-frontend` and `jms-email-consumer`. The Compose files in this
-> repository still pin the previous images, so the stack does not serve these
-> endpoints or screens until the new images are released and pinned. The
-> release checklist at the end lists what to update here at that point.
+> **Status: wave 1 released** with backend 3.10.0, frontend 3.10.0 and
+> consumer 3.4.0 (see [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)). Wave 2
+> (warehouse-service) is still pending.
 
 The commerce work ships in two waves:
 

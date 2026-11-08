@@ -100,6 +100,7 @@ Application password login:
 - `client` / `client`
 - `client2` / `client2`
 - `client3` / `client3`
+- `warehouse` / `warehouse` (warehouse role)
 
 Keycloak SSO login:
 

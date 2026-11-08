@@ -255,6 +255,7 @@ For direct Keycloak SSO, `authProvider` is the configured default provider value
 | Client | `client` | `client` | Backend demo seed |
 | Client | `client2` | `client2` | Backend demo seed |
 | Client | `client3` | `client3` | Backend demo seed |
+| Warehouse | `warehouse` | `warehouse` | Backend demo seed |
 
 ### SSO Users (Keycloak-owned)
 

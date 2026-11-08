@@ -74,6 +74,7 @@ Password-login demo users are still available through the application login:
 - `client` / `client`
 - `client2` / `client2`
 - `client3` / `client3`
+- `warehouse` / `warehouse` (warehouse role)
 
 Keycloak Admin Console is available at `http://localhost:8082/admin/` with `admin` / `admin`.
 The local realm enables browser Authorization Code + PKCE for the frontend and direct access grants for Playwright training fixtures. Direct grants are included only so tests can obtain an ID token over HTTP, exchange it through the backend, and start UI tests already authenticated with app-issued tokens.
