@@ -153,3 +153,13 @@ becomes 503 `{message: "Backend unavailable"}`.
 - Backend gets `WAREHOUSE_SERVICE_TOKEN`.
 - Gateway locations for the public paths above, placed before the generic
   `/api/v1/` location, plus `/warehouse/v3/api-docs`.
+- The aitesters sandbox runs its own `aitesters-warehouse-service` (same
+  image, 160m) paired with `aitesters-backend`. It verifies the sandbox JWT key,
+  uses its own `aitesters_warehouse_service_token`, and stores data in a tmpfs
+  `aitesters-warehouse-postgres` (96m), so warehouse state is as ephemeral as the
+  in-memory sandbox backend. The nightly `aitesters-reset` unit recreates all
+  three together. The aitesters gateway block routes the same public paths to
+  it and keeps `/internal/` at 404.
+- The consumer runs the GraalVM native image (3.5.0+): `command: ["-Xmx64m"]`,
+  `mem_limit: 160m`, no JVM blocklist mount (the blocklist is baked in at build
+  time and the distroless runtime has no JDK).

@@ -325,6 +325,8 @@
   loop:
     - http://warehouse-service:4003/actuator/health
     - http://warehouse-service:4003/v3/api-docs
+    - http://aitesters-warehouse-service:4003/actuator/health
+    - http://aitesters-warehouse-service:4003/v3/api-docs
   register: verify_warehouse_direct
   changed_when: false
   until: verify_warehouse_direct.rc == 0
@@ -734,6 +736,24 @@
     return_content: true
   register: verify_aitesters_openapi
   until: verify_aitesters_openapi.status == 200
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify aitesters warehouse-service routes through gateway host routing
+  ansible.builtin.uri:
+    url: "http://127.0.0.1{{ item.path }}"
+    headers:
+      Host: "{{ aitesters_hostname }}"
+    status_code: "{{ item.status }}"
+  loop:
+    - path: /warehouse/v3/api-docs
+      status: 200
+    - path: /internal/v1/orders/1
+      status: 404
+  loop_control:
+    label: "{{ item.path }}"
+  register: verify_aitesters_warehouse
+  until: verify_aitesters_warehouse.status == item.status
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 

@@ -122,6 +122,88 @@ services:
     networks:
       - my-private-ntwk
 
+
+  aitesters-warehouse-service:
+    # The sandbox's own warehouse-service, paired with the in-memory aitesters-backend.
+    # It uses a tmpfs Postgres so both forget their data together on recreation.
+    image: warehouse-service:local
+    restart: unless-stopped
+    hostname: aitesters-warehouse-service
+    logging: *default-logging
+    env_file:
+      # Only the sandbox JWT key, its own service token and its database password.
+      - path: .env.aitesters-warehouse
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-warehouse-postgres:5432/warehouse?currentSchema=warehouse
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      BACKEND_BASE_URL: http://aitesters-backend:4001
+    depends_on:
+      aitesters-warehouse-postgres:
+        condition: service_healthy
+        restart: true
+      aitesters-backend:
+        condition: service_healthy
+        restart: true
+    expose:
+      - "4003"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4003;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
+  aitesters-warehouse-postgres:
+    # Minimal tmpfs Postgres for the sandbox warehouse only; tuned for a ~96 MB footprint.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    restart: unless-stopped
+    logging: *default-logging
+    env_file:
+      - path: .env.aitesters-warehouse-postgres
+        required: false
+    environment:
+      POSTGRES_DB: warehouse
+      POSTGRES_USER: warehouse
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - max_connections=10
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=48MB
+    expose:
+      - "5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    mem_limit: 96m
+    shm_size: 32m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d warehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - my-private-ntwk
   frontend:
     image: slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff
     restart: unless-stopped

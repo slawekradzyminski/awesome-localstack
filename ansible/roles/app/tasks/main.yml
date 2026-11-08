@@ -53,7 +53,9 @@
       - >-
         warehouse_service_allow_unpinned_image | bool
         or ((lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
-            .services['warehouse-service'].image is search('@sha256:[0-9a-f]{64}$'))
+            .services['warehouse-service'].image is search('@sha256:[0-9a-f]{64}$')
+            and (lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['aitesters-warehouse-service'].image is search('@sha256:[0-9a-f]{64}$'))
     quiet: true
     fail_msg: >-
       docker-compose.server.yml still builds warehouse-service locally. Publish
@@ -70,6 +72,21 @@
     fail_msg: >-
       Configure warehouse_service_token (at least 32 characters, distinct from
       both JWT keys) in Ansible Vault.
+  no_log: true
+
+- name: Require dedicated aitesters warehouse secrets
+  ansible.builtin.assert:
+    that:
+      - (aitesters_warehouse_service_token | default('', true) | string | length) >= 32
+      - aitesters_warehouse_service_token != warehouse_service_token
+      - aitesters_warehouse_service_token != jwt_secret_key
+      - aitesters_warehouse_service_token != aitesters_jwt_secret_key
+      - (aitesters_warehouse_postgres_password | default('', true) | string | length) >= 16
+    quiet: true
+    fail_msg: >-
+      Configure aitesters_warehouse_service_token (at least 32 characters,
+      distinct from the stable token and both JWT keys) and
+      aitesters_warehouse_postgres_password (at least 16 characters) in Ansible Vault.
   no_log: true
 
 - name: Read deployed Prometheus configuration checksums
@@ -224,6 +241,22 @@
     owner: root
     group: root
     mode: "0600"
+  no_log: true
+
+- name: Render the aitesters warehouse-service runtime environment
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ app_dir }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop:
+    - src: env.aitesters-warehouse.j2
+      dest: .env.aitesters-warehouse
+    - src: env.aitesters-warehouse-postgres.j2
+      dest: .env.aitesters-warehouse-postgres
+  loop_control:
+    label: "{{ item.dest }}"
   no_log: true
 
 - name: Normalize application directory ownership

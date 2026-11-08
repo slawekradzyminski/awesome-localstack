@@ -120,6 +120,13 @@ warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ postgres_password | default('', true) }}"
 
+# The aitesters sandbox has its own warehouse-service and tmpfs Postgres, keyed
+# to the sandbox JWT key so stable-site tokens never authenticate there.
+aitesters_warehouse_runtime_env:
+  JWT_SECRET_KEY: "{{ aitesters_jwt_secret_key | default('', true) }}"
+  WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+
 # The server cannot build the GraalVM native image (memory, missing sibling
 # checkout). Deployments stop until docker-compose.server.yml pins a published
 # warehouse-service digest; override only for a deliberate pre-built local image.

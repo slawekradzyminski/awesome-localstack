@@ -32,6 +32,9 @@ aitesters_jwt_secret_key: replace-with-a-different-random-key-of-at-least-32-byt
 # Shared by the backend internal API and warehouse-service (X-Service-Token).
 # Generate with `openssl rand -hex 32`; keep it different from both JWT keys.
 warehouse_service_token: replace-with-at-least-32-random-bytes
+# The aitesters sandbox pair: its own service token and tmpfs Postgres password.
+aitesters_warehouse_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
+aitesters_warehouse_postgres_password: replace-with-at-least-16-random-characters
 
 # Required when postgres_backup_enabled is true. Keep a separate offline copy:
 # losing this passphrase makes encrypted backups unrecoverable.

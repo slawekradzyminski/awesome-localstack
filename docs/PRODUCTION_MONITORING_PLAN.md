@@ -403,7 +403,8 @@ must be reviewed after controlled load tests or material traffic growth:
 | `backend` | `-Xms256m -Xmx896m` | 1.5 GiB |
 | `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
 | `aitesters-backend` | Existing percentage-based limit | Existing 768 MiB |
-| `warehouse-service` | Not applicable (GraalVM native image, target RSS 120 MiB) | 160 MiB |
+| `warehouse-service`, `aitesters-warehouse-service` | `-Xmx64m` runtime argument (GraalVM native image, ~58 MiB RSS measured) | 160 MiB each |
+| `aitesters-warehouse-postgres` | Not applicable (tmpfs, `shared_buffers=16MB`, ~69 MiB measured) | 96 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
 | `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
 | `grafana` | Not applicable | 640 MiB |
