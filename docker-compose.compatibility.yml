@@ -12,6 +12,9 @@ x-backend: &backend
         create_host_path: false
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
+    SPRING_DATASOURCE_USERNAME: postgres
+    SPRING_DATASOURCE_PASSWORD: postgres
     PASSWORD_RESET_EXPOSE_TOKEN_IN_RESPONSE: "false"
     OLLAMA_BASE_URL: http://ollama-mock:11434
     APP_SSO_ENABLED: "false"
@@ -33,24 +36,55 @@ x-backend: &backend
     SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "4000"
     JAVA_TOOL_OPTIONS: -Xmx512m
   mem_limit: 768m
-  depends_on:
-    - ollama-mock
+
+x-postgres: &postgres
+  # Disposable tmpfs database per backend, so each compatibility run starts clean.
+  image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+  environment:
+    POSTGRES_DB: testdb
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=40"]
+  tmpfs:
+    - /var/lib/postgresql/data
+  mem_limit: 256m
+  shm_size: 64m
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d testdb"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
 
 services:
   backend:
     <<: *backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama-mock:
+        condition: service_started
     ports:
       - "127.0.0.1:14001:4001"
+  postgres:
+    <<: *postgres
   admin-backend:
     <<: *backend
+    depends_on:
+      admin-postgres:
+        condition: service_healthy
+      ollama-mock:
+        condition: service_started
     environment:
       <<: *backend-environment
       SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://admin-postgres:5432/testdb
       APP_TRAFFIC_OBFUSCATE_AUTHORIZATION: "true"
       APP_TRAFFIC_OBFUSCATE_EMAILS: "true"
       APP_TRAFFIC_OBFUSCATE_SENSITIVE_BODY_FIELDS: "true"
     ports:
       - "127.0.0.1:14002:4001"
+  admin-postgres:
+    <<: *postgres
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29
     volumes:

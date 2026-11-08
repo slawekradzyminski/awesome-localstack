@@ -322,11 +322,13 @@ It reaches the stable backend through `.env.runtime` and warehouse-service
 through `.env.warehouse`, which contains only `JWT_SECRET_KEY`,
 `WAREHOUSE_SERVICE_TOKEN` and `SPRING_DATASOURCE_PASSWORD` (root-owned, mode
 0600). The aitesters sandbox pairs `aitesters-backend` with its own
-`aitesters-warehouse-service` and tmpfs `aitesters-warehouse-postgres`:
-`.env.aitesters` carries `aitesters_warehouse_service_token`, and
-`.env.aitesters-warehouse` / `.env.aitesters-warehouse-postgres` carry the
-sandbox JWT key, that token and `aitesters_warehouse_postgres_password`. The
-nightly reset recreates all three. Deployment fails unless both warehouse
+`aitesters-warehouse-service`, both on `aitesters-postgres` (database
+`aitesters`, warehouse schema `warehouse`): `.env.aitesters` carries
+`aitesters_warehouse_service_token` and replaces the stable database password
+with `aitesters_postgres_password`; `.env.aitesters-warehouse` /
+`.env.aitesters-postgres` carry the sandbox JWT key, that token and the sandbox
+database password. The nightly reset recreates all three with
+`--renew-anon-volumes`, so the sandbox database starts empty and reseeds. Deployment fails unless both warehouse
 services use a published `tag@sha256` (the VPS cannot build the native image);
 set `warehouse_service_allow_unpinned_image=true` only for a deliberately
 pre-loaded image. Verification checks the direct `warehouse-service:4003` and

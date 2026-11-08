@@ -192,3 +192,18 @@ task layout (it had become `invalid-patch`) and is killed by the updated
 `scripts/verify-backend-upgrade.py`, together with two wave-2 cases re-run as a
 regression check. Killed: 3. Survived: 0. Invalid: 0. Equivalent: 0. Raw record:
 [`results/backend-upgrade-first-warehouse-20261108.json`](./results/backend-upgrade-first-warehouse-20261108.json).
+
+## Backend runtime profiles on PostgreSQL — 8 November 2026
+
+The backend's `local` and `aitesters` profiles moved from H2 `create-drop` to
+PostgreSQL with Flyway and `ddl-auto: validate` (test-secure-backend#88). One
+requirement-driven candidate was frozen before writing tests:
+
+| Mutant | Violated requirement | Result |
+| --- | --- | --- |
+| `backend-aitesters-profile-skips-flyway` | Every packaged profile runs the production Flyway migrations; Hibernate never generates a runtime schema | killed by `RuntimeProfilesUsePostgresTest` |
+
+`RuntimeProfilesPostgresIT` additionally boots both profiles on PostgreSQL and
+asserts applied migrations and `validate`. The run used a temporary manifest
+pointing at the feature worktree. Killed: 1. Survived: 0. Invalid: 0.
+Equivalent: 0. No PIT-scoped logic changed (one permit-list entry removed).

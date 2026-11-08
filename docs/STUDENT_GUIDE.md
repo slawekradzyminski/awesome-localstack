@@ -71,7 +71,10 @@ Expected services:
 - `backend`
 - `frontend`
 - `gateway`
+- `keycloak`
 - `ollama-mock`
+- `postgres` (shared by the backend and warehouse-service)
+- `warehouse-service` (fulfilment, returns and purchasing)
 
 Expected status:
 

@@ -241,6 +241,23 @@ def main() -> int:
         failures,
     )
 
+    sandbox_environment = server_services["aitesters-backend"].get("environment", {})
+    sandbox_warehouse_environment = server_services["aitesters-warehouse-service"].get("environment", {})
+    require(
+        sandbox_environment.get("SPRING_DATASOURCE_URL") == "jdbc:postgresql://aitesters-postgres:5432/aitesters"
+        and str(sandbox_warehouse_environment.get("SPRING_DATASOURCE_URL", "")).startswith(
+            "jdbc:postgresql://aitesters-postgres:5432/aitesters?")
+        and "aitesters-postgres" in server_services["aitesters-backend"].get("depends_on", {}),
+        "the sandbox backend and warehouse-service must use the sandbox database, never the stable one",
+        failures,
+    )
+    sandbox_template = (ROOT / "ansible" / "roles" / "app" / "templates" / "env.aitesters.j2").read_text()
+    require(
+        "'SPRING_DATASOURCE_PASSWORD': aitesters_postgres_password" in sandbox_template,
+        "the sandbox runtime env must replace the stable database password with aitesters_postgres_password",
+        failures,
+    )
+
     gateway_upstreams = gateway_warehouse_upstreams(ROOT / "nginx" / "conf.d" / "app-gateway.conf")
     require(
         gateway_upstreams.get("awesome.byst.re") == "http://warehouse-service:4003"

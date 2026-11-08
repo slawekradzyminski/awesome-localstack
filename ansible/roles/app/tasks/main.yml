@@ -74,19 +74,21 @@
       both JWT keys) in Ansible Vault.
   no_log: true
 
-- name: Require dedicated aitesters warehouse secrets
+- name: Require dedicated aitesters warehouse and database secrets
   ansible.builtin.assert:
     that:
       - (aitesters_warehouse_service_token | default('', true) | string | length) >= 32
       - aitesters_warehouse_service_token != warehouse_service_token
       - aitesters_warehouse_service_token != jwt_secret_key
       - aitesters_warehouse_service_token != aitesters_jwt_secret_key
-      - (aitesters_warehouse_postgres_password | default('', true) | string | length) >= 16
+      - (aitesters_postgres_password | default('', true) | string | length) >= 16
+      - aitesters_postgres_password != postgres_password
     quiet: true
     fail_msg: >-
       Configure aitesters_warehouse_service_token (at least 32 characters,
       distinct from the stable token and both JWT keys) and
-      aitesters_warehouse_postgres_password (at least 16 characters) in Ansible Vault.
+      aitesters_postgres_password (at least 16 characters, distinct from
+      postgres_password) in Ansible Vault.
   no_log: true
 
 - name: Read deployed Prometheus configuration checksums
@@ -253,8 +255,8 @@
   loop:
     - src: env.aitesters-warehouse.j2
       dest: .env.aitesters-warehouse
-    - src: env.aitesters-warehouse-postgres.j2
-      dest: .env.aitesters-warehouse-postgres
+    - src: env.aitesters-postgres.j2
+      dest: .env.aitesters-postgres
   loop_control:
     label: "{{ item.dest }}"
   no_log: true

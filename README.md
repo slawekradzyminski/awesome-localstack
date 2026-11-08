@@ -94,7 +94,7 @@ flowchart LR
     G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     F[Frontend]
     B[Backend]
-    W[Warehouse Service<br/>internal 4003, H2]
+    W[Warehouse Service<br/>internal 4003, PostgreSQL]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
@@ -372,7 +372,7 @@ make ansible-reset-aitesters-state
 - `make ansible-verify`: run health checks without changing deployment state
 - `make ansible-cleanup`: run the checksum- and retention-guarded container cleanup
 - `make ansible-reset-demo-state`: destructively reset Postgres and Mailpit-backed demo state, then redeploy
-- `make ansible-reset-aitesters-state`: recreate only the H2-backed aitesters backend and reseed local demo data
+- `make ansible-reset-aitesters-state`: recreate the aitesters database (fresh volume), backend and warehouse-service and reseed local demo data
 
 Main public URLs:
 

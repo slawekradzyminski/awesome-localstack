@@ -113,8 +113,8 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
 
 - **Profiles.** lightweight, full and server all run `warehouse-service` on
   internal port 4003 (never published on the host).
-  - lightweight: `local` profile, in-memory H2, `BACKEND_BASE_URL` overridden to
-    `http://backend:4001`;
+  - lightweight: `docker,demo` profiles, tmpfs PostgreSQL `testdb` shared with
+    the backend (`?currentSchema=warehouse`);
   - full: `docker` profile, PostgreSQL `testdb` with
     `?currentSchema=warehouse`;
   - server: `docker` profile, same database and schema, `mem_limit: 160m`
