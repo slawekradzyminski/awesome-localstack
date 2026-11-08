@@ -160,3 +160,25 @@ mutants therefore no longer apply to `test-secure-backend`: their patches and
 manifest entries are removed, and they will be re-authored against
 warehouse-service. The raw record above keeps the original 3-killed run; only
 the idempotency-key mutant remains active for the backend.
+
+## Commerce wave 2 stack wiring — 8 November 2026
+
+Two requirement-driven candidates for the aitesters warehouse pairing were
+frozen before strengthening the checks:
+
+| Mutant | Violated requirement | Before | After |
+| --- | --- | --- | --- |
+| `stack-sandbox-warehouse-reuses-stable-env` | Stable-site JWTs and the stable service token must not authenticate at the sandbox warehouse-service | survived | killed |
+| `stack-sandbox-gateway-routes-to-stable-warehouse` | Warehouse requests on the aitesters host must reach `aitesters-warehouse-service` | survived | killed |
+
+`scripts/verify-release-images.py` now requires the sandbox warehouse to use
+only `.env.aitesters-warehouse`, to call `aitesters-backend`, and each gateway
+host to set its own `$warehouse_upstream`; both checks pass on the original.
+`stack-certificate-mutable-source` was regenerated with the same intent because
+the native consumer no longer has a blocklist mount (the old patch was
+`invalid-patch`). The re-run killed all five stack cases it covered.
+Killed: 5. Survived: 0. Invalid: 0. Equivalent: 0. No PIT/Stryker-scoped code
+changed in this repository.
+
+Raw record:
+[`results/wave2-warehouse-20261108.json`](./results/wave2-warehouse-20261108.json).
