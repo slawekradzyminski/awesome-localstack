@@ -1,6 +1,6 @@
 # Commerce training features
 
-> **Status: wave 1 released** with backend 3.10.0, frontend 3.10.0 and
+> **Status: wave 1 released** with backend 3.10.1, frontend 3.10.0 and
 > consumer 3.4.0 (see [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)). Wave 2
 > (warehouse-service) is still pending.
 

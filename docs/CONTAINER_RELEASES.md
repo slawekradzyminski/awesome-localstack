@@ -132,7 +132,7 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
-## Commerce wave 1: backend 3.10.0, frontend 3.10.0, consumer 3.4.0 — 8 November 2026
+## Commerce wave 1: backend 3.10.1, frontend 3.10.0, consumer 3.4.0 — 8 November 2026
 
 Wave 1 of the commerce extensions (see [COMMERCE_FULFILMENT.md](COMMERCE_FULFILMENT.md)):
 coupons, product reviews, wishlist with back-in-stock emails, product CSV
@@ -142,11 +142,17 @@ with `warehouse-service` (wave 2).
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
-| `slawekradzyminski/backend:3.10.0@sha256:6c1eea68cbfdea3894cee414d9fbdbc425468e1f41c8cff9c764b6d18e3458ba` | [PR #85](https://github.com/slawekradzyminski/test-secure-backend/pull/85), `242b1ea` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42500173909) |
+| `slawekradzyminski/backend:3.10.1@sha256:45ac5391eadfd41e1a4df010700bd6073d1d16bcec0fec2b50fe4f2bea3cf8c0` | [PR #85](https://github.com/slawekradzyminski/test-secure-backend/pull/85) + [PR #87](https://github.com/slawekradzyminski/test-secure-backend/pull/87), `606a2f4` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42506599471) |
 | `slawekradzyminski/frontend:3.10.0@sha256:75508a827997b818db0c590445630c4ce23d1373d79da73d2ecc1240c0ba14ff` | [PR #91](https://github.com/slawekradzyminski/vite-react-frontend/pull/91), `29737f9` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42504804256) |
 | `slawekradzyminski/consumer:3.4.0@sha256:30cfbd3fdb861d7085c4c8a3ac9fbbc68ec9cd3c1d19befa196a155186cee297` | [PR #29](https://github.com/slawekradzyminski/jms-email-consumer/pull/29), `ab44182` | [run](https://github.com/slawekradzyminski/jms-email-consumer/actions/runs/42500121296) |
 
-Backend 3.10.0 runs Flyway migration V7: new coupon, redemption, cart-coupon,
+Backend 3.10.0 was published but never deployed: the pre-deploy run of the
+unchanged course suite (`l20`, revision `c6f7aee`) failed 7 of 311 tests because
+every cart and order body gained coupon fields, and the course compares whole
+bodies with `toEqual`. Backend 3.10.1 omits those fields unless a coupon is
+involved and passed the same suite 311/311 with no skips or flaky tests.
+
+Backend 3.10.1 runs Flyway migration V7: new coupon, redemption, cart-coupon,
 review, wishlist and idempotency tables, a nullable `orders.subtotal_amount`
 backfilled from `total_amount`, `orders.discount_amount` and `coupon_code`, and
 widened check constraints for roles (`ROLE_WAREHOUSE`), email event types and
