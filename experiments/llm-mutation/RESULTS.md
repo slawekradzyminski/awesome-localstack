@@ -231,3 +231,12 @@ Survived: 0. Invalid: 0. Equivalent: 0. Framework mutation is reported
 separately: PIT on the changed classes killed 75 of 75 after adding PNG chunk and
 password-boundary tests. Raw record:
 [`results/native-backend-20261108.json`](./results/native-backend-20261108.json).
+
+**Stack regression after the native backend (9 November 2026).** The backends no
+longer carry JVM blocklist mounts, so the two certificate mutants and the gRPC
+port mutant became `invalid-patch`. They were regenerated with the same intent
+against the remaining JVMs (the sandbox-shared `ollama-mock` loses its mount; all
+remaining mounts use the mutable source) and the backend's loopback gRPC port.
+All ten stack cases were re-run. Killed: 10. Survived: 0. Invalid: 0.
+Equivalent: 0. Raw record:
+[`results/native-backend-stack-20261109.json`](./results/native-backend-stack-20261109.json).

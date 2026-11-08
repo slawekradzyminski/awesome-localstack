@@ -1,7 +1,9 @@
+diff --git a/docker-compose.server.yml b/docker-compose.server.yml
+index 6209394..1729b4a 100644
 --- a/docker-compose.server.yml
 +++ b/docker-compose.server.yml
-@@ -136,13 +136,6 @@
-     mem_limit: 768m
+@@ -552,13 +552,6 @@ services:
+     mem_limit: 512m
      networks:
        - my-private-ntwk
 -    volumes:
@@ -12,5 +14,5 @@
 -        bind:
 -          create_host_path: false
  
-   aitesters-frontend:
-     image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
+ volumes:
+   activemq-data:

@@ -1,26 +1,8 @@
 diff --git a/docker-compose.server.yml b/docker-compose.server.yml
-index 7bd0820..4bf23da 100644
+index 6209394..205c146 100644
 --- a/docker-compose.server.yml
 +++ b/docker-compose.server.yml
-@@ -68,7 +68,7 @@ services:
-       - my-private-ntwk
-     volumes:
-       - type: bind
--        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-+        source: ./security/java/blocked.certs
-         target: /opt/java/openjdk/lib/security/blocked.certs
-         read_only: true
-         bind:
-@@ -265,7 +265,7 @@ services:
-       - my-private-ntwk
-     volumes:
-       - type: bind
--        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-+        source: ./security/java/blocked.certs
-         target: /opt/java/openjdk/lib/security/blocked.certs
-         read_only: true
-         bind:
-@@ -497,7 +497,7 @@ services:
+@@ -489,7 +489,7 @@ services:
        - "8161"
      volumes:
        - type: bind
@@ -29,7 +11,7 @@ index 7bd0820..4bf23da 100644
          target: /opt/java/openjdk/lib/security/blocked.certs
          read_only: true
          bind:
-@@ -562,7 +562,7 @@ services:
+@@ -554,7 +554,7 @@ services:
        - my-private-ntwk
      volumes:
        - type: bind
