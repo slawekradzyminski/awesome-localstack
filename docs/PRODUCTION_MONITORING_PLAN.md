@@ -401,7 +401,7 @@ must be reviewed after controlled load tests or material traffic growth:
 | Service | JVM target | Container limit |
 | --- | --- | --- |
 | `backend` | `-Xms256m -Xmx896m` | 1.5 GiB |
-| `consumer` | `-Xms192m -Xmx768m` | 1.125 GiB |
+| `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
 | `aitesters-backend` | Existing percentage-based limit | Existing 768 MiB |
 | `warehouse-service` | Not applicable (GraalVM native image, target RSS 120 MiB) | 160 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |

@@ -453,7 +453,6 @@ services:
       - path: .env.runtime
         required: false
     environment:
-      JAVA_TOOL_OPTIONS: "-Xms192m -Xmx768m"
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: "1025"
     expose:
@@ -466,16 +465,11 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    mem_limit: 1152m
+    # GraalVM native image (~70 MB RSS measured); the heap cap is a runtime argument.
+    command: ["-Xmx64m"]
+    mem_limit: 160m
     networks:
       - my-private-ntwk
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /opt/java/openjdk/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
 
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29

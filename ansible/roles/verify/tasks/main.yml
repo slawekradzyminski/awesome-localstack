@@ -16,7 +16,6 @@
   loop:
     - backend
     - aitesters-backend
-    - consumer
     - ollama-mock
     - activemq
   register: java_security_runtime_check
@@ -618,7 +617,7 @@
     - job: spring_backend_micrometer
       maximum_bytes: 939524096
     - job: spring_consumer_micrometer
-      maximum_bytes: 805306368
+      maximum_bytes: 67108864
   loop_control:
     label: "{{ item.job }}"
   register: jvm_maximum_heap_responses

@@ -8,6 +8,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+NATIVE_IMAGES = ('slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:', 'warehouse-service:local')
 
 
 def verify(root=ROOT):
@@ -42,8 +43,13 @@ def verify(root=ROOT):
         config = json.loads(subprocess.check_output(command, cwd=root, env=task_env))
         for name, service in config['services'].items():
             image = service.get('image', '')
+            if any(part in image for part in NATIVE_IMAGES):
+                # GraalVM native images bake the blocklist in at build time and ship no JDK to mount into.
+                if any('blocked.certs' in mount.get('target', '') for mount in service.get('volumes', [])):
+                    raise ValueError(f'{profile}/{name}: native image must not mount a JVM blocklist')
+                continue
             if not any(part in image for part in (
-                'slawekradzyminski/backend:', 'slawekradzyminski/consumer:',
+                'slawekradzyminski/backend:',
                 'slawekradzyminski/ollama-mock:', 'apache/artemis:', 'quay.io/keycloak/keycloak:',
             )):
                 continue
