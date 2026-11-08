@@ -905,6 +905,28 @@
         "-Dtest=EmailJmsBrokerContractTest",
         "test"
       ]
+    },
+    {
+      "id": "backend-idempotency-key-not-scoped-to-user",
+      "component": "backend",
+      "repository": "../test-secure-backend",
+      "patch": "mutants/backend-idempotency-key-not-scoped-to-user.patch",
+      "description": "Look up a checkout Idempotency-Key globally instead of per user, on the assumption that client keys are random UUIDs.",
+      "contract": "Idempotency keys are scoped per user. Two users who send the same key each get their own order; a different user's key must never replay or conflict with someone else's checkout.",
+      "compile": [
+        "./mvnw",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ],
+      "test": [
+        "./mvnw",
+        "-q",
+        "-Dtest=IdempotencyAndEtagTest",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-Djacoco.skip=true",
+        "test"
+      ]
     }
   ]
 }
