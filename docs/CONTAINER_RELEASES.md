@@ -131,6 +131,61 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Architecture review fixes: backend 3.14.0, warehouse-service 1.1.0, consumer 3.6.0 — 9 November 2026
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.14.0@sha256:476c7e3bcb6edd65425fb4818411bdd0143347c4af40baff4c94198a5ec288b1` | [PR #91](https://github.com/slawekradzyminski/test-secure-backend/pull/91), `a076a57` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42690292654) |
+| `slawekradzyminski/warehouse-service:1.1.0@sha256:ae39b577695c7383d30e91ff96247c718ca5fce00fea4eff21460e114f17ee77` | [PR #3](https://github.com/slawekradzyminski/warehouse-service/pull/3), `8de7326` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/42690307715) |
+| `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` | [PR #31](https://github.com/slawekradzyminski/jms-email-consumer/pull/31), `78de144` | [run](https://github.com/slawekradzyminski/jms-email-consumer/actions/runs/42690326854) |
+
+This release fixes the findings of the warehouse architecture review:
+
+1. **Stuck release.** A shipment release whose response was lost left the order
+   `AWAITING_PICK` without a shipment and blocked every retry. The backend now
+   accepts a repeated `AWAITING_PICK`. warehouse-service keeps the shipment when
+   the order turns out to be released, and adopts released orders that have no
+   shipment.
+2. **Refunds.** Refunding a return books it on the backend order
+   (`POST /internal/v1/orders/{id}/refunds`, idempotent, capped at the total). A
+   full refund releases the coupon. Orders show `refundedAmount` once it is above
+   zero.
+3. **Cancellation propagation.** `ShipmentReconciler` cancels shipments whose
+   order was cancelled on the backend, every minute (`GET /internal/v1/orders?ids=`).
+4. **Email durability.** warehouse notifications use a transactional outbox with
+   retries, and the backend deduplicates them by `requestId`. The backend stores
+   email payloads and retries failed or lost sends (`EmailRetryJob`).
+5. **Email text in one place.** The backend renders every email; the consumer
+   delivers it unchanged.
+6. **Database isolation.** warehouse-service connects as its own `warehouse` role,
+   which owns only the `warehouse` schema. The one-shot `postgres-roles` and
+   `aitesters-postgres-roles` services prepare it before every start.
+7. **Multi-instance safety.** Return requests are serialised with an
+   `order_locks` row lock instead of an in-process lock.
+8. **No shared signing secret.** Access tokens are RS256 (`JWT_SIGNING_KEY` from
+   Vault). warehouse-service verifies them with the backend's
+   `/internal/v1/jwks.json`.
+
+Migrations: backend Flyway V9 adds nullable or defaulted `email_event` columns,
+`orders.refunded_amount` (default 0) and the `order_refunds` table.
+warehouse-service V2 adds `notification_outbox` and `order_locks`. Rolling back
+to backend 3.13.0 / warehouse-service 1.0.0 / consumer 3.5.0 (references in the
+3.13.0 section and the wave-2 table) also needs the previous Compose files and
+Vault keys `jwt_secret_key` / `aitesters_jwt_secret_key`, which stay in Vault.
+Old images ignore the added columns and tables, so the backup is not needed for
+rollback. Switching to RS256 invalidates the access tokens issued before the
+deploy, and clients refresh them with their refresh tokens.
+
+Verification before release: the backend passed 807 unit and 52 PostgreSQL
+integration tests, and warehouse-service passed 205 tests. Locally built native
+images of both passed their smoke tests (warehouse 61 MiB under the 160 MiB
+limit; an HMAC token signed with the public key is rejected). An end-to-end run
+of both native images on the lightweight stack covered RS256/JWKS, shipment to
+delivery, return and refund booked on the order, backend-rendered emails, the
+outbox, the reconciler and a JWKS refetch after a backend restart. The unchanged
+course suite (`l20`, `596d524`) passed 311/311 against the 3.14.0 candidate with
+no skips or flaky tests.
+
 ## Backend 3.13.0: GraalVM native image — 9 November 2026
 
 | Image | Source | Release workflow |

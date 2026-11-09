@@ -57,9 +57,72 @@
       {{
         (verify_compose_config_response.stdout | from_json).services.keys()
         | list
+        | difference(verify_oneshot_services)
         | sort
       }}
   no_log: true
+
+- name: Read one-shot service exit codes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - ps
+      - --all
+      - --format
+      - "{{ '{{.Service}} {{.State}} {{.ExitCode}}' }}"
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop: "{{ verify_oneshot_services }}"
+  register: verify_oneshot_results
+  changed_when: false
+
+- name: Verify one-shot services completed successfully
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - item.stdout == item.item ~ ' exited 0'
+    fail_msg: "{{ item.item }} did not complete successfully: {{ item.stdout | default('not created') }}"
+  loop: "{{ verify_oneshot_results.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Verify the warehouse database roles cannot read backend tables
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - "{{ item.service }}"
+      - psql
+      - --username={{ item.superuser }}
+      - --dbname={{ item.database }}
+      - --tuples-only
+      - --no-align
+      - >-
+        --command=SELECT
+        (SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname = 'warehouse') || ' '
+        || has_table_privilege('warehouse', 'public.orders', 'SELECT')::text || ' '
+        || has_table_privilege('warehouse', 'public.app_user', 'SELECT')::text || ' '
+        || has_schema_privilege('warehouse', 'public', 'CREATE')::text
+    chdir: "{{ app_dir }}"
+  loop:
+    - service: postgres
+      superuser: postgres
+      database: testdb
+    - service: aitesters-postgres
+      superuser: aitesters
+      database: aitesters
+  loop_control:
+    label: "{{ item.service }}"
+  register: verify_warehouse_role_isolation
+  changed_when: false
+  failed_when: verify_warehouse_role_isolation.stdout != 'warehouse false false false'
 
 - name: Read running production services
   ansible.builtin.command:

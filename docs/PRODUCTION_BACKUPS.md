@@ -59,6 +59,12 @@ sudo systemctl start awesome-postgres-restore-check.service
 sudo journalctl -u awesome-postgres-restore-check.service
 ```
 
+Archives are taken with `--no-owner`, so a restored `warehouse` schema belongs
+to the superuser at first. Recreate warehouse-service after a restore
+(`docker compose -f docker-compose.server.yml up -d warehouse-service`): its
+one-shot `postgres-roles` dependency hands the schema and its tables back to
+the `warehouse` role before the service starts.
+
 Inspect timer state:
 
 ```bash

@@ -66,12 +66,9 @@
   ansible.builtin.assert:
     that:
       - (warehouse_service_token | default('', true) | string | length) >= 32
-      - warehouse_service_token != jwt_secret_key
-      - warehouse_service_token != aitesters_jwt_secret_key
     quiet: true
     fail_msg: >-
-      Configure warehouse_service_token (at least 32 characters, distinct from
-      both JWT keys) in Ansible Vault.
+      Configure warehouse_service_token (at least 32 characters) in Ansible Vault.
   no_log: true
 
 - name: Require dedicated aitesters warehouse and database secrets
@@ -79,16 +76,19 @@
     that:
       - (aitesters_warehouse_service_token | default('', true) | string | length) >= 32
       - aitesters_warehouse_service_token != warehouse_service_token
-      - aitesters_warehouse_service_token != jwt_secret_key
-      - aitesters_warehouse_service_token != aitesters_jwt_secret_key
       - (aitesters_postgres_password | default('', true) | string | length) >= 16
       - aitesters_postgres_password != postgres_password
+      - (warehouse_postgres_password | default('', true) | string | length) >= 16
+      - (aitesters_warehouse_postgres_password | default('', true) | string | length) >= 16
+      - warehouse_postgres_password not in [postgres_password, aitesters_postgres_password]
+      - aitesters_warehouse_postgres_password not in [postgres_password, aitesters_postgres_password, warehouse_postgres_password]
     quiet: true
     fail_msg: >-
       Configure aitesters_warehouse_service_token (at least 32 characters,
-      distinct from the stable token and both JWT keys) and
-      aitesters_postgres_password (at least 16 characters, distinct from
-      postgres_password) in Ansible Vault.
+      distinct from the stable token), aitesters_postgres_password (at least 16
+      characters, distinct from postgres_password) and distinct
+      warehouse_postgres_password and aitesters_warehouse_postgres_password
+      values (at least 16 characters each) in Ansible Vault.
   no_log: true
 
 - name: Read deployed Prometheus configuration checksums
@@ -210,13 +210,21 @@
         )
       }}
 
-- name: Require a distinct JWT signing key for the disposable sandbox
+- name: Require distinct RS256 signing keys for both backends
   ansible.builtin.assert:
     that:
-      - (aitesters_jwt_secret_key | default('', true) | length) >= 32
-      - aitesters_jwt_secret_key != jwt_secret_key
+      # base64 PKCS#8 DER of an RSA key of at least 2048 bits is over 1500 characters
+      - (jwt_signing_key | default('', true) | length) >= 1500
+      - (aitesters_jwt_signing_key | default('', true) | length) >= 1500
+      - aitesters_jwt_signing_key != jwt_signing_key
+      - jwt_signing_key is match('^[A-Za-z0-9+/=]+$')
+      - aitesters_jwt_signing_key is match('^[A-Za-z0-9+/=]+$')
     quiet: true
-    fail_msg: Configure a distinct aitesters_jwt_secret_key in Ansible Vault.
+    fail_msg: >-
+      Configure jwt_signing_key and a distinct aitesters_jwt_signing_key in
+      Ansible Vault: single-line base64 PKCS#8 RSA private keys of at least
+      2048 bits (openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048
+      -outform DER | base64 | tr -d '\n').
   no_log: true
 
 - name: Render the isolated sandbox runtime environment
@@ -257,6 +265,10 @@
       dest: .env.aitesters-warehouse
     - src: env.aitesters-postgres.j2
       dest: .env.aitesters-postgres
+    - src: env.postgres-roles.j2
+      dest: .env.postgres-roles
+    - src: env.aitesters-postgres-roles.j2
+      dest: .env.aitesters-postgres-roles
   loop_control:
     label: "{{ item.dest }}"
   no_log: true

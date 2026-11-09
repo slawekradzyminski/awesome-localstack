@@ -70,6 +70,7 @@ postgres_restore_image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66
 
 app_copy_paths:
   - security
+  - postgres
   - nginx
   - grafana
   - prometheus
@@ -107,25 +108,41 @@ app_runtime_env:
   APP_BOOTSTRAP_ADMIN_LAST_NAME: "{{ app_bootstrap_admin_last_name | default('', true) }}"
   APP_MFA_ENCRYPTION_PASSWORD: "{{ app_mfa_encryption_password | default('', true) }}"
   APP_MFA_ENCRYPTION_SALT: "{{ app_mfa_encryption_salt | default('', true) }}"
-  JWT_SECRET_KEY: "{{ jwt_secret_key | default('', true) }}"
+  JWT_SIGNING_KEY: "{{ jwt_signing_key | default('', true) }}"
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
-# warehouse-service receives only what it needs, from the same Vault values as
-# the backend: the JWT verification key, the service token and the database
-# password (it uses the `warehouse` schema of the backend database).
+# warehouse-service receives only what it needs: the service token and the
+# password of its own `warehouse` database role, which owns only the `warehouse`
+# schema of the backend database. It verifies access tokens with the backend's
+# public JWKS, so it holds no signing key.
 warehouse_runtime_env:
-  JWT_SECRET_KEY: "{{ jwt_secret_key | default('', true) }}"
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
-  SPRING_DATASOURCE_PASSWORD: "{{ postgres_password | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
 
-# The aitesters sandbox has its own warehouse-service and aitesters-postgres,
-# keyed to the sandbox JWT key so stable-site tokens never authenticate there.
+# The aitesters sandbox has its own warehouse-service and aitesters-postgres; it
+# verifies tokens with aitesters-backend's JWKS, so stable-site tokens never
+# authenticate there.
 aitesters_warehouse_runtime_env:
-  JWT_SECRET_KEY: "{{ aitesters_jwt_secret_key | default('', true) }}"
   WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
-  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_postgres_password | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+
+# One-shot postgres-roles services (postgres/warehouse-role.sh): the superuser
+# password and the warehouse role password for each database.
+postgres_roles_env:
+  PGPASSWORD: "{{ postgres_password | default('', true) }}"
+  WAREHOUSE_DB_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
+
+aitesters_postgres_roles_env:
+  PGPASSWORD: "{{ aitesters_postgres_password | default('', true) }}"
+  WAREHOUSE_DB_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+
+# Compose services that run once and exit; verification expects them exited 0
+# instead of running.
+verify_oneshot_services:
+  - postgres-roles
+  - aitesters-postgres-roles
 
 # The server cannot build the GraalVM native image (memory, missing sibling
 # checkout). Deployments stop until docker-compose.server.yml pins a published

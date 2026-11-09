@@ -2,7 +2,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4
+    image: slawekradzyminski/backend:3.14.0@sha256:476c7e3bcb6edd65425fb4818411bdd0143347c4af40baff4c94198a5ec288b1
     restart: always
     expose:
       - "4001"
@@ -23,9 +23,10 @@ services:
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
       OLLAMA_BASE_URL: http://ollama-dmr-adapter:11434
       OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
-      # Shared with warehouse-service: it validates backend-issued access tokens
-      # and authenticates to the backend internal API with the service token.
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
+      # warehouse-service verifies access tokens with the backend JWKS
+      # (/internal/v1/jwks.json) and calls the internal API with the service token.
+      # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
     models:
       local_llm:
@@ -44,7 +45,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    image: slawekradzyminski/warehouse-service:1.1.0@sha256:ae39b577695c7383d30e91ff96247c718ca5fce00fea4eff21460e114f17ee77
     restart: always
     expose:
       - "4003"
@@ -52,18 +53,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker,demo
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SPRING_DATASOURCE_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
     depends_on:
       backend:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -166,6 +166,27 @@ services:
     networks:
       - my-private-ntwk
 
+  postgres-roles:
+    # One-shot: gives warehouse-service its own role, limited to schema warehouse
+    # (postgres/warehouse-role.sh). Runs before every warehouse-service start.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGDATABASE: testdb
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
+    volumes:
+      - ./postgres:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 64m
+    networks:
+      - my-private-ntwk
+
   postgres:
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: always
@@ -253,7 +274,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0
+    image: slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775
     restart: always
     ports:
       - "4002:4002"
