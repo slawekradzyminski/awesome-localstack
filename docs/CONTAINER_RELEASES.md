@@ -186,6 +186,25 @@ outbox, the reconciler and a JWKS refetch after a backend restart. The unchanged
 course suite (`l20`, `596d524`) passed 311/311 against the 3.14.0 candidate with
 no skips or flaky tests.
 
+Production rollout (9 November 2026): the first `make ansible-deploy-backend-upgrade`
+took the encrypted pre-deploy backup and then stopped at Compose convergence:
+`aitesters-backend` rejected its Vault signing key. The keys had been generated
+with `openssl genpkey -outform DER`, which OpenSSL 3 writes as PKCS#1, not
+PKCS#8. The same key material was converted to PKCS#8 in Vault and the retry
+finished with `failed=0` (135 tasks). Its verification covered both role
+one-shots exiting 0, the `warehouse` role owning its schema without access to
+`public`, and the reviewed image IDs. `docs/ANSIBLE.md` now gives the PKCS#8
+command, and the deploy rejects PKCS#1 keys. A first CI run of the full profile
+also showed that `docker-compose.model-mock.yml` replaced the backend's
+`depends_on`, losing the healthy-database condition; the overlay now keeps it.
+Public checks on both hosts: `/login`, `/v3/api-docs` and
+`/warehouse/v3/api-docs` return 200, `/internal/v1/jwks.json` returns 404, and
+warehouse endpoints return 401 without a token. A sandbox sign-in issues an
+RS256 token with a `kid`; that token reads the warehouse queue and suppliers
+(200) and gets 401 at the stable site. Flyway: backend V9, warehouse V2.
+Measured memory: backend 177 MiB, aitesters-backend 154 MiB, both
+warehouse-services 66 MiB, consumer 35 MiB; 2.8 GiB available.
+
 ## Backend 3.13.0: GraalVM native image — 9 November 2026
 
 | Image | Source | Release workflow |

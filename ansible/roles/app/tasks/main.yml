@@ -219,12 +219,15 @@
       - aitesters_jwt_signing_key != jwt_signing_key
       - jwt_signing_key is match('^[A-Za-z0-9+/=]+$')
       - aitesters_jwt_signing_key is match('^[A-Za-z0-9+/=]+$')
+      # PKCS#8 (version 0, rsaEncryption), not the PKCS#1 that `genpkey -outform DER` writes
+      - jwt_signing_key is match('^MIIE..IBADANBgkqhkiG9w0BAQEF')
+      - aitesters_jwt_signing_key is match('^MIIE..IBADANBgkqhkiG9w0BAQEF')
     quiet: true
     fail_msg: >-
       Configure jwt_signing_key and a distinct aitesters_jwt_signing_key in
       Ansible Vault: single-line base64 PKCS#8 RSA private keys of at least
       2048 bits (openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048
-      -outform DER | base64 | tr -d '\n').
+      | openssl pkcs8 -topk8 -nocrypt -outform DER | base64 | tr -d '\n').
   no_log: true
 
 - name: Render the isolated sandbox runtime environment

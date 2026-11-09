@@ -309,8 +309,9 @@ cd ansible
 
 Configure distinct `jwt_signing_key` and `aitesters_jwt_signing_key` values in
 Ansible Vault: single-line base64 PKCS#8 RSA private keys of at least 2048 bits
-(`openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform DER |
-base64 | tr -d '\n'`). The backends sign access tokens with RS256 and publish
+(`openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | openssl pkcs8
+-topk8 -nocrypt -outform DER | base64 | tr -d '\n'`; OpenSSL 3 writes PKCS#1
+for `genpkey -outform DER`, which the backend rejects). The backends sign access tokens with RS256 and publish
 the public keys at `/internal/v1/jwks.json` for their warehouse-services.
 Deployment renders `.env.runtime` for the stable backend and `.env.aitesters`
 for the disposable backend. The latter receives the same required service
