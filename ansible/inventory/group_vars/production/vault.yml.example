@@ -28,7 +28,7 @@ app_mfa_encryption_password: replace-with-at-least-32-random-characters
 app_mfa_encryption_salt: replace-with-at-least-16-random-bytes-in-hex
 # RS256 access-token signing keys: single-line base64 PKCS#8 RSA keys of at
 # least 2048 bits, different for each backend. Generate with
-#   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform DER | base64 | tr -d '\n'
+#   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | openssl pkcs8 -topk8 -nocrypt -outform DER | base64 | tr -d '\n'
 # Rotating a key invalidates existing access tokens (clients refresh them).
 jwt_signing_key: replace-with-base64-pkcs8-rsa-private-key
 aitesters_jwt_signing_key: replace-with-a-different-base64-pkcs8-rsa-private-key
