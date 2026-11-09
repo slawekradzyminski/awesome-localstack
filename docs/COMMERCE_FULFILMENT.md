@@ -100,13 +100,19 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
     `mem_limit: 160m` (GraalVM native image, about 40–60 MiB measured);
   - server sandbox: `aitesters-warehouse-service`, paired with
     `aitesters-backend` and using the `warehouse` schema of `aitesters-postgres`.
-- **Shared secrets.** `JWT_SECRET_KEY` must match the backend so warehouse-service
-  can validate backend-issued tokens. `WAREHOUSE_SERVICE_TOKEN` authenticates
-  warehouse-service to the backend `/internal/v1` API. Local profiles default
-  both through Compose variables (`JWT_SECRET_KEY`, `WAREHOUSE_SERVICE_TOKEN`)
-  that are set on both services. The server takes them from Ansible Vault
-  (`jwt_secret_key`, `warehouse_service_token`) via `.env.runtime` (backend) and
-  `.env.warehouse` (warehouse-service).
+- **Secrets and database role.** The backend signs access tokens with RS256
+  (`JWT_SIGNING_KEY`, a base64 PKCS#8 RSA key; local profiles leave it empty,
+  so the backend generates an ephemeral key per start). warehouse-service holds
+  no signing secret: it verifies tokens with the backend's
+  `/internal/v1/jwks.json`. `WAREHOUSE_SERVICE_TOKEN` authenticates
+  warehouse-service to the backend `/internal/v1` API. warehouse-service
+  connects as its own `warehouse` database role, which owns only the
+  `warehouse` schema; the one-shot `postgres-roles` service
+  (`postgres/warehouse-role.sh`) creates or updates that role before every
+  warehouse-service start (`WAREHOUSE_DB_PASSWORD`, default
+  `local-warehouse-db-password` locally). The server takes the values from
+  Ansible Vault (`jwt_signing_key`, `warehouse_service_token`,
+  `warehouse_postgres_password` and their `aitesters_` counterparts).
 - **Gateway.** Warehouse locations precede the generic `/api/v1/` route,
   `/warehouse/v3/api-docs` exposes the warehouse OpenAPI document, and
   `/internal/` returns 404. The upstream is resolved at request time, so the

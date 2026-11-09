@@ -25,7 +25,8 @@ services:
       OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
       # Shared with warehouse-service: it validates backend-issued access tokens
       # and authenticates to the backend internal API with the service token.
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
+      # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
     models:
       local_llm:
@@ -52,18 +53,17 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker,demo
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: warehouse
+      SPRING_DATASOURCE_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-development-jwt-key-change-me}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
     depends_on:
       backend:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -163,6 +163,27 @@ services:
       - ./images:/usr/share/nginx/html/images:ro
       - ./branding:/usr/share/nginx/html/branding:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    networks:
+      - my-private-ntwk
+
+  postgres-roles:
+    # One-shot: gives warehouse-service its own role, limited to schema warehouse
+    # (postgres/warehouse-role.sh). Runs before every warehouse-service start.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGDATABASE: testdb
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
+    volumes:
+      - ./postgres:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 64m
     networks:
       - my-private-ntwk
 

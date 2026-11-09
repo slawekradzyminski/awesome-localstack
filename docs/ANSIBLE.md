@@ -307,28 +307,43 @@ cd ansible
 
 ## Stable and sandbox authentication isolation
 
-Configure distinct `jwt_secret_key` and `aitesters_jwt_secret_key` values in
-Ansible Vault (at least 32 random bytes each). Deployment renders `.env.runtime`
-for the stable backend and `.env.aitesters` for the disposable backend. The latter
-receives the same required service settings with its own JWT key, and never
-inherits the stable runtime file. Both files are root-owned mode 0600 and ignored
-by Git. Ansible rejects missing or equal signing keys and verifies that tokens
+Configure distinct `jwt_signing_key` and `aitesters_jwt_signing_key` values in
+Ansible Vault: single-line base64 PKCS#8 RSA private keys of at least 2048 bits
+(`openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform DER |
+base64 | tr -d '\n'`). The backends sign access tokens with RS256 and publish
+the public keys at `/internal/v1/jwks.json` for their warehouse-services.
+Deployment renders `.env.runtime` for the stable backend and `.env.aitesters`
+for the disposable backend. The latter receives the same required service
+settings with its own signing key, and never inherits the stable runtime file. Both files are root-owned mode 0600 and ignored
+by Git. Ansible rejects missing, malformed or equal signing keys and verifies that tokens
 issued by one site return HTTP 401 at the other.
 
 ## warehouse-service secrets and image gate
 
 Configure `warehouse_service_token` in Ansible Vault (at least 32 random
-characters, for example `openssl rand -hex 32`, distinct from both JWT keys).
+characters, for example `openssl rand -hex 32`).
 It reaches the stable backend through `.env.runtime` and warehouse-service
-through `.env.warehouse`, which contains only `JWT_SECRET_KEY`,
-`WAREHOUSE_SERVICE_TOKEN` and `SPRING_DATASOURCE_PASSWORD` (root-owned, mode
-0600). The aitesters sandbox pairs `aitesters-backend` with its own
+through `.env.warehouse`, which contains only `WAREHOUSE_SERVICE_TOKEN` and
+`SPRING_DATASOURCE_PASSWORD` (root-owned, mode 0600). warehouse-service
+verifies access tokens with the backend's JWKS and connects as the `warehouse`
+database role, whose password is `warehouse_postgres_password`
+(`aitesters_warehouse_postgres_password` in the sandbox, each at least 16
+characters and distinct from the superuser passwords). The one-shot
+`postgres-roles` and `aitesters-postgres-roles` services run
+`postgres/warehouse-role.sh` with `.env.postgres-roles` /
+`.env.aitesters-postgres-roles` (superuser and role passwords) before every
+warehouse-service start: they create or update the role, hand it the
+`warehouse` schema and its tables, and fail if it could read the backend's
+`public` tables. Verification expects both one-shots to have exited 0 and
+checks that the role owns `warehouse` and cannot read `public.orders` or
+`public.app_user`. The aitesters sandbox pairs `aitesters-backend` with its own
 `aitesters-warehouse-service`, both on `aitesters-postgres` (database
 `aitesters`, warehouse schema `warehouse`): `.env.aitesters` carries
 `aitesters_warehouse_service_token` and replaces the stable database password
 with `aitesters_postgres_password`; `.env.aitesters-warehouse` /
-`.env.aitesters-postgres` carry the sandbox JWT key, that token and the sandbox
-database password. The nightly reset recreates all three with
+`.env.aitesters-postgres` carry that token, the sandbox warehouse role password
+and the sandbox superuser password. The nightly reset recreates the database,
+`aitesters-postgres-roles`, the backend and warehouse-service with
 `--renew-anon-volumes`, so the sandbox database starts empty and reseeds. Deployment fails unless both warehouse
 services use a published `tag@sha256` (the VPS cannot build the native image);
 set `warehouse_service_allow_unpinned_image=true` only for a deliberately

@@ -13,7 +13,7 @@ services:
     hostname: backend
     logging: *default-logging
     env_file:
-      # Supplies JWT_SECRET_KEY and WAREHOUSE_SERVICE_TOKEN from Ansible Vault.
+      # Supplies JWT_SIGNING_KEY and WAREHOUSE_SERVICE_TOKEN from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -74,20 +74,20 @@ services:
     hostname: warehouse-service
     logging: *default-logging
     env_file:
-      # Only JWT_SECRET_KEY, WAREHOUSE_SERVICE_TOKEN and SPRING_DATASOURCE_PASSWORD,
-      # rendered by Ansible from the same Vault values the backend receives.
+      # Only WAREHOUSE_SERVICE_TOKEN and the warehouse role's SPRING_DATASOURCE_PASSWORD,
+      # rendered by Ansible from Vault. Access tokens are verified with the backend's JWKS.
       - path: .env.warehouse
         required: false
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
-      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_USERNAME: warehouse
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
       backend:
         condition: service_healthy
     expose:
@@ -120,19 +120,20 @@ services:
     hostname: aitesters-warehouse-service
     logging: *default-logging
     env_file:
-      # Only the sandbox JWT key, its own service token and its database password.
+      # Only its own service token and the warehouse role's database password; tokens
+      # are verified with aitesters-backend's JWKS, so stable-site tokens never match.
       - path: .env.aitesters-warehouse
         required: false
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-postgres:5432/aitesters?currentSchema=warehouse
-      SPRING_DATASOURCE_USERNAME: aitesters
+      SPRING_DATASOURCE_USERNAME: warehouse
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       BACKEND_BASE_URL: http://aitesters-backend:4001
     depends_on:
-      aitesters-postgres:
-        condition: service_healthy
+      aitesters-postgres-roles:
+        condition: service_completed_successfully
         restart: true
       aitesters-backend:
         condition: service_healthy
@@ -155,6 +156,54 @@ services:
       start_period: 30s
     command: ["-Xmx64m"]
     mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
+  postgres-roles:
+    # One-shot: gives warehouse-service its own role, limited to schema warehouse of
+    # testdb (postgres/warehouse-role.sh). Runs before every warehouse-service start.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    restart: "no"
+    logging: *default-logging
+    env_file:
+      # PGPASSWORD (superuser) and WAREHOUSE_DB_PASSWORD from Ansible Vault.
+      - path: .env.postgres-roles
+        required: false
+    environment:
+      PGHOST: postgres
+      PGDATABASE: testdb
+      PGUSER: postgres
+    volumes:
+      - ./postgres:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 64m
+    networks:
+      - my-private-ntwk
+
+  aitesters-postgres-roles:
+    # The same one-shot for the sandbox database; the nightly reset runs it again
+    # after renewing aitesters-postgres.
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    restart: "no"
+    logging: *default-logging
+    env_file:
+      - path: .env.aitesters-postgres-roles
+        required: false
+    environment:
+      PGHOST: aitesters-postgres
+      PGDATABASE: aitesters
+      PGUSER: aitesters
+    volumes:
+      - ./postgres:/scripts:ro
+    depends_on:
+      aitesters-postgres:
+        condition: service_healthy
+        restart: true
+    mem_limit: 64m
     networks:
       - my-private-ntwk
 

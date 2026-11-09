@@ -218,7 +218,7 @@ def main() -> int:
     require(
         sandbox_env_files == [".env.aitesters"]
         and ".env.aitesters" not in stable_env_files
-        and "JWT_SECRET_KEY" not in server_services["aitesters-backend"].get("environment", {}),
+        and not {"JWT_SECRET_KEY", "JWT_SIGNING_KEY"} & set(server_services["aitesters-backend"].get("environment", {})),
         f"sandbox must use its own runtime env file instead of the stable signing key "
         f"(sandbox files: {sandbox_env_files}, stable files: {stable_env_files})",
         failures,
@@ -228,12 +228,25 @@ def main() -> int:
     require(
         sandbox_warehouse_env_files == [".env.aitesters-warehouse"]
         and ".env.aitesters-warehouse" not in declared_env_files("warehouse-service")
-        and not {"JWT_SECRET_KEY", "WAREHOUSE_SERVICE_TOKEN"}
+        and not {"JWT_SECRET_KEY", "JWT_SIGNING_KEY", "WAREHOUSE_SERVICE_TOKEN"}
         & set(server_services["aitesters-warehouse-service"].get("environment", {})),
         "the sandbox warehouse-service must use its own runtime env file instead of the stable "
         f"signing key and service token (files: {sandbox_warehouse_env_files})",
         failures,
     )
+    for warehouse, roles in (("warehouse-service", "postgres-roles"),
+                             ("aitesters-warehouse-service", "aitesters-postgres-roles")):
+        warehouse_service = server_services[warehouse]
+        require(
+            warehouse_service.get("environment", {}).get("SPRING_DATASOURCE_USERNAME") == "warehouse"
+            and warehouse_service.get("depends_on", {}).get(roles, {}).get("condition")
+            == "service_completed_successfully"
+            and "JWT_SECRET_KEY" not in warehouse_service.get("environment", {}),
+            f"{warehouse} must use the dedicated warehouse database role prepared by {roles} "
+            "and verify tokens through the backend JWKS instead of a shared JWT secret",
+            failures,
+        )
+
     require(
         server_services["aitesters-warehouse-service"].get("environment", {}).get("BACKEND_BASE_URL")
         == "http://aitesters-backend:4001",

@@ -42,8 +42,12 @@ exposes it at `/warehouse/v3/api-docs`.
 
 warehouse-service validates the backend's access tokens itself:
 
-- HMAC-SHA JWT signed with `JWT_SECRET_KEY` (same variable and same
-  short-key expansion as `JwtTokenProvider.init()` in the backend).
+- RS256 JWT signed by the backend (`JWT_SIGNING_KEY`). warehouse-service holds
+  no signing material: it resolves the verification key by the token's `kid`
+  from `GET /internal/v1/jwks.json`, caches it, and refetches the set when an
+  unknown `kid` appears (at most once per 10 seconds). Tokens with another
+  algorithm, no `kid` or an unknown `kid` are 401; a backend outage before the
+  key is cached is 503.
 - `sub` is the username; the `auth` claim carries the roles exactly as the
   backend writes them (`ROLE_ADMIN`, `ROLE_CLIENT`, `ROLE_WAREHOUSE`).
 - No user lookup: the token is the source of truth. 401 for missing, expired
@@ -64,16 +68,19 @@ traffic capture and the public OpenAPI document. When
 | Method and path | Purpose | Response |
 | --- | --- | --- |
 | `GET /internal/v1/orders/{id}` | Order snapshot | `InternalOrderDto` or 404 |
-| `GET /internal/v1/orders?status=PAID&fulfilment=NONE&page=&size=` | Fulfilment queue, oldest first | `PageDto<InternalOrderDto>` |
-| `PUT /internal/v1/orders/{id}/fulfilment` | Mirror the shipment state onto the order | `InternalOrderDto`; 409 when the transition is not allowed |
+| `GET /internal/v1/orders?status=PAID&fulfilment=NONE&page=&size=` | Fulfilment queue, oldest first (also `fulfilment=AWAITING_PICK` for released orders) | `PageDto<InternalOrderDto>` |
+| `GET /internal/v1/orders?ids=1,2` | Order snapshots in any status, at most 100 | `List<InternalOrderDto>` |
+| `PUT /internal/v1/orders/{id}/fulfilment` | Mirror the shipment state onto the order | `InternalOrderDto`; repeating the current state is a no-op; 409 when the transition is not allowed |
+| `POST /internal/v1/orders/{id}/refunds` | Book the refund of a return | `InternalOrderDto`; idempotent per `requestId`; 409 unless `DELIVERED` or when refunds would exceed the total |
 | `POST /internal/v1/orders/{id}/warehouse-cancel` | Cancel an order whose shipment the warehouse cancels | `InternalOrderDto`; 409 unless the order is `PAID` and `fulfilmentState` is `AWAITING_PICK` or `PICKED` |
 | `GET /internal/v1/products?ids=1,2` (or no `ids` for all) | Product snapshots | `List<InternalProductDto>` |
 | `POST /internal/v1/inventory/receipts` | Add stock for a purchase receipt or a resellable return | `{movementIds: [..]}`; idempotent per `requestId` |
-| `POST /internal/v1/notifications` | Email a customer | 202 |
+| `POST /internal/v1/notifications` | Email a customer; the backend renders the text | 202; a repeated `requestId` sends nothing |
+| `GET /internal/v1/jwks.json` | Access-token verification keys | JSON Web Key Set |
 
 ```text
 InternalOrderDto { id, username, status, fulfilmentState, subtotalAmount,
-                   discountAmount, totalAmount, couponCode,
+                   discountAmount, totalAmount, couponCode, refundedAmount,
                    shippingAddress {street, city, state, zipCode, country},
                    items [{productId, productName, category, quantity, unitPrice}],
                    createdAt, updatedAt }
@@ -83,8 +90,13 @@ InternalProductDto    { id, name, category, price, stockQuantity }
 receipts body         { requestId: UUID, type: PURCHASE_RECEIVED|RETURN_RESTOCKED,
                         orderId?: Long, reference: String,
                         lines: [{productId, quantity}] }
-notifications body    { username, template: ORDER_SHIPPED|ORDER_DELIVERED|RETURN_UPDATED,
-                        subject, message, properties: {string: string} }
+refunds body          { requestId: UUID, amount, reference }
+notifications body    { requestId: UUID, username,
+                        template: ORDER_SHIPPED|ORDER_DELIVERED|RETURN_UPDATED,
+                        properties: {string: string} }
+                      ORDER_SHIPPED: orderId, carrier, trackingNumber
+                      ORDER_DELIVERED: orderId
+                      RETURN_UPDATED: returnId, orderId, status, refundAmount?, note?
 ```
 
 ### Fulfilment state on the backend
@@ -93,7 +105,9 @@ The backend stores `orders.fulfilment_state`
 (`NONE`, `AWAITING_PICK`, `PICKED`, `PACKED`, `SHIPPED`, `DELIVERED`, `CANCELLED`;
 default `NONE`) instead of a shipments table. The `PUT .../fulfilment` rules:
 
-- `NONE → AWAITING_PICK` only for `PAID` orders (409 otherwise or if already set).
+- `NONE → AWAITING_PICK` only for `PAID` orders (409 otherwise). Repeating
+  `AWAITING_PICK` (or any current state) is a no-op, so a retried release
+  is safe.
 - Forward steps only: `AWAITING_PICK → PICKED → PACKED → SHIPPED → DELIVERED`.
 - `SHIPPED` sets order status `SHIPPED`; `DELIVERED` sets `DELIVERED`.
 - `CANCELLED` is set only through `warehouse-cancel` or customer cancellation.
@@ -108,20 +122,25 @@ admin status endpoint returns 409 while the state is `AWAITING_PICK` through
 
 | Action in warehouse-service | Backend calls, in order |
 | --- | --- |
-| Create shipment | `GET order` (must be `PAID`, `fulfilmentState=NONE`), save shipment, `PUT fulfilment AWAITING_PICK`; on failure delete the local shipment |
+| Create shipment | `GET order` (must be `PAID`, `fulfilmentState` `NONE`, or `AWAITING_PICK` without a local shipment), save shipment, `PUT fulfilment AWAITING_PICK`; on 409 delete the local shipment; on 503 `GET order` again and keep the shipment if the order is `AWAITING_PICK` |
 | Pick / pack | `PUT fulfilment PICKED` / `PACKED` after the local transition is validated |
-| Ship / deliver | `PUT fulfilment SHIPPED` / `DELIVERED`, then `POST notifications` (`ORDER_SHIPPED` / `ORDER_DELIVERED`) |
-| Cancel shipment | `POST warehouse-cancel`; then mark the shipment `CANCELLED` |
+| Ship / deliver | `PUT fulfilment SHIPPED` / `DELIVERED`, then an outbox notification (`ORDER_SHIPPED` / `ORDER_DELIVERED`) |
+| Cancel shipment | `POST warehouse-cancel` (a 409 for an order that is already `CANCELLED` counts as done); then mark the shipment `CANCELLED` |
 | Request return | `GET order` for ownership, status `DELIVERED`, items, totals |
 | Receive return | `POST inventory/receipts` (`RETURN_RESTOCKED`, `requestId` = deterministic UUID from the return id) for resellable lines |
-| Approve / reject / refund | `POST notifications` (`RETURN_UPDATED`) |
+| Refund return | `POST orders/{id}/refunds` (`requestId` = deterministic UUID from the return id), then mark the return `REFUNDED` |
+| Approve / reject / refund | Outbox notification (`RETURN_UPDATED`) |
+| Reconcile (every minute) | `GET orders?ids=` for `AWAITING_PICK` shipments, cancelling those whose order is `CANCELLED`; `GET orders?status=PAID&fulfilment=AWAITING_PICK`, adopting orders older than two minutes that have no shipment |
 | Receive purchase order | `POST inventory/receipts` (`PURCHASE_RECEIVED`, the receipt's `requestId`) |
 | Reorder suggestions | `GET products` (all) plus local open purchase-order lines |
 | Queue | `GET orders?status=PAID&fulfilment=NONE` |
 
 The order of local and remote writes is chosen so that a failed remote call
 leaves no orphaned local state: validate locally, call the backend, then
-persist. The backend calls are idempotent where a retry could repeat them
+persist. Notifications are the exception: they are written to a
+`notification_outbox` table in the same transaction as the change, sent right
+after the commit and retried with backoff while the backend answers 503; the
+backend drops repeated `requestId`s, so a retry never sends a second email. The backend calls are idempotent where a retry could repeat them
 (`requestId`, forward-only fulfilment transitions). Backend 4xx responses are
 mapped to the same status and message for the caller; backend unavailability
 becomes 503 `{message: "Backend unavailable"}`.
@@ -148,8 +167,9 @@ becomes 503 `{message: "Backend unavailable"}`.
 ## localstack changes
 
 - New `warehouse-service` service in lightweight, full and server profiles,
-  `mem_limit: 160m`, healthcheck on `/actuator/health`, env `JWT_SECRET_KEY`,
-  `WAREHOUSE_SERVICE_TOKEN`, `BACKEND_BASE_URL`, datasource settings.
+  `mem_limit: 160m`, healthcheck on `/actuator/health`, env
+  `WAREHOUSE_SERVICE_TOKEN`, `BACKEND_BASE_URL`, datasource settings for the
+  `warehouse` role, after the one-shot `postgres-roles` service.
 - Backend gets `WAREHOUSE_SERVICE_TOKEN`.
 - Gateway locations for the public paths above, placed before the generic
   `/api/v1/` location, plus `/warehouse/v3/api-docs`.
