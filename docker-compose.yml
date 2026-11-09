@@ -23,8 +23,8 @@ services:
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
       OLLAMA_BASE_URL: http://ollama-dmr-adapter:11434
       OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
-      # Shared with warehouse-service: it validates backend-issued access tokens
-      # and authenticates to the backend internal API with the service token.
+      # warehouse-service verifies access tokens with the backend JWKS
+      # (/internal/v1/jwks.json) and calls the internal API with the service token.
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
