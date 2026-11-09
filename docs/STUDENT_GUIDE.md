@@ -89,7 +89,7 @@ Main application URL:
 Useful lightweight URLs:
 
 - frontend login: `http://localhost:8081/login`
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
 - Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
@@ -147,6 +147,11 @@ Expected:
 Important:
 
 - Swagger requests should go to `http://localhost:8081/...`
+- The "Select a definition" dropdown (top right) switches between the backend
+  API and "Warehouse service" (shipments, returns, suppliers, purchase orders).
+  Both use the same bearer token from `POST /api/v1/users/signin`; authorize
+  again after switching definitions. The warehouse endpoints need the
+  `warehouse` or `admin` user, or a client token for your own returns.
 
 ### 3. OpenAPI Docs Respond
 
@@ -245,9 +250,14 @@ What to check:
 
 ```bash
 curl -i http://localhost:8081/v3/api-docs
+curl -i http://localhost:8081/warehouse/v3/api-docs
 ```
 
-Swagger should use `http://localhost:8081`, not `http://localhost:4001` and not `http://localhost`.
+Both documents' `servers[0].url` should be `http://localhost:8081`, not
+`http://localhost:4001` and not `http://localhost` (backend 3.14.1 and
+warehouse-service 1.1.1 or later). A 404 for the "Warehouse service" definition
+means Swagger UI was opened on the backend port directly instead of through the
+gateway on 8081.
 
 ### Mocked LLM Is Not Responding
 
