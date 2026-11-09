@@ -3,11 +3,17 @@ services:
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
     models: !reset []
+    # Same conditions as docker-compose.yml with ollama instead of the DMR adapter:
+    # the native backend starts in about a second and must wait for a healthy database.
     depends_on: !override
-      - activemq
-      - keycloak
-      - ollama
-      - postgres
+      activemq:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      ollama:
+        condition: service_started
+      postgres:
+        condition: service_healthy
 
   ollama-dmr-adapter:
     profiles:
