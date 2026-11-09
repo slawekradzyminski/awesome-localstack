@@ -14,14 +14,14 @@ groups:
 
       - alert: HostAvailableMemoryCritical
         expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.08
-        for: 3m
+        for: 10m
         labels:
           severity: critical
           alert_family: host-memory-ratio
           service: host
         annotations:
           summary: Host available memory is below 8%
-          description: Linux MemAvailable has remained below 8% for 3 minutes.
+          description: Linux MemAvailable has remained below 8% for 10 minutes.
 
       - alert: HostAbsoluteAvailableMemoryLow
         expr: node_memory_MemAvailable_bytes < 600 * 1024 * 1024
@@ -36,14 +36,14 @@ groups:
 
       - alert: HostAbsoluteAvailableMemoryCritical
         expr: node_memory_MemAvailable_bytes < 300 * 1024 * 1024
-        for: 3m
+        for: 10m
         labels:
           severity: critical
           alert_family: host-memory-absolute
           service: host
         annotations:
           summary: Host available memory is below 300 MiB
-          description: Linux MemAvailable has remained below 300 MiB for 3 minutes.
+          description: Linux MemAvailable has remained below 300 MiB for 10 minutes.
 
       # Deliberately high and slow: test suites, deploys and the nightly reset saturate the single
       # vCPU for minutes at a time. This fires only when tasks wait on CPU almost all the time for
@@ -72,14 +72,14 @@ groups:
 
       - alert: HostMemoryPressureWaitingCritical
         expr: rate(container_pressure_memory_waiting_seconds_total{job="cadvisor",id="/"}[5m]) > 0.20
-        for: 3m
+        for: 15m
         labels:
           severity: critical
           alert_family: host-memory-waiting
           service: host
         annotations:
           summary: Severe VPS task waiting caused by memory pressure
-          description: VPS-root cgroup memory PSI waiting time has exceeded 20% for 3 minutes.
+          description: VPS-root cgroup memory PSI waiting time has exceeded 20% for 15 minutes.
 
       - alert: HostMemoryFullStalls
         expr: rate(container_pressure_memory_stalled_seconds_total{job="cadvisor",id="/"}[5m]) > 0.02
@@ -94,14 +94,14 @@ groups:
 
       - alert: HostMemoryFullStallsCritical
         expr: rate(container_pressure_memory_stalled_seconds_total{job="cadvisor",id="/"}[5m]) > 0.05
-        for: 3m
+        for: 10m
         labels:
           severity: critical
           alert_family: host-memory-stalls
           service: host
         annotations:
           summary: VPS is experiencing severe full memory stalls
-          description: VPS-root cgroup full memory PSI stalls have exceeded 5% for 3 minutes.
+          description: VPS-root cgroup full memory PSI stalls have exceeded 5% for 10 minutes.
 
       - alert: HostKernelOOMKill
         expr: increase(container_oom_events_total{job="cadvisor",id="/"}[5m]) > 0
@@ -127,25 +127,25 @@ groups:
 
       - alert: HostSwapUsageCritical
         expr: node_memory_SwapTotal_bytes > 0 and (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes > 0.50
-        for: 5m
+        for: 10m
         labels:
           severity: critical
           alert_family: host-swap-usage
           service: host
         annotations:
           summary: More than half of the emergency swap is in use
-          description: Swap use has exceeded 50% for 5 minutes and the memory safety buffer is nearly exhausted.
+          description: Swap use has exceeded 50% for 10 minutes and the memory safety buffer is nearly exhausted.
 
       - alert: HostSwapThrashing
         # On LXC, node_vmstat_pswp* reports the shared provider host, so only page on a swap-capable VPS.
         expr: (rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 50) and node_memory_SwapTotal_bytes > 0
-        for: 5m
+        for: 10m
         labels:
           severity: critical
           service: host
         annotations:
           summary: The host is continuously paging
-          description: Combined swap-in and swap-out activity has exceeded 50 pages per second for 5 minutes.
+          description: Combined swap-in and swap-out activity has exceeded 50 pages per second for 10 minutes.
 
   - name: host-disk
     rules:
@@ -162,14 +162,14 @@ groups:
 
       - alert: HostRootDiskSpaceCritical
         expr: node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""} < 0.10
-        for: 3m
+        for: 15m
         labels:
           severity: critical
           alert_family: host-root-disk
           service: host
         annotations:
           summary: Root filesystem has less than 10% available
-          description: Available root filesystem capacity has remained below 10% for 3 minutes.
+          description: Available root filesystem capacity has remained below 10% for 15 minutes.
 
       - alert: HostRootInodesLow
         expr: node_filesystem_files_free{mountpoint="/",fstype!=""} / node_filesystem_files{mountpoint="/",fstype!=""} < 0.15
@@ -184,11 +184,11 @@ groups:
 
       - alert: HostRootInodesCritical
         expr: node_filesystem_files_free{mountpoint="/",fstype!=""} / node_filesystem_files{mountpoint="/",fstype!=""} < 0.08
-        for: 3m
+        for: 15m
         labels:
           severity: critical
           alert_family: host-root-inodes
           service: host
         annotations:
           summary: Root filesystem has less than 8% free inodes
-          description: Free root filesystem inodes have remained below 8% for 3 minutes.
+          description: Free root filesystem inodes have remained below 8% for 15 minutes.

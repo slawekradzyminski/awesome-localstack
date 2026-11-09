@@ -4,8 +4,11 @@ global:
 templates:
   - /etc/alertmanager/templates/*.tmpl
 
+# Low-noise policy: this is a training stack and an external uptime monitor covers
+# public availability. Warnings stay visible in Prometheus, Grafana and the
+# Alertmanager API but are not delivered; only sustained criticals reach Telegram.
 route:
-  receiver: production-telegram
+  receiver: dashboard-only
   group_by:
     - alertname
     - severity
@@ -13,7 +16,11 @@ route:
     - service
   group_wait: 30s
   group_interval: 5m
-  repeat_interval: 4h
+  repeat_interval: 24h
+  routes:
+    - receiver: production-telegram
+      matchers:
+        - severity="critical"
 
 inhibit_rules:
   # Warning and critical rules of one condition have different alertnames, so pair them by alert_family.
@@ -31,10 +38,11 @@ inhibit_rules:
       - id
 
 receivers:
+  - name: dashboard-only
   - name: production-telegram
     telegram_configs:
       - bot_token_file: /etc/alertmanager/secrets/telegram_bot_token
         chat_id_file: /etc/alertmanager/secrets/telegram_chat_id
-        send_resolved: true
+        send_resolved: false
         parse_mode: ""
         message: '{{ template "telegram.awesome.message" . }}'

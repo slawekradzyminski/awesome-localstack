@@ -11,20 +11,21 @@ groups:
           summary: Prometheus scrape target is unavailable
           description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 2 minutes.
 
+      # Telegram receives only criticals; 15 minutes outlasts any planned deploy restart.
       - alert: PrometheusTargetDownCritical
         expr: up == 0
-        for: 5m
+        for: 15m
         labels:
           severity: critical
           alert_family: target-down
         annotations:
           summary: Prometheus scrape target is persistently unavailable
-          description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 5 minutes.
+          description: Target {{ $labels.instance }} for job {{ $labels.job }} has been unavailable for 15 minutes.
 
       - alert: PrometheusRuleEvaluationFailures
         expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
         labels:
-          severity: critical
+          severity: warning
           service: prometheus
         annotations:
           summary: Prometheus failed to evaluate one or more rules
@@ -33,7 +34,7 @@ groups:
       - alert: AlertmanagerNotificationFailures
         expr: increase(alertmanager_notifications_failed_total[5m]) > 0
         labels:
-          severity: critical
+          severity: warning
           service: alertmanager
         annotations:
           summary: Alertmanager failed to deliver a notification
@@ -54,14 +55,14 @@ groups:
 
       - alert: PublicEndpointProbeFailedCritical
         expr: probe_success{job="public_https"} == 0
-        for: 5m
+        for: 15m
         labels:
           severity: critical
           alert_family: public-probe
           service: public-edge
         annotations:
           summary: Public HTTPS endpoint is persistently unavailable
-          description: The probe of {{ $labels.instance }} has failed for 5 minutes.
+          description: The probe of {{ $labels.instance }} has failed for 15 minutes.
 
       - alert: PublicEndpointLatencyHigh
         expr: probe_duration_seconds{job="public_https"} > 2

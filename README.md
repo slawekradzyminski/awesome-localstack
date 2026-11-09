@@ -471,8 +471,9 @@ Production hardening in this profile:
 - Blackbox Exporter checks the public login, backend OpenAPI and
   warehouse-service OpenAPI routes every 30 seconds,
   including DNS, TLS, HTTP status, and latency
-- Alertmanager sends grouped warning, critical, and resolved notifications to
-  a Vault-configured private Telegram chat
+- Alertmanager sends only sustained critical alerts (no resolved messages,
+  24-hour repeat) to a Vault-configured private Telegram chat; warnings stay
+  on the dashboards
 - the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
   but swap remains disabled on the current MIKR.US LXC host because its
   virtualization layer rejects `swapon`

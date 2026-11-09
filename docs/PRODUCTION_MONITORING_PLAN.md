@@ -217,8 +217,24 @@ network.
 
 The deployed phase 3 receiver is a private Telegram bot. Alertmanager reads the
 bot token and chat ID from files rendered by Ansible from Vault, groups related
-alerts, and sends firing and resolved notifications without exposing a
-monitoring port publicly.
+alerts, and delivers notifications without exposing a monitoring port publicly.
+
+Since 2026-11-09 delivery follows a low-noise policy, because this is a
+training stack and an external uptime monitor already covers public
+availability:
+
+- only `severity="critical"` alerts reach Telegram; warnings go to the
+  `dashboard-only` receiver and stay visible in Prometheus, Grafana and the
+  Alertmanager API;
+- resolved notifications are not sent, and a still-firing critical repeats at
+  most once every 24 hours;
+- critical rules wait 10 to 15 minutes, so planned deploy restarts (the backend
+  scrape and public probes fail for a few minutes) never page; scrape-target
+  and public-probe criticals wait 15 minutes, matching the deploy silence;
+- `PrometheusRuleEvaluationFailures` and `AlertmanagerNotificationFailures` are
+  warnings, because a failing Telegram channel cannot report its own failure.
+
+Immediate criticals remain only for kernel or container OOM events.
 
 Telegram was selected because it does not require an SMTP mailbox or
 application password. The bot token must be treated as a credential: it is
@@ -292,10 +308,10 @@ is using otherwise idle memory as reclaimable filesystem cache.
 
 | Alert | Warning | Critical |
 | --- | --- | --- |
-| Available memory | Below 15% for 10 minutes | Below 8% for 3 minutes |
-| Absolute available memory | Below 600 MiB for 10 minutes | Below 300 MiB for 3 minutes |
-| PSI memory waiting | Above 10% for 10 minutes | Above 20% for 3 minutes |
-| PSI full stalls | Above 2% for 5 minutes | Above 5% for 3 minutes |
+| Available memory | Below 15% for 10 minutes | Below 8% for 10 minutes |
+| Absolute available memory | Below 600 MiB for 10 minutes | Below 300 MiB for 10 minutes |
+| PSI memory waiting | Above 10% for 10 minutes | Above 20% for 15 minutes |
+| PSI full stalls | Above 2% for 5 minutes | Above 5% for 10 minutes |
 | Kernel OOM | Not applicable | Any new OOM kill |
 
 Representative PromQL:
@@ -324,16 +340,16 @@ counters on MIKR.US LXC; those series cover the shared physical provider host.
 The deployed swap policy is:
 
 - warning when more than 128 MiB is used for 10 minutes;
-- critical when more than 50% is used;
-- critical when sustained swap-in or swap-out activity indicates thrashing.
+- critical when more than 50% is used for 10 minutes;
+- critical when swap-in or swap-out activity indicates thrashing for 10 minutes.
 
 ### Containers
 
 | Alert | Warning | Critical |
 | --- | --- | --- |
-| Working set versus limit | Above 85% for 10 minutes | Above 95% for 2 minutes |
+| Working set versus limit | Above 85% for 10 minutes | Above 95% for 10 minutes |
 | Container OOM | Not applicable | Any new OOM event |
-| Critical container missing | After 2 minutes | After 5 minutes |
+| Critical container missing | Not applicable | After 15 minutes |
 | Unexpected growth | More than 25% over one hour | More than 40% over one hour |
 
 The critical-service list should include at least:
@@ -353,8 +369,8 @@ been configured.
 
 | Alert | Warning | Critical |
 | --- | --- | --- |
-| Heap after GC | Above 75% for 10 minutes | Above 90% for 5 minutes |
-| GC overhead | Above 10% for 10 minutes | Above 20% for 5 minutes |
+| Heap after GC | Above 75% for 10 minutes | Above 90% for 15 minutes |
+| GC overhead | Above 10% for 10 minutes | Above 20% for 15 minutes |
 | Long GC pause | Workload-dependent threshold | Repeated severe pauses |
 | Thread growth | Sustained abnormal increase | Limit-threatening increase |
 
@@ -362,8 +378,8 @@ been configured.
 
 | Alert | Warning | Critical |
 | --- | --- | --- |
-| Available root filesystem | Below 20% | Below 10% |
-| Available inodes | Below 15% | Below 8% |
+| Available root filesystem | Below 20% for 10 minutes | Below 10% for 15 minutes |
+| Available inodes | Below 15% for 10 minutes | Below 8% for 15 minutes |
 | Forecasted exhaustion | Within 7 days | Within 48 hours |
 
 Disk forecasting should require a minimum history window and should only fire
