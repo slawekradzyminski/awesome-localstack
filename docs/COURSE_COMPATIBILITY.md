@@ -136,9 +136,6 @@ If the runner aborts, inspect its logs and summary; incomplete runs are not
 compatibility evidence. Compare both exit status and test counts/skips when
 evaluating a candidate. Do not change course assertions to hide a regression.
 
-See [the phased implementation plan](GRAPHQL_GRPC_IMPLEMENTATION_PLAN.md) for
-protocol-specific, mutation, deployment, and rollback gates.
-
 ## Course checks with the native gRPC listener active
 
 Use the optional override while running the unchanged latest lesson:
@@ -154,5 +151,4 @@ only to the disposable ordinary backend, publishes its listener on loopback
 14991, and checks that the port is reachable before the REST lesson runs. The
 admin comparison backend still uses the same candidate image with its original
 profiles. The frozen course sources, URL validation, and HTTP test assertions
-are unchanged. Full native protocol/status checks are recorded separately in
-[the gRPC verification report](GRPC_VERIFICATION.md).
+are unchanged.

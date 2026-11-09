@@ -1,23 +1,16 @@
 # Commerce training features
 
-> **Status: wave 1 released** with backend 3.10.1, frontend 3.10.0 and
-> consumer 3.4.0 (see [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)). Wave 2
-> (warehouse-service) is still pending.
+The shop has two layers of training features, both live on every profile and
+on `awesome.byst.re` and `aitesters.byst.re` (current images:
+[CONTAINER_RELEASES.md](CONTAINER_RELEASES.md#current-compatibility-set)):
 
-The commerce work ships in two waves:
-
-1. **Wave 1 (this page): shop features.** Coupons, reviews, wishlist, product
-   CSV, idempotent checkout, conditional product updates, and the `warehouse`
-   demo user with `ROLE_WAREHOUSE`. They run inside the existing backend and
-   frontend containers. No new service is added, so the memory budget of every
-   profile, including the 4.25 GiB production VPS, is unchanged.
-2. **Wave 2: warehouse fulfilment, returns and purchasing.** Shipments, the
-   pick/pack/ship workflow, returns (RMA), suppliers, purchase orders and
-   reorder suggestions arrive with the separate `warehouse-service` in a later
-   release. Until then the `warehouse` user can sign in, but the warehouse,
-   returns and purchasing screens and endpoints are not available.
-   The stack wiring for wave 2 is described in
-   [Wave 2: warehouse-service](#wave-2-warehouse-service) below.
+1. **Shop features in the backend.** Coupons, reviews, wishlist, product CSV,
+   idempotent checkout, conditional product updates, and the `warehouse` demo
+   user with `ROLE_WAREHOUSE`.
+2. **Warehouse fulfilment, returns and purchasing in `warehouse-service`.**
+   Shipments and the pick/pack/ship/deliver workflow, returns (RMA), suppliers,
+   purchase orders and reorder suggestions, served by a separate GraalVM native
+   service (see [below](#warehouse-service)).
 
 The backend design and every business rule are documented in
 [`test-secure-backend/docs/COMMERCE_AND_FULFILMENT.md`](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/COMMERCE_AND_FULFILMENT.md).
@@ -43,8 +36,8 @@ A typical end-to-end scenario:
 3. `client` reviews the product and adds an out-of-stock item to the wishlist.
 4. `admin` moderates the review and restocks the wishlisted product; the
    back-in-stock email arrives.
-
-Shipping, returns and purchasing scenarios join this flow in wave 2.
+5. `warehouse` picks, packs and ships the order; `client` follows the shipment
+   and requests a return, which `admin` approves and refunds.
 
 ## Demo data
 
@@ -55,7 +48,8 @@ the full profile) add:
 - coupons `WELCOME10` (10 % from 50.00), `SAVE50` (50.00 off from 300.00,
   100 uses), `EXPIRED20` (expired) and `SPRING25` (starts in a week).
 
-Demo suppliers arrive with warehouse-service in wave 2.
+warehouse-service seeds the demo suppliers "Nordic Electronics" and "Baltic
+Gadgets" in the same profiles.
 
 The server profile does not seed demo data.
 
@@ -73,22 +67,7 @@ The server profile does not seed demo data.
   exposes `ETag`, `Idempotent-Replayed` and `Content-Disposition`; requests
   through the gateway are same-origin and unaffected.
 
-## Release checklist for this repository (wave 1)
-
-1. Release `jms-email-consumer` first (it tolerates unknown templates), then
-   `test-secure-backend`, then `vite-react-frontend` with its OpenAPI snapshot
-   regenerated from the released backend.
-2. Pin the three new image digests in every Compose profile and validate each
-   file with `docker compose config --quiet`.
-3. Add `warehouse` / `warehouse` to the demo user lists in `README.md`,
-   `docs/STUDENT_GUIDE.md` and `docs/SSO_FLOW.md`, and remove the status note
-   at the top of this page.
-4. Verify through the gateway: sign-in as `warehouse`,
-   `GET /api/v1/admin/coupons` as `admin`, and a CSV export download.
-
-Wave 2 (warehouse-service) has its own deployment notes and checklist below.
-
-## Wave 2: warehouse-service
+## warehouse-service
 
 `warehouse-service` hosts the Tier 2 features: shipments and the
 pick/pack/ship/deliver workflow, returns (RMA) with proportional refunds,
@@ -117,8 +96,10 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
     the backend (`?currentSchema=warehouse`);
   - full: `docker` profile, PostgreSQL `testdb` with
     `?currentSchema=warehouse`;
-  - server: `docker` profile, same database and schema, `mem_limit: 160m`
-    (GraalVM native image, target RSS 120 MiB).
+  - server: `docker` profile, same database and schema, `-Xmx64m` in
+    `mem_limit: 160m` (GraalVM native image, about 40–60 MiB measured);
+  - server sandbox: `aitesters-warehouse-service`, paired with
+    `aitesters-backend` and using the `warehouse` schema of `aitesters-postgres`.
 - **Shared secrets.** `JWT_SECRET_KEY` must match the backend so warehouse-service
   can validate backend-issued tokens. `WAREHOUSE_SERVICE_TOKEN` authenticates
   warehouse-service to the backend `/internal/v1` API. Local profiles default
@@ -130,38 +111,12 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
   `/warehouse/v3/api-docs` exposes the warehouse OpenAPI document, and
   `/internal/` returns 404. The upstream is resolved at request time, so the
   gateway still starts without warehouse-service. The `aitesters.byst.re`
-  sandbox has no warehouse-service.
+  host routes the same paths to `aitesters-warehouse-service`.
 - **Monitoring.** Prometheus scrapes `spring_warehouse_micrometer`; the server
   adds a `CriticalContainerMissing` rule and a public probe of
   `https://awesome.byst.re/warehouse/v3/api-docs`. The generic container memory
   alerts cover the 160 MiB limit.
-- **Memory.** The server's container limits grow by 160 MiB. Watch
-  `MemAvailable` after the rollout against the 600 MiB warning threshold in
+- **Memory.** Container limits and measured usage are listed in
   [PRODUCTION_MONITORING_PLAN.md](PRODUCTION_MONITORING_PLAN.md).
-- **Image.** Every profile pins
-  `slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9`;
-  the server deployment refuses an unpinned image.
-
-### Release checklist for this repository (wave 2, completed 8 November 2026)
-
-1. Release `test-secure-backend` with the internal API and
-   `orders.fulfilment_state` (it must accept `WAREHOUSE_SERVICE_TOKEN`).
-2. Publish the first `warehouse-service` image from its repository (Maven tests,
-   native build, `linux/amd64` and `linux/arm64`, SBOM and provenance) and copy
-   the Docker Hub manifest digest.
-3. Replace `image: warehouse-service:local` and its `build:` block with the
-   pinned `tag@sha256` reference in the lightweight, full and server profiles;
-   record it in `docs/CONTAINER_RELEASES.md` and add `warehouse-service` to
-   `PRODUCTION_SERVICES` in `scripts/verify-release-images.py`.
-4. Release `vite-react-frontend` with the warehouse screens enabled and both
-   OpenAPI snapshots regenerated, then pin it.
-5. Add `warehouse_service_token` to the production Vault (`openssl rand -hex 32`).
-6. Validate every Compose file with `docker compose config --quiet` and run
-   `python3 scripts/verify-image-pins.py` and
-   `python3 scripts/verify-release-images.py --remote`.
-7. Verify direct and proxied routes: `warehouse-service:4003/actuator/health`
-   from the gateway container, `/warehouse/v3/api-docs` and `/warehouse` as
-   `warehouse` through the gateway, `/internal/v1/orders/1` returns 404, and a
-   full order to ship to return flow.
-8. Deploy with `make ansible-deploy-backend-upgrade` (the backend migration
-   changes `orders`), then remove the status note at the top of this page.
+- **Image.** Every profile pins a published `tag@sha256` reference; the server
+  deployment refuses an unpinned image.

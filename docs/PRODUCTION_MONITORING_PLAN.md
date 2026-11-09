@@ -131,8 +131,9 @@ approximately 29.7 GiB. This is much larger than the VPS and is possible
 because those containers had neither an explicit JVM maximum heap nor a
 container memory limit.
 
-Phase 1 configures the backend with `-Xmx896m` inside a 1.5 GiB container and
-the consumer with `-Xmx768m` inside a 1.125 GiB container.
+Phase 1 bounded those JVMs (backend `-Xmx896m` in 1.5 GiB, consumer `-Xmx768m`
+in 1.125 GiB). Both now run as GraalVM native images with much smaller heaps
+and limits; see [Explicit JVM and container limits](#explicit-jvm-and-container-limits).
 
 Phase 2 added Node Exporter and cAdvisor as private Prometheus targets. Prometheus
 stores data in a named volume with both a 30-day time limit and a 5 GB size

@@ -1,8 +1,8 @@
 # Optional native gRPC inventory listener
 
-Backend 3.8.0 includes four admin-only inventory RPCs. All primary Compose
-profiles pin this release. The override adds the listener to the lightweight
-stack without rebuilding; it defaults to the same pinned backend image:
+The backend serves four admin-only inventory RPCs. The listener always runs
+inside the backend container; the override publishes it from the lightweight
+stack on host loopback, using the same pinned backend image:
 
 For a step-by-step classroom exercise, see the [gRPC training runbook](GRPC_TRAINING_RUNBOOK.md).
 
@@ -23,16 +23,14 @@ is occupied; Prometheus remains on 9090. Inside the backend container, gRPC list
 on 9091. The host mapping is loopback-only, including when this override is merged
 with the server file. There is no public gRPC route through nginx.
 
-Reflection is off by default. Use the checked-in `.proto` with grpcurl or Postman.
-Set `GRPC_REFLECTION_ENABLED=true` before starting the override if you need
-training-time schema discovery; reflection and health require an admin JWT too.
-Full and lightweight startup without this override does not activate the native
-listener. The server profile explicitly enables it as described below.
-GraphQL and GraphiQL remain enabled by default in the updated backend.
+Server reflection is disabled (the native image fixes it at build time), so use
+the checked-in `.proto` with grpcurl or Postman; health requires an admin JWT.
+Without this override the listener runs only inside the container and is not
+reachable from the host. The server profile publishes it as described below.
+GraphQL and GraphiQL are always available over the HTTP gateway.
 
 For examples, status codes, presence semantics, deadlines, and idempotent retry
 rules, see [backend gRPC documentation](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRPC.md).
-For verification evidence, see [gRPC verification](GRPC_VERIFICATION.md).
 
 ## Server deployment and SSH access
 

@@ -210,7 +210,8 @@ These `curl` requests verify container and gateway availability only.
 Usually means:
 
 - backend is still starting
-- lightweight backend startup can take around 30 to 60 seconds
+- the backend and warehouse-service are ready within seconds once PostgreSQL is
+  up; Keycloak is usually the last service to become ready
 
 What to do:
 
@@ -307,7 +308,7 @@ docker compose -f lightweight-docker-compose.yml down --volumes
 
 ## Additional GraphQL and gRPC exercises
 
-Application release 3.8.0 adds GraphQL alongside REST. Use `/api/v1/graphiql`
+The backend serves GraphQL alongside REST. Use `/api/v1/graphiql`
 for schema exploration and queries with your normal JWT. Swagger continues to
 cover REST; it does not list GraphQL fields or native gRPC methods. The storefront
 starts in REST mode and offers a per-tab GraphQL selector.
@@ -318,5 +319,4 @@ lightweight Compose command to enable it. See the [classroom runbook](GRPC_TRAIN
 and [gRPC setup](GRPC_INVENTORY.md).
 Follow the [protocol testing lab](PROTOCOL_TESTING_LAB.md) for equivalent stock
 adjustments, partial-error assertions, native status codes, and safe traffic
-monitoring. Use the 3.8.0 application images. See the
-[release record](GRAPHQL_GRPC_RELEASE.md) for deployment verification.
+monitoring.

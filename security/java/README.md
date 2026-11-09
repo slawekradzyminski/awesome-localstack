@@ -13,7 +13,7 @@ do not replace it with a simple certificate-byte hashing loop.
 
 Generated file SHA-256: `2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10`.
 The fixture contains 35 certificates and produces 86 unique fingerprints.
-Old vendor files from all five production JVM services contain 38 fingerprints;
+Old vendor files from the production JVM services contain 38 fingerprints;
 all are retained. The unmitigated host JVM failed the fixture (16 certificates
 unblocked). After replacement, it rejects all 35. Disposables using the existing
 Temurin 25 and Red Hat Keycloak 21 images also reject all 35 with this file.
@@ -32,9 +32,11 @@ base JVM before running its plugin installer.
 
 `blocked.certs` is the identical build-time artifact for standalone Dockerfiles;
 the versioned copy is the immutable Compose source. The backend, consumer and
-model-mock source repositories also include the artifact in both JDK/JRE stages.
-Their existing published image digests are unchanged; the Compose mount protects
-the existing images without publishing replacement application releases.
+warehouse-service run as GraalVM native images: their builder stage installs
+this artifact before compilation and the runtime image has no JDK, so they need
+no mount (`scripts/verify-java-security.py` rejects one). The remaining JVMs in
+Compose (ActiveMQ, the Ollama mock, Keycloak and the optional Jenkins) keep the
+read-only mount.
 
 ## Verification and renewal
 
@@ -54,8 +56,5 @@ and rerun JVM, profile and mutation checks before rollout. Do not silently weake
 the expected fingerprint or fixture counts. A vendor upgrade can remove this
 override only after its own default blocklist passes the same tests.
 
-Framework mutation scope is unchanged (no PIT/Stryker-selected application code
-changed). Two frozen config mutants compiled and were killed: omitting the
-sandbox mount and reverting production to an unversioned bind source. No survivors
-or invalid candidates remain. Results are in
-`experiments/llm-mutation/results/java-security-2026-10-22.json`.
+`scripts/verify-java-security.py` fails if a JVM service loses its mount or the
+bind source stops being the content-addressed file.

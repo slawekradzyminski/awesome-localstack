@@ -2,9 +2,8 @@
 
 These are additional testing surfaces over the same inventory services and
 transactions. REST remains the frontend default. GraphQL is always included in
-the updated backend; the native gRPC listener is optional and exposes only four
-admin inventory RPCs. Application release 3.8.0 includes these features; see the
-[release record](GRAPHQL_GRPC_RELEASE.md) for public rollout verification.
+the backend; its native gRPC listener exposes only four admin inventory RPCs and
+is published on the host only with the `docker-compose.grpc.yml` override.
 
 Swagger documents REST. Explore GraphQL at `/api/v1/graphiql`, with its schema
 sidebar and autocomplete. Use the checked-in Protobuf contract with grpcurl or

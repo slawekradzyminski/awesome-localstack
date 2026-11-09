@@ -206,7 +206,7 @@ The role checks:
 
 ### Readiness retries
 
-The backend is a JVM service and can take time to bind port `4001` after containers are already reported as running.
+The backends start in about a second as native images, but they wait for PostgreSQL and Flyway, and the gateway may briefly answer `502` while containers are recreated.
 
 For that reason, HTTP verification uses retries and delay rather than failing immediately on a temporary `502`.
 

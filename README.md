@@ -27,10 +27,6 @@ fulfilment, returns and purchasing are served by `warehouse-service`; its API
 boundary is documented in
 [docs/WAREHOUSE_SERVICE_CONTRACT.md](docs/WAREHOUSE_SERVICE_CONTRACT.md).
 
-For the empirical mutation-testing results and the workflow used by coding
-agents, see [docs/MUTATION_TESTING_AI_STUDY.md](docs/MUTATION_TESTING_AI_STUDY.md)
-and [docs/MUTATION_TESTING_AGENT_PLAYBOOK.md](docs/MUTATION_TESTING_AGENT_PLAYBOOK.md).
-
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
 This does not mean the profiles can run side by side on the same machine. `lightweight` and `full` still publish overlapping host ports such as `8081` and `11434`, so stop one profile before starting the other.
@@ -40,9 +36,10 @@ This does not mean the profiles can run side by side on the same machine. `light
 Use this most of the time for local work.
 
 It uses the same immutable backend, frontend, and model-mock releases as the
-reviewed server compatibility set, including the GraalVM native
-`warehouse-service` image. It runs the `docker,demo` profiles against a small
-dedicated tmpfs Postgres and calls the backend at `http://backend:4001`.
+reviewed server compatibility set; the backend and `warehouse-service` are
+GraalVM native images. The backend (`local` profile)
+and warehouse-service (`docker,demo`) share one small tmpfs PostgreSQL, so data
+resets whenever the stack is recreated.
 
 Start it with:
 
@@ -407,7 +404,9 @@ flowchart LR
     B[Backend]
     W[Warehouse Service<br/>internal, 160 MiB]
     AF[Aitesters Frontend]
-    AB[Aitesters Backend<br/>local profile]
+    AB[Aitesters Backend<br/>aitesters profile]
+    AW[Aitesters Warehouse Service<br/>internal]
+    ADB[(aitesters-postgres<br/>internal only)]
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
     C[Consumer<br/>internal only]
@@ -429,6 +428,10 @@ flowchart LR
     W -->|schema warehouse| DB
     G -->|aitesters.byst.re| AF
     G -->|aitesters.byst.re /api| AB
+    G -->|aitesters.byst.re warehouse paths| AW
+    AW -->|/internal/v1| AB
+    AB --> ADB
+    AW -->|schema warehouse| ADB
     B --> DB
     B --> MQ
     MQ --> C
@@ -475,7 +478,9 @@ Production hardening in this profile:
   virtualization layer rejects `swapon`
 - the backends, consumer and warehouse-services run as GraalVM native images with
   explicit heap arguments and container memory limits
-- aitesters backend and frontend are internal-only behind the same gateway
+- aitesters backend, frontend and warehouse-service are internal-only behind the
+  same gateway; the sandbox has its own `aitesters-postgres`, signing key and
+  service token, and the nightly reset recreates it from a fresh volume
 - both public training backends use explicitly increased rate-limit capacities
   for repeated parallel API regression suites while retaining the original
   policy windows; see `docs/PROFILE_URLS.md` for the per-policy values
@@ -507,6 +512,7 @@ curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
+curl -i https://aitesters.byst.re/warehouse/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
 curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
@@ -521,8 +527,9 @@ Expected:
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
 - `aitesters.byst.re/v3/api-docs` returns `200`
+- `aitesters.byst.re/warehouse/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`
-- `aitesters.byst.re/api/v1/local/email/outbox` returns `200`
+- `aitesters.byst.re/api/v1/local/email/outbox` returns `401` without a token
 
 Server operations:
 
@@ -580,9 +587,9 @@ Across the main profiles, the gateway serves:
 - If images are missing in the app, check the gateway URL first.
 - If nginx config changes do not seem to apply, recreate `gateway`.
 
-For the optional native inventory API in backend 3.8.0, see
-[the gRPC guide](docs/GRPC_INVENTORY.md). The lightweight Compose override
-publishes only on loopback and uses the same pinned backend release by default.
+For the native gRPC inventory API, see [the gRPC guide](docs/GRPC_INVENTORY.md).
+The lightweight Compose override publishes it only on host loopback and uses the
+same pinned backend release.
 
 For equivalent REST, GraphQL, and native gRPC inventory exercises, see the
 [protocol testing lab](docs/PROTOCOL_TESTING_LAB.md). For a ready-to-run lightweight

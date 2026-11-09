@@ -63,9 +63,7 @@ or encryption key migration.
 `python3 scripts/verify-java-security.py` validates the frozen upstream inputs,
 23 JVM mounts, Ansible asset copy and Jenkins coverage. All modified Compose
 profiles pass config validation. The existing image-pin and release-set checks
-pass. Two frozen configuration mutants compiled and were killed (sandbox JVM
-omission, mutable bind source); zero survived/invalid/equivalent candidates were
-reported. No PIT/Stryker-selected application logic changed.
+pass.
 
 All three installed Homebrew JVMs (25.0.2, 21.0.12.1 and 25.0.4.1) now reject all
 35 certificates in the upstream fixture. Previous files were backed up before
@@ -456,9 +454,7 @@ The source checks passed 592 unit and 46 integration tests, including repeated,
 leading, and trailing null bytes, all four payload columns, idempotence, and
 PostgreSQL persistence/read-back. Targeted persistence mutation feedback detected
 23 of 25 mutants with no reachability gaps; the two residual boundary cases remain
-equivalent (equal-length clipping and an extra empty flush). A compiling semantic
-mutation that normalizes only the first null byte was detected by the migration
-regression. Use the coordinated backend-upgrade target and encrypted-backup
+equivalent (equal-length clipping and an extra empty flush). Use the coordinated backend-upgrade target and encrypted-backup
 procedure described below whenever applying V6.
 
 Production rollout completed on 2026-10-20 using the coordinated upgrade target:
@@ -494,10 +490,7 @@ Before publication, the unchanged latest `l20` suite at course revision
 311/311 on PostgreSQL 16.14 with Flyway V1–V6 and Hibernate validation. There
 were no skips or retries. Backend verification passed 590 unit and 44
 integration tests, with 25 focused checks after the final media guard change.
-PITest review is documented in the backend performance audit. Two additional
-frozen semantic mutants (wrong legacy MFA key and discarded immediate traffic
-reads) compiled and were killed by passing baseline tests. A third mutation
-that backs up before quiescing was killed by the upgrade-order check.
+PITest review is documented in the backend performance audit.
 
 Use `make ansible-deploy-backend-upgrade` for this release. The opt-in role
 pulls the selected immutable image before interrupting requests, stops both
@@ -650,6 +643,3 @@ SBOM. No database migration is introduced.
 
 The frontend counterpart is tracked in
 [PR #67](https://github.com/slawekradzyminski/vite-react-frontend/pull/67).
-The [release record](GRAPHQL_GRPC_RELEASE.md) tracks historical lesson results,
-artifact verification, deployment, and public smoke tests. The existing user
-instruction excludes rollback work for this rollout.

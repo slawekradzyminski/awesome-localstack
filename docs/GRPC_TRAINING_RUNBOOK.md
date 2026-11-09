@@ -10,7 +10,7 @@ The storefront does not call gRPC; Swagger does not list these RPCs.
 
 | Participant | Recommended setup | Access needed |
 | --- | --- | --- |
-| Student doing the exercise | Run the published 3.8.0 stack locally with the gRPC Compose override | Docker Compose, `grpcurl`, `curl`, `jq`, and this repository; no server SSH access |
+| Student doing the exercise | Run the lightweight stack locally with the gRPC Compose override | Docker Compose, `grpcurl`, `curl`, `jq`, and this repository; no server SSH access |
 | Instructor demonstrating the deployed sandbox | Open an SSH tunnel on the instructor's machine and screen-share the calls | Existing production SSH/Vault access, `grpcurl`, and a sandbox admin JWT |
 
 There is **no public native gRPC URL**. The production listeners bind to server

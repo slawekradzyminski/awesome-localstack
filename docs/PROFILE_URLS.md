@@ -477,6 +477,7 @@ curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
+curl -i https://aitesters.byst.re/warehouse/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
 curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
@@ -492,14 +493,15 @@ Expected:
 - `aitesters.byst.re/login` returns `200`
 - `aitesters.byst.re/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`
-- `aitesters.byst.re/api/v1/local/email/outbox` returns `200`
+- `aitesters.byst.re/warehouse/v3/api-docs` returns `200`
+- `aitesters.byst.re/api/v1/local/email/outbox` returns `401` without a token (an admin JWT and the `X-Local-Outbox-Key` header are required)
 
 Internal-only checks on the VPS:
 
 ```bash
 cd /opt/awesome-localstack
-docker compose -f docker-compose.server.yml exec backend curl -i http://backend:4001/actuator/health
-docker compose -f docker-compose.server.yml exec consumer curl -i http://consumer:4002/actuator/prometheus
+docker compose -f docker-compose.server.yml exec gateway curl -i http://backend:4001/actuator/health
+docker compose -f docker-compose.server.yml exec gateway curl -i http://consumer:4002/actuator/prometheus
 docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/actuator/health
 docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/v3/api-docs
 docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
@@ -511,30 +513,28 @@ docker compose -f docker-compose.server.yml exec gateway curl -i http://localhos
 docker compose -f docker-compose.server.yml exec gateway curl -i http://activemq:8161
 ```
 
-## GraphiQL in backend 3.8.0
+## GraphiQL
 
-Backend 3.8.0 enables GraphiQL at `/api/v1/graphiql` on the same origin as the
-app, for example `http://localhost:8081/api/v1/graphiql`. The pinned application
-images include this feature, and the `/api/v1/` gateway route covers this URL. Enter a bearer access token in the editor's Headers tab for schema
+The backend serves GraphiQL at `/api/v1/graphiql` on the same origin as the
+app, for example `http://localhost:8081/api/v1/graphiql`; the `/api/v1/` gateway
+route covers this URL. Enter a bearer access token in the editor's Headers tab for schema
 exploration and queries. Swagger remains the REST API explorer.
 
-See [GraphiQL verification](GRAPHIQL_VERIFICATION.md) and
+See the backend's GraphiQL
 [usage](https://github.com/slawekradzyminski/test-secure-backend/blob/master/docs/GRAPHQL.md#use-graphiql).
 
-## Native gRPC in backend 3.8.0
+## Native gRPC
 
-`docker-compose.grpc.yml` adds a loopback-only `127.0.0.1:9091` listener when used
-with the released backend image. It preserves the selected base application's
+`docker-compose.grpc.yml` publishes the backend's gRPC listener on host loopback
+`127.0.0.1:9091`. It preserves the selected base application's
 profiles; GraphQL and GraphiQL remain available over the existing HTTP gateway.
-Prometheus keeps 9090. Native gRPC has no public nginx route, and both health and
-optional reflection require an administrator JWT. See [gRPC setup](GRPC_INVENTORY.md).
+Prometheus keeps 9090. Native gRPC has no public nginx route, health requires an
+administrator JWT, and server reflection is disabled. See [gRPC setup](GRPC_INVENTORY.md).
 
-Frontend/backend 3.8.0 also show protocol summaries in Traffic
-Monitor. Supply its displayed session ID in GraphiQL headers or native gRPC
+The frontend's Traffic Monitor also shows protocol summaries. Supply its displayed session ID in GraphiQL headers or native gRPC
 metadata. See the [protocol lab](PROTOCOL_TESTING_LAB.md).
 
-The updated **server profile** explicitly enables native gRPC on two loopback-only
-host ports: `127.0.0.1:9091` for the stable backend and `127.0.0.1:9092` for the
+The **server profile** publishes native gRPC on two loopback-only host ports: `127.0.0.1:9091` for the stable backend and `127.0.0.1:9092` for the
 aitesters sandbox. Reach them through an [SSH tunnel](GRPC_INVENTORY.md#server-deployment-and-ssh-access).
 There is no public gRPC nginx route. Full and lightweight profiles retain the
 optional override described above.

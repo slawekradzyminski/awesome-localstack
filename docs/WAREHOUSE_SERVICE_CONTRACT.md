@@ -11,12 +11,12 @@ already specified in `test-secure-backend/docs/COMMERCE_AND_FULFILMENT.md`
 
 | Item | Value |
 | --- | --- |
-| Repository | `/Users/slawek/IdeaProjects/warehouse-service` (new, sibling of the other repos) |
+| Repository | [slawekradzyminski/warehouse-service](https://github.com/slawekradzyminski/warehouse-service) |
 | Stack | Spring Boot 4 / Java 25, same conventions as the backend (Lombok, springdoc, `CustomException`-style errors with `ErrorDto {message}`) |
-| Image | GraalVM native image (Spring AOT), target RSS ≤ 120 MB |
+| Image | GraalVM native image (Spring AOT), about 40–60 MiB RSS measured |
 | Port | 4003 |
-| Database | Postgres schema `warehouse` in the existing database (`spring.flyway.schemas=warehouse`, `currentSchema=warehouse`); H2 in-memory only for the `local` profile and tests |
-| Profiles | `local` (H2, backend at `http://localhost:4001`), `docker` (Postgres, backend at `http://backend:4001`) |
+| Database | Postgres schema `warehouse` in the existing database (`spring.flyway.schemas=warehouse`, `currentSchema=warehouse`); H2 only in the JVM unit tests |
+| Profiles | `local` (Postgres `localhost:5432/testdb`, backend at `http://localhost:4001`, demo suppliers), `docker` (Postgres, backend at `http://backend:4001`), `demo` (seeds demo suppliers) |
 | Deployed in | lightweight, full and server Compose profiles |
 
 Native-image rules: no runtime classpath scanning tricks, no CGLIB-only
