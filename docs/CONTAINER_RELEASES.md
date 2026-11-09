@@ -161,6 +161,19 @@ was not executable); no image was tagged, and the tag was moved to the fix.
 Previous reference: `slawekradzyminski/backend:3.12.0@sha256:4ab420bfcf8fa94aff2cbe9917d37593e054aa616ae35751295112953686a13a`. No migration; rolling back only needs the previous
 image and the JVM Compose settings.
 
+Production rollout (9 November 2026): `make ansible-deploy` converged both native
+backends but its verification stopped at the direct-backend GraphQL check, which
+ran `curl` inside the backend containers (the native image has none). After
+[#75](https://github.com/slawekradzyminski/awesome-localstack/pull/75) moved that
+check to the gateway container, `make ansible-verify` passed with `failed=0`. The
+first `runDocker` CI run also exposed that the full profile started the backend
+before PostgreSQL was healthy; the native backend now waits for a healthy database
+there. Measured after the rollout: backend 245 MiB (JVM 409 MiB), aitesters-backend
+160 MiB (JVM 363 MiB), 2.7 GiB available (was 2.3 GiB). The unchanged `l20` suite
+passed 311/311 against production in 6.1 minutes; the single vCPU still saturates
+under its parallel workers (CPU PSI waiting peaked at 100%, 66% average busy), so
+native removes JIT warm-up and memory pressure but not per-request CPU.
+
 ## Backend 3.12.0: PostgreSQL in every profile — 8 November 2026
 
 | Image | Source | Release workflow |
