@@ -60,9 +60,11 @@ The server profile does not seed demo data.
   headers are optional, so the AI Testers API course suite keeps passing.
 - Database migration `V7` adds tables and widens existing check constraints;
   it does not rewrite existing rows except to backfill `orders.subtotal_amount`.
-- Emails for the new events are rendered by the backend and published with the
-  `GENERIC` template, so older JMS consumers keep working. The consumer release
-  additionally maps unknown templates to `GENERIC` instead of failing.
+- The backend renders the subject and body of every customer email (since
+  backend 3.14.0 also for warehouse shipment and return emails, from template
+  properties). Consumer 3.6.0 delivers that text unchanged and maps unknown
+  template names to `GENERIC`, so the local outbox and Mailpit show the same
+  email.
 - Browser CORS now allows `Idempotency-Key`, `If-Match` and `If-None-Match` and
   exposes `ETag`, `Idempotent-Replayed` and `Content-Disposition`; requests
   through the gateway are same-origin and unaffected.

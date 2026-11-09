@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4
+    image: slawekradzyminski/backend:3.14.0@sha256:476c7e3bcb6edd65425fb4818411bdd0143347c4af40baff4c94198a5ec288b1
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -69,7 +69,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    image: slawekradzyminski/warehouse-service:1.1.0@sha256:ae39b577695c7383d30e91ff96247c718ca5fce00fea4eff21460e114f17ee77
     restart: unless-stopped
     hostname: warehouse-service
     logging: *default-logging
@@ -115,7 +115,7 @@ services:
   aitesters-warehouse-service:
     # The sandbox's own warehouse-service, paired with aitesters-backend and sharing
     # its database (schema warehouse), like warehouse-service on the stable site.
-    image: slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9
+    image: slawekradzyminski/warehouse-service:1.1.0@sha256:ae39b577695c7383d30e91ff96247c718ca5fce00fea4eff21460e114f17ee77
     restart: unless-stopped
     hostname: aitesters-warehouse-service
     logging: *default-logging
@@ -254,7 +254,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4
+    image: slawekradzyminski/backend:3.14.0@sha256:476c7e3bcb6edd65425fb4818411bdd0143347c4af40baff4c94198a5ec288b1
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -565,7 +565,7 @@ services:
       - my-private-ntwk
 
   consumer:
-    image: slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0
+    image: slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775
     restart: unless-stopped
     logging: *default-logging
     env_file:
