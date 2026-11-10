@@ -27,7 +27,8 @@ That gateway is the intended public surface for:
 - backend API under `/api/v1/...`
 - warehouse-service API under its `/api/v1/...` paths (see
   [Warehouse-service routes](#warehouse-service-routes))
-- Swagger UI under `/swagger-ui/...`
+- Swagger UI under `/swagger-ui/...`, with a definition dropdown for the backend
+  (JSON and YAML) and "Warehouse service"
 - OpenAPI under `/v3/api-docs` (backend) and `/warehouse/v3/api-docs`
   (warehouse-service)
 - actuator under `/actuator/...`
@@ -118,7 +119,7 @@ docker compose -f docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -171,7 +172,7 @@ docker compose -f lightweight-docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
@@ -252,7 +253,7 @@ Recommended public URLs:
 Stable public playground:
 
 - frontend: `https://awesome.byst.re/login`
-- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
+- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
@@ -262,7 +263,7 @@ Stable public playground:
 Disposable API/UI testing sandbox:
 
 - frontend: `https://aitesters.byst.re/login`
-- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html`
+- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `https://aitesters.byst.re/v3/api-docs`
 - sign in API: `https://aitesters.byst.re/api/v1/users/signin`
 - local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`

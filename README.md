@@ -53,7 +53,7 @@ Main app URL:
 
 Other useful lightweight URLs:
 
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - image through gateway: `http://localhost:8081/images/iphone.png`
@@ -183,7 +183,7 @@ Main app URL:
 
 Other useful full-profile URLs:
 
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html`
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - Prometheus: `http://localhost:9090/graph`
@@ -378,7 +378,7 @@ Main public URLs:
 
 Other stable playground URLs:
 
-- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html`
+- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
@@ -386,7 +386,7 @@ Other stable playground URLs:
 
 Other aitesters sandbox URLs:
 
-- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html`
+- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
 - OpenAPI JSON: `https://aitesters.byst.re/v3/api-docs`
 - sign in API: `https://aitesters.byst.re/api/v1/users/signin`
 - local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
@@ -565,7 +565,8 @@ Across the main profiles, the gateway serves:
 - backend API under `/api/v1/...`
 - warehouse fulfilment, returns and purchasing paths under `/api/v1/...`,
   routed to warehouse-service (see `docs/PROFILE_URLS.md`)
-- Swagger UI under `/swagger-ui/...`
+- Swagger UI under `/swagger-ui/...`, with a definition dropdown for the backend
+  (JSON and YAML) and "Warehouse service"
 - OpenAPI under `/v3/api-docs`, and warehouse-service OpenAPI under
   `/warehouse/v3/api-docs`
 - `/internal/` always returns `404`

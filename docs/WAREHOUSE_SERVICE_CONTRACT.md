@@ -36,7 +36,10 @@ bodies stay exactly as in backend PR #85, so the frontend keeps its calls.
 - `GET /api/v1/admin/inventory/reorder-suggestions`
 
 warehouse-service serves its OpenAPI at `/v3/api-docs` (port 4003); the gateway
-exposes it at `/warehouse/v3/api-docs`.
+exposes it at `/warehouse/v3/api-docs`, and the backend's Swagger UI lists it as
+the "Warehouse service" definition. The document's server URL follows the
+gateway's `X-Forwarded-*` headers (`SpringDocProxyConfig`, as in the backend),
+so "Try it out" calls `https://awesome.byst.re` through the gateway.
 
 ### Authentication
 
