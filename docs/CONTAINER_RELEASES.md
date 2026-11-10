@@ -189,7 +189,9 @@ Migrations: backend Flyway V9 adds nullable or defaulted `email_event` columns,
 warehouse-service V2 adds `notification_outbox` and `order_locks`. Rolling back
 to backend 3.13.0 / warehouse-service 1.0.0 / consumer 3.5.0 (references in the
 3.13.0 section and the wave-2 table) also needs the previous Compose files and
-Vault keys `jwt_secret_key` / `aitesters_jwt_secret_key`, which stay in Vault.
+the HMAC Vault keys `jwt_secret_key` / `aitesters_jwt_secret_key`. Those were
+removed from Vault on 2026-11-10, so a rollback first adds fresh random values
+(`openssl rand -base64 48`); old tokens are invalid after the switch anyway.
 Old images ignore the added columns and tables, so the backup is not needed for
 rollback. Switching to RS256 invalidates the access tokens issued before the
 deploy, and clients refresh them with their refresh tokens.
