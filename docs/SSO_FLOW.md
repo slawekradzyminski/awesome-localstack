@@ -35,7 +35,7 @@ graph TB
     subgraph "Keycloak (localhost:8082)"
         KC[awesome-testing realm]
         CLIENT[awesome-testing-frontend<br/>public OIDC client]
-        USERS[sso-client, sso-admin]
+        USERS[sso-e2e-client, sso-admin]
     end
 
     subgraph "Spring Boot Backend"
@@ -82,7 +82,7 @@ graph LR
             CLIENT["awesome-testing-frontend<br/>(public OIDC client)"]
             REDIRECT["Allowed redirect URI<br/>localhost:8081/auth/sso/callback"]
             ORIGINS["Allowed web origin<br/>localhost:8081"]
-            SSO_USERS["sso-client<br/>sso-admin"]
+            SSO_USERS["sso-e2e-client<br/>sso-admin"]
             MAPPERS["OIDC protocol mappers<br/>standard profile/email claims"]
         end
     end
@@ -161,7 +161,7 @@ sequenceDiagram
     Browser->>Browser: Generate PKCE values<br/>state, nonce, code_verifier,<br/>code_challenge
     Browser->>KC: GET /auth?client_id=awesome-testing-frontend<br/>&response_type=code<br/>&scope=openid profile email<br/>&code_challenge=...
     KC->>User: Show Keycloak login form
-    User->>KC: Enter sso-client / SsoClient123!
+    User->>KC: Enter sso-e2e-client / SsoClient123!
     KC->>KC: Validate credentials<br/>and create Keycloak session
     KC->>Browser: 302 Redirect to<br/>/auth/sso/callback?code=...&state=...
     Browser->>Browser: Verify returned state
@@ -261,7 +261,7 @@ For direct Keycloak SSO, `authProvider` is the configured default provider value
 
 | Role | Username | Password | Email |
 | --- | --- | --- | --- |
-| Client | `sso-client` | `SsoClient123!` | `sso-client@example.test` |
+| Client | `sso-e2e-client` | `SsoClient123!` | `sso-e2e-client@example.test` |
 | Admin | `sso-admin` | `SsoAdmin123!` | `sso-admin@example.test` |
 
 ### Infrastructure
@@ -354,7 +354,7 @@ Check the browser flow manually:
 
 1. Open `http://localhost:8081/login`.
 2. Choose the SSO option.
-3. Sign in with `sso-client` / `SsoClient123!`.
+3. Sign in with `sso-e2e-client` / `SsoClient123!`.
 4. Confirm the browser returns to the application, not to the Keycloak admin console.
 5. Confirm protected app pages work after login.
 
