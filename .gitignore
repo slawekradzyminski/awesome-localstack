@@ -4,6 +4,9 @@
 .env.runtime
 .env.aitesters
 .env.warehouse
+.env.payment
+.env.aitesters-*
+.env.postgres-roles
 .playwright-cli
 GTP56_SOL_AUDIT.md
 ansible/.vault_pass

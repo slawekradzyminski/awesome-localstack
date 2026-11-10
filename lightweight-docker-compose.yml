@@ -21,11 +21,16 @@ services:
       APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
       APP_SSO_AUDIENCE: awesome-testing-frontend
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      # warehouse-service verifies access tokens with the backend JWKS
-      # (/internal/v1/jwks.json) and calls the internal API with the service token.
+      # warehouse-service and payment-service verify access tokens with the backend
+      # JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
+      # The backend calls payment-service (refunds) with the same payment token and
+      # verifies payment result notifications with the webhook secret.
+      PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+      PAYMENT_BASE_URL: http://payment-service:4004
     depends_on:
       keycloak:
         condition: service_started
@@ -86,11 +91,51 @@ services:
     networks:
       - my-private-ntwk
 
+  payment-service:
+    image: slawekradzyminski/payment-service:1.0.0
+    restart: always
+    expose:
+      - "4004"
+    hostname: payment-service
+    environment:
+      # Shares the backend database (schema payment).
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=payment
+      SPRING_DATASOURCE_USERNAME: payment
+      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-db-password}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      BACKEND_BASE_URL: http://backend:4001
+      PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
+    mem_limit: 160m
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4004;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks:
+      - my-private-ntwk
+
   postgres-roles:
-    # One-shot: gives warehouse-service its own role, limited to schema warehouse
-    # (postgres/warehouse-role.sh). Runs before every warehouse-service start.
+    # One-shot: gives warehouse-service and payment-service their own roles, each
+    # limited to its own schema (postgres/service-roles.sh). Runs before every
+    # warehouse-service and payment-service start.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
-    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
     environment:
       PGHOST: postgres
@@ -98,6 +143,7 @@ services:
       PGUSER: postgres
       PGPASSWORD: postgres
       WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-db-password}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:
@@ -108,7 +154,8 @@ services:
       - my-private-ntwk
 
   postgres:
-    # Disposable tmpfs Postgres for the backend (testdb) and warehouse-service (schema warehouse).
+    # Disposable tmpfs Postgres for the backend (testdb), warehouse-service (schema
+    # warehouse) and payment-service (schema payment).
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: always
     environment:

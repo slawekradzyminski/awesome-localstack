@@ -6,6 +6,6 @@ After=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory={{ app_dir }}
-ExecStart=/usr/bin/docker compose -f {{ app_compose_file }} up -d --force-recreate --renew-anon-volumes --no-deps aitesters-postgres aitesters-postgres-roles aitesters-backend aitesters-warehouse-service
+ExecStart=/usr/bin/docker compose -f {{ app_compose_file }} up -d --force-recreate --renew-anon-volumes --no-deps aitesters-postgres aitesters-postgres-roles aitesters-backend aitesters-warehouse-service aitesters-payment-service
 StandardOutput=append:{{ aitesters_reset_log_file }}
 StandardError=append:{{ aitesters_reset_log_file }}

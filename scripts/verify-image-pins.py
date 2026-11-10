@@ -18,6 +18,8 @@ COMPOSE_PROFILES = (
     ("lightweight-docker-compose.yml",),
     ("docker-compose.server.yml",),
 )
+# Marker used in docker-compose.server.yml until payment-service is published.
+PENDING_DIGEST_MARKER = "PENDING_PAYMENT_SERVICE_DIGEST"
 
 
 def resolved_services(files: tuple[str, ...]) -> dict[str, dict[str, object]]:
@@ -43,7 +45,14 @@ def main() -> int:
         for service, config in resolved_services(files).items():
             image = str(config.get("image", ""))
             local_build = bool(config.get("build")) and image.endswith(":local")
-            if not local_build and not PINNED_IMAGE.fullmatch(image):
+            if PENDING_DIGEST_MARKER in image or (
+                    image.startswith("slawekradzyminski/payment-service:") and "@" not in image):
+                failures.append(
+                    f"{profile} service {service} uses the pending payment-service release "
+                    f"{image}: replace it with the published tag@sha256 manifest digest "
+                    f"(placeholder {PENDING_DIGEST_MARKER} on the server profile)"
+                )
+            elif not local_build and not PINNED_IMAGE.fullmatch(image):
                 failures.append(
                     f"{profile} service {service} is not pinned by digest: {image}"
                 )

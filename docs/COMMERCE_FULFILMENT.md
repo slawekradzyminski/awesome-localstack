@@ -110,7 +110,8 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
   warehouse-service to the backend `/internal/v1` API. warehouse-service
   connects as its own `warehouse` database role, which owns only the
   `warehouse` schema; the one-shot `postgres-roles` service
-  (`postgres/warehouse-role.sh`) creates or updates that role before every
+  (`postgres/service-roles.sh`, which runs `postgres/service-role.sh` for the
+  `warehouse` and `payment` roles) creates or updates that role before every
   warehouse-service start (`WAREHOUSE_DB_PASSWORD`, default
   `local-warehouse-db-password` locally). The server takes the values from
   Ansible Vault (`jwt_signing_key`, `warehouse_service_token`,
@@ -128,3 +129,8 @@ gateway returns 502) or when the backend is down (warehouse-service returns 503
   [PRODUCTION_MONITORING_PLAN.md](PRODUCTION_MONITORING_PLAN.md).
 - **Image.** Every profile pins a published `tag@sha256` reference; the server
   deployment refuses an unpinned image.
+- **Payments and tracking.** Card payments run in `payment-service`
+  (port 4004, schema and role `payment`), deployed the same way; see
+  [PAYMENT_SERVICE_CONTRACT.md](PAYMENT_SERVICE_CONTRACT.md). Shipment tracking
+  is part of warehouse-service 1.2.0; see the tracking addendum in
+  [WAREHOUSE_SERVICE_CONTRACT.md](WAREHOUSE_SERVICE_CONTRACT.md#addendum-shipment-tracking-warehouse-service-120).

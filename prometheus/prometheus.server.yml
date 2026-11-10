@@ -39,6 +39,14 @@ scrape_configs:
       - targets:
           - warehouse-service:4003
 
+  - job_name: spring_payment_micrometer
+    metrics_path: /actuator/prometheus
+    # 15s keeps scrape rendering off the single shared vCPU; no rule or panel needs finer data.
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - payment-service:4004
+
   - job_name: node
     scrape_interval: 15s
     static_configs:
@@ -75,6 +83,7 @@ scrape_configs:
           - https://awesome.byst.re/login
           - https://awesome.byst.re/v3/api-docs
           - https://awesome.byst.re/warehouse/v3/api-docs
+          - https://awesome.byst.re/payment/v3/api-docs
         labels:
           service: public-edge
     relabel_configs:

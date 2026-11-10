@@ -62,6 +62,22 @@
       the image from the warehouse-service repository and pin its tag@sha256
       reference before deploying (docs/CONTAINER_RELEASES.md).
 
+- name: Require a published payment-service image before deploying
+  ansible.builtin.assert:
+    that:
+      - >-
+        payment_service_allow_unpinned_image | bool
+        or ((lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['payment-service'].image is search('@sha256:[0-9a-f]{64}$')
+            and (lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['aitesters-payment-service'].image is search('@sha256:[0-9a-f]{64}$'))
+    quiet: true
+    fail_msg: >-
+      docker-compose.server.yml does not pin a published payment-service image
+      (still the PENDING_PAYMENT_SERVICE_DIGEST placeholder or a bare tag). Publish
+      the image from the payment-service repository and pin its tag@sha256
+      reference before deploying (docs/CONTAINER_RELEASES.md).
+
 - name: Require a dedicated warehouse service token
   ansible.builtin.assert:
     that:
@@ -89,6 +105,37 @@
       characters, distinct from postgres_password) and distinct
       warehouse_postgres_password and aitesters_warehouse_postgres_password
       values (at least 16 characters each) in Ansible Vault.
+  no_log: true
+
+- name: Require dedicated payment-service tokens, webhook secrets and database passwords
+  ansible.builtin.assert:
+    that:
+      - (payment_service_token | default('', true) | string | length) >= 32
+      - (aitesters_payment_service_token | default('', true) | string | length) >= 32
+      - (payment_webhook_secret | default('', true) | string | length) >= 32
+      - (aitesters_payment_webhook_secret | default('', true) | string | length) >= 32
+      # Every token and webhook secret is distinct: a leaked value of one site or
+      # one caller never authenticates another.
+      - >-
+        [payment_service_token, aitesters_payment_service_token,
+         payment_webhook_secret, aitesters_payment_webhook_secret,
+         warehouse_service_token, aitesters_warehouse_service_token]
+        | unique | length == 6
+      - (payment_postgres_password | default('', true) | string | length) >= 16
+      - (aitesters_payment_postgres_password | default('', true) | string | length) >= 16
+      - >-
+        [postgres_password, aitesters_postgres_password,
+         warehouse_postgres_password, aitesters_warehouse_postgres_password,
+         payment_postgres_password, aitesters_payment_postgres_password]
+        | unique | length == 6
+    quiet: true
+    fail_msg: >-
+      Configure payment_service_token, aitesters_payment_service_token,
+      payment_webhook_secret and aitesters_payment_webhook_secret (at least 32
+      characters each, distinct from each other and from the warehouse service
+      tokens) and payment_postgres_password and aitesters_payment_postgres_password
+      (at least 16 characters each, distinct from every other database password)
+      in Ansible Vault.
   no_log: true
 
 - name: Read deployed Prometheus configuration checksums
@@ -256,7 +303,16 @@
     mode: "0600"
   no_log: true
 
-- name: Render the aitesters warehouse-service runtime environment
+- name: Render the payment-service runtime environment
+  ansible.builtin.template:
+    src: env.payment.j2
+    dest: "{{ app_dir }}/.env.payment"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Render the aitesters service and database runtime environments
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ app_dir }}/{{ item.dest }}"
@@ -266,6 +322,8 @@
   loop:
     - src: env.aitesters-warehouse.j2
       dest: .env.aitesters-warehouse
+    - src: env.aitesters-payment.j2
+      dest: .env.aitesters-payment
     - src: env.aitesters-postgres.j2
       dest: .env.aitesters-postgres
     - src: env.postgres-roles.j2

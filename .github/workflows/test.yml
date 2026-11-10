@@ -86,6 +86,10 @@ jobs:
         docker compose -f lightweight-docker-compose.yml up -d --wait --wait-timeout 300 --pull always
         curl --fail --silent --show-error http://127.0.0.1:8081/login >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/v3/api-docs >/dev/null
+        # warehouse-service and payment-service through the gateway (up --wait already
+        # required their healthchecks and the postgres-roles one-shot to pass).
+        curl --fail --silent --show-error http://127.0.0.1:8081/warehouse/v3/api-docs >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/payment/v3/api-docs >/dev/null
         curl --fail --silent --show-error --request POST http://127.0.0.1:11434/api/generate \
           --header 'Content-Type: application/json' \
           --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \

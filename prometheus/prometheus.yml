@@ -17,3 +17,8 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets: ['warehouse-service:4003']
+  - job_name: 'spring_payment_micrometer'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['payment-service:4004']
