@@ -213,7 +213,7 @@ Keycloak SSO users:
 
 | Role | Username | Password |
 | --- | --- | --- |
-| Client | `sso-client` | `SsoClient123!` |
+| Client | `sso-e2e-client` | `SsoClient123!` |
 | Admin | `sso-admin` | `SsoAdmin123!` |
 
 Keycloak Admin Console:

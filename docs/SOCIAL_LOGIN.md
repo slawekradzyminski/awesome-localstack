@@ -68,7 +68,7 @@ graph LR
             IDP_G["Identity Provider: google<br/>(OIDC type)"]
             IDP_H["Identity Provider: github<br/>(OIDC type)"]
             MAPPER["Protocol Mapper<br/>identity_provider → JWT claim"]
-            USERS_AT["sso-client, sso-admin"]
+            USERS_AT["sso-e2e-client, sso-admin"]
         end
 
         subgraph "google-mock realm"
@@ -248,7 +248,7 @@ After the first login, subsequent logins skip the review step entirely — the f
 
 | Username | Password | Email | Role |
 | --- | --- | --- | --- |
-| `sso-client` | `SsoClient123!` | `sso-client@example.test` | Client |
+| `sso-e2e-client` | `SsoClient123!` | `sso-e2e-client@example.test` | Client |
 | `sso-admin` | `SsoAdmin123!` | `sso-admin@example.test` | Admin |
 
 ### Social Login Users (mock realms)

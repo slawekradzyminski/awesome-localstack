@@ -62,7 +62,7 @@ Other useful lightweight URLs:
 
 The lightweight profile also starts Keycloak with the `awesome-testing` realm and these training users:
 
-- `sso-client` / `SsoClient123!`
+- `sso-e2e-client` / `SsoClient123!`
 - `sso-admin` / `SsoAdmin123!`
 
 Social login mock users (simulated Google and GitHub via Keycloak brokering):
@@ -105,9 +105,10 @@ flowchart LR
 What students should verify:
 
 ```bash
-docker compose -f lightweight-docker-compose.yml ps
+docker compose -f lightweight-docker-compose.yml ps -a
 curl -i http://localhost:8081/login
 curl -i http://localhost:8081/v3/api-docs
+curl -i http://localhost:8081/warehouse/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
@@ -116,9 +117,9 @@ curl -i -X POST http://localhost:11434/api/generate \
 
 Expected:
 
-- all lightweight containers are `Up`
+- long-running containers are `Up`; the one-shot `postgres-roles` and `keycloak-init` show `Exited (0)`
 - login page loads
-- Swagger and OpenAPI respond with `200`
+- Swagger and both OpenAPI documents (backend and warehouse) respond with `200`
 - product image responds with `200`
 - the mocked model path responds with the same `qwen3.5:2b` default used across the migration
 - mocked LLM generate endpoint responds with `200`
@@ -126,8 +127,8 @@ Expected:
 Useful logs:
 
 ```bash
-docker compose -f lightweight-docker-compose.yml logs -f backend gateway
-docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
+docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service gateway
+docker compose -f lightweight-docker-compose.yml logs -f keycloak ollama-mock
 ```
 
 Stop it with:
