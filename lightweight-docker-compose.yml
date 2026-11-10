@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.14.0@sha256:476c7e3bcb6edd65425fb4818411bdd0143347c4af40baff4c94198a5ec288b1
+    image: slawekradzyminski/backend:3.14.1@sha256:cd1a12810a1b4f82eb23b3519362add3f20704e2652ebc3710f1a5d88e5712e4
     restart: always
     expose:
       - "4001"
@@ -49,7 +49,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.1.0@sha256:ae39b577695c7383d30e91ff96247c718ca5fce00fea4eff21460e114f17ee77
+    image: slawekradzyminski/warehouse-service:1.1.1@sha256:7b1202bea1d6994c8046c5ddef967387907bff01ce5ae8476f01acfa2284c9cf
     restart: always
     expose:
       - "4003"

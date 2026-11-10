@@ -131,6 +131,24 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Warehouse definition in Swagger UI: backend 3.14.1, warehouse-service 1.1.1 — 10 November 2026
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.14.1@sha256:cd1a12810a1b4f82eb23b3519362add3f20704e2652ebc3710f1a5d88e5712e4` | [PR #92](https://github.com/slawekradzyminski/test-secure-backend/pull/92), `f4cda43` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42712362297) |
+| `slawekradzyminski/warehouse-service:1.1.1@sha256:7b1202bea1d6994c8046c5ddef967387907bff01ce5ae8476f01acfa2284c9cf` | [PR #4](https://github.com/slawekradzyminski/warehouse-service/pull/4), `27c66cd` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/42712378862) |
+
+The backend's Swagger UI definition dropdown gains "Warehouse service", which
+loads `/warehouse/v3/api-docs` through the gateway (404 on the bare backend
+port). Both documents now build their server URL from the port in the
+forwarded host before `X-Forwarded-Port`. The local gateway publishes 8081 but
+forwards its container port 80, so the local documents used to advertise
+`http://localhost` and "Try it out" missed the gateway. warehouse-service also
+gets the backend's `ServerBaseUrlCustomizer`, because its native image ignored
+`server.forward-headers-strategy` and advertised `http://` behind the TLS edge.
+No migrations; rolling back only needs the 3.14.0 / 1.1.0 references above.
+The unchanged course suite (`l20`, `596d524`) passed 311/311 against 3.14.1.
+
 ## Architecture review fixes: backend 3.14.0, warehouse-service 1.1.0, consumer 3.6.0 — 9 November 2026
 
 | Image | Source | Release workflow |
