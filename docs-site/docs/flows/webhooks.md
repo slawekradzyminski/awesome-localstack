@@ -70,11 +70,12 @@ secret.
 ## Delivery, retries and auto-disable
 
 ```mermaid
-stateDiagram-v2
-    [*] --> PENDING
-    PENDING --> DELIVERED: 2xx in 5 s
-    PENDING --> PENDING: retry later
-    PENDING --> FAILED: 8 attempts or blocked
+flowchart TB
+    E[Event committed] --> A[Send attempt]
+    A -->|2xx within 5 s| D[DELIVERED]
+    A -->|failed| Q{Last attempt or blocked?}
+    Q -->|no| W[Wait 1, 2, 4... min] --> A
+    Q -->|yes| F[FAILED]
 ```
 
 - Success = `2xx` within 5 seconds (connect + response). Redirects are never

@@ -7,7 +7,7 @@
 | Generator | MkDocs 1.6 with the Material theme (search, dark mode, Mermaid, tabs) |
 | Sources | `docs-site/docs/` (wiki pages) + the repository's `docs/*.md`, published unchanged under **Reference** by `docs-site/hooks/repo_docs.py` |
 | Python pins | `docs-site/requirements.txt` (exact versions) |
-| Mermaid | `mermaid.min.js` 11.17.2, downloaded at image build time with a pinned SHA-256 and served by the site itself (no CDN at view time); no web fonts are loaded. The header's repository badge asks the GitHub API for star and fork counts |
+| Mermaid | `mermaid.min.js` 11.17.2, downloaded at image build time with a pinned SHA-256 and served by the site itself (no CDN at view time); no web fonts are loaded. The site makes no third-party requests (the GitHub link in the footer is a plain link) |
 | Image | `docs-site/Dockerfile`: `python:3.13-slim` builds with `mkdocs build --strict`, `nginx:1.31.3-trixie` serves `/docs/` (both pinned by digest) |
 | Runtime | nginx with one worker, `mem_limit: 32m`, healthcheck on `/docs/`; pages are sent with `Cache-Control: no-cache` so a rebuilt wiki shows up at once, assets are cached for 7 days |
 
@@ -85,9 +85,17 @@ which fails on broken internal links and anchors, and builds the image.
   the text or a table below. A diagram wider than the page is scaled down
   until its text is unreadable. Every diagram can also be clicked to open at
   full size (`docs/assets/javascripts/diagram-zoom.js`).
-- Never use `;` inside a Mermaid sequence diagram: it ends the statement, the
-  diagram fails to parse and the page shows the raw source. The hook turns it
-  into a build warning, so the strict build fails.
+- Draw trees, not webs: if two branches can both end in the same two states,
+  repeat the result boxes instead of crossing lines (see the payment outcomes),
+  and leave secondary connections to a sentence below the diagram.
+- Every decision shows all of its branches; never hide a box to bend an arrow.
+- The hook fails the strict build on three things that render badly: `;` inside
+  a sequence diagram (it ends the statement, so the page shows raw source), a
+  self-message such as `B->>B:` (its label is drawn over the lifeline; use
+  `Note over B:`), and a box hidden with `fill:none`/`stroke:none`.
+- The Reference copies of `docs/*.md` drop per-node `style` colours, because
+  the wiki theme forces its own label colour (dark text on dark fills); GitHub
+  still shows the colours.
 - New pages must be added to `nav` in `docs-site/mkdocs.yml`.
 - New files in `docs/` appear automatically under Reference once added to the
   `Reference` section of `nav`.

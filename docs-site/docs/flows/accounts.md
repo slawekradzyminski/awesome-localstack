@@ -106,7 +106,7 @@ sequenceDiagram
     B-->>U: 202 (always)
     B->>M: Reset link (30 min)
     U->>B: Token + new password
-    B->>B: Revoke refresh tokens
+    Note over B: Revoke refresh tokens
     B->>M: Password changed
     B-->>U: 200
 ```

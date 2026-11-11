@@ -41,7 +41,7 @@ sequenceDiagram
         P->>B: Get public keys (JWKS)
         B-->>P: Keys
     end
-    P->>P: Check signature + expiry
+    Note over P: Check signature + expiry
     P-->>C: Response
 ```
 

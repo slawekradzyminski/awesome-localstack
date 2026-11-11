@@ -19,6 +19,7 @@ from pathlib import Path
 from mkdocs.structure.files import File
 
 log = logging.getLogger("mkdocs.hooks.repo_docs")
+SELF_MESSAGE = re.compile(r"\s*(\w+)\s*-{1,2}[>x)]{1,2}[+-]?\s*(\w+)\s*:")
 MERMAID_BLOCK = re.compile(r"^```mermaid\n(?P<body>.*?)^```", re.MULTILINE | re.DOTALL)
 
 GITHUB_BLOB = "https://github.com/slawekradzyminski/awesome-localstack/blob/main/"
@@ -80,23 +81,49 @@ def _separate_headings(markdown: str) -> str:
 
 
 def _check_mermaid(markdown: str, src_uri: str) -> None:
-    """Warn (and so fail the strict build) on Mermaid that would not render.
+    """Warn (and so fail the strict build) on Mermaid that renders badly.
 
-    In sequence diagrams `;` ends a statement, so a message or note containing
-    one is a parse error and Material shows the raw source instead of a diagram.
+    - In sequence diagrams `;` ends a statement, so a message or note containing
+      one is a parse error and Material shows the raw source instead.
+    - A self-message (A->>A) draws its label across the lifeline and under step
+      numbers; a note reads better.
+    - A node hidden with fill/stroke none looks like a broken arrow.
     """
     for block in MERMAID_BLOCK.finditer(markdown):
         body = block.group("body")
+        if re.search(r"fill:\s*none|stroke:\s*none", body):
+            log.warning("%s: Mermaid diagram hides a node (fill/stroke none); show every step", src_uri)
         if not body.lstrip().startswith("sequenceDiagram"):
             continue
         for line in body.splitlines():
             if ";" in line and not line.strip().startswith("%%"):
                 log.warning("%s: Mermaid sequence diagram line contains ';': %s", src_uri, line.strip())
+            self_message = SELF_MESSAGE.match(line)
+            if self_message and self_message.group(1) == self_message.group(2):
+                log.warning("%s: Mermaid self-message draws its label over the lifeline; "
+                            "use 'Note over %s: ...' instead: %s",
+                            src_uri, self_message.group(1), line.strip())
+
+
+def _theme_mermaid(markdown: str) -> str:
+    """Drop per-node `style` lines from Mermaid blocks.
+
+    The docs colour nodes for GitHub (for example `fill:#333,color:#fff`), but
+    the Material theme forces its own label colour, so on the wiki dark fills
+    end up with dark text. Without the overrides every node uses the theme's
+    readable light and dark palette. The source files keep their colours.
+    """
+    def strip(block: re.Match) -> str:
+        lines = block.group(0).split("\n")
+        return "\n".join(line for line in lines if not re.match(r"\s*style\s+\S+\s", line))
+    return MERMAID_BLOCK.sub(strip, markdown)
 
 
 def on_page_markdown(markdown, page, config, files):
     _check_mermaid(markdown, page.file.src_uri)
-    if not page.file.src_uri.startswith(f"{REFERENCE_DIR}/"):
+    source = _source_dir(config)
+    if not page.file.abs_src_path or Path(page.file.abs_src_path).resolve().parent != source:
+        # The wiki's own pages, including reference/index.md, stay as written.
         return markdown
     available = {
         posixpath.basename(f.src_uri)
@@ -108,7 +135,7 @@ def on_page_markdown(markdown, page, config, files):
         f"    This page is `docs/{posixpath.basename(page.file.src_uri)}` from the repository, "
         "published unchanged. Edit it there.\n\n"
     )
-    body = LINK.sub(lambda m: _rewrite(m, available), _separate_headings(markdown))
+    body = LINK.sub(lambda m: _rewrite(m, available), _separate_headings(_theme_mermaid(markdown)))
     # Keep the H1 first so the page title stays the document title.
     lines = body.split("\n", 1)
     if lines[0].startswith("# ") and len(lines) == 2:

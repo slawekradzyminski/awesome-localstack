@@ -42,7 +42,7 @@ sequenceDiagram
     P->>B: Read order 42
     P-->>C: CAPTURED
     P->>B: Signed result
-    B->>B: Order 42 PAID
+    Note over B: Order 42 is now PAID
     B-->>C: Emails
 ```
 
@@ -86,9 +86,7 @@ sequenceDiagram
     participant W as warehouse-service
     participant B as Backend
     actor C as Customer
-    loop each carrier step
-        W->>W: Next scan
-    end
+    Note over W: Carrier scans every step:<br/>in transit, out for delivery
     W->>B: DELIVERED
     B-->>C: Email
     C->>W: Track parcel

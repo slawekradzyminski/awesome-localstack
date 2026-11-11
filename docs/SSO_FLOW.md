@@ -27,39 +27,15 @@ The `server` profile keeps SSO disabled by default. Do not point production-like
 ## Overview
 
 ```mermaid
-graph TB
-    subgraph Browser
-        FE[React Frontend<br/>localhost:8081]
-    end
-
-    subgraph "Keycloak (localhost:8082)"
-        KC[awesome-testing realm]
-        CLIENT[awesome-testing-frontend<br/>public OIDC client]
-        USERS[sso-e2e-client, sso-admin]
-    end
-
-    subgraph "Spring Boot Backend"
-        BE[Backend API<br/>behind localhost:8081 gateway]
-        DB[(Application database)]
-    end
-
-    FE -->|"Authorization Code + PKCE"| KC
-    KC -->|"Login form + session"| USERS
-    KC -->|"Authorization code"| FE
-    FE -->|"Code + code_verifier"| KC
-    KC -->|"ID token + access token"| FE
-    FE -->|"POST /api/v1/users/sso/exchange<br/>ID token"| BE
-    BE -->|"Fetch JWKS and validate JWT"| KC
-    BE -->|"Create/reuse SSO-linked user"| DB
-    BE -->|"App access token + refresh token"| FE
-
-    CLIENT -.-> KC
-
-    style KC fill:#4A90D9,color:#fff
-    style CLIENT fill:#4A90D9,color:#fff
-    style USERS fill:#F4B400,color:#000
-    style FE fill:#61DAFB,color:#000
-    style BE fill:#6DB33F,color:#fff
+sequenceDiagram
+    participant FE as Frontend
+    participant KC as Keycloak
+    participant BE as Backend
+    FE->>KC: Log in (code + PKCE)
+    KC-->>FE: ID token
+    FE->>BE: Exchange ID token
+    BE->>KC: Get signing keys (JWKS)
+    BE-->>FE: App access + refresh token
 ```
 
 The important separation is:
@@ -158,21 +134,21 @@ sequenceDiagram
     participant Backend as Spring Boot<br/>Backend
 
     User->>Browser: Click SSO login
-    Browser->>Browser: Generate PKCE values<br/>state, nonce, code_verifier,<br/>code_challenge
+    Note over Browser: Generate PKCE values<br/>state, nonce, code_verifier,<br/>code_challenge
     Browser->>KC: GET /auth?client_id=awesome-testing-frontend<br/>&response_type=code<br/>&scope=openid profile email<br/>&code_challenge=...
     KC->>User: Show Keycloak login form
     User->>KC: Enter sso-e2e-client / SsoClient123!
-    KC->>KC: Validate credentials<br/>and create Keycloak session
+    Note over KC: Validate credentials<br/>and create Keycloak session
     KC->>Browser: 302 Redirect to<br/>/auth/sso/callback?code=...&state=...
-    Browser->>Browser: Verify returned state
+    Note over Browser: Verify returned state
     Browser->>KC: POST /token<br/>authorization code + code_verifier
     KC-->>Browser: ID token + access token<br/>(issued by awesome-testing)
     Browser->>Backend: POST /api/v1/users/sso/exchange<br/>{idToken: "..."}
     Backend->>KC: Fetch JWKS if not cached
-    Backend->>Backend: Validate JWT signature,<br/>issuer, audience, and expiry
-    Backend->>Backend: Provision or reuse<br/>local SSO-linked user
+    Note over Backend: Validate JWT signature,<br/>issuer, audience, and expiry
+    Note over Backend: Provision or reuse<br/>local SSO-linked user
     Backend-->>Browser: App token + refresh token
-    Browser->>Browser: Store app tokens
+    Note over Browser: Store app tokens
     Browser->>User: Continue as logged-in app user
 ```
 

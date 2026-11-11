@@ -1,9 +1,6 @@
 site_name: Awesome LocalStack Wiki
 site_description: How the Awesome Testing training platform works, technically and as a business.
 site_url: https://awesome.byst.re/docs/
-repo_url: https://github.com/slawekradzyminski/awesome-localstack
-repo_name: awesome-localstack
-edit_uri: ""
 copyright: Awesome Testing training platform. Built from awesome-localstack/docs-site.
 
 docs_dir: docs
@@ -30,7 +27,6 @@ theme:
   language: en
   icon:
     logo: material/book-open-page-variant
-    repo: fontawesome/brands/github
   features:
     - navigation.tabs
     - navigation.sections
@@ -63,6 +59,15 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+
+# A plain footer link instead of `repo_url`: the theme's repository badge calls
+# the GitHub API (and logs a 404 because the repository has no releases).
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/slawekradzyminski/awesome-localstack
+      name: awesome-localstack on GitHub
 
 extra_javascript:
   # Downloaded with a pinned checksum by the Dockerfile; Material uses a global

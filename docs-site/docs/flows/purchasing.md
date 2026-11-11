@@ -23,11 +23,11 @@ raises stock in the backend through the internal receipts API. UI page:
 stateDiagram-v2
     [*] --> DRAFT
     DRAFT --> SUBMITTED: submit
+    SUBMITTED --> PARTIALLY_RECEIVED: receive some
+    PARTIALLY_RECEIVED --> RECEIVED: receive rest
+    SUBMITTED --> RECEIVED: receive all
     DRAFT --> CANCELLED: cancel
     SUBMITTED --> CANCELLED: cancel
-    SUBMITTED --> PARTIALLY_RECEIVED: some
-    SUBMITTED --> RECEIVED: all
-    PARTIALLY_RECEIVED --> RECEIVED: rest
 ```
 
 ## Receipts
@@ -46,7 +46,7 @@ sequenceDiagram
     participant W as warehouse-service
     participant B as Backend
     A->>W: Receipt (requestId)
-    W->>W: Check quantities
+    Note over W: Check quantities
     W->>B: Add stock
     B-->>W: Movement ids
     W-->>A: Updated order

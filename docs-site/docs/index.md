@@ -43,12 +43,10 @@ and deployed — so you can design meaningful tests instead of guessing.
 flowchart LR
     U([You]) --> G[gateway]
     G --> F[shop UI]
-    G --> B[backend]
     G --> W[warehouse-service]
+    G --> B[backend]
     G --> P[payment-service]
     B --> DB[(PostgreSQL)]
-    W --> B
-    P --> B
 ```
 
 The **gateway** sends each path to the right service. The **backend** owns

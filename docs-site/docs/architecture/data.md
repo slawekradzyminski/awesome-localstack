@@ -8,8 +8,6 @@ flowchart TB
     B[backend] --> PUB[(schema public)]
     W[warehouse-service] --> WH[(schema warehouse)]
     P[payment-service] --> PAY[(schema payment)]
-    R[postgres-roles] -.->|prepares| WH
-    R -.->|prepares| PAY
 ```
 
 ## Roles and isolation

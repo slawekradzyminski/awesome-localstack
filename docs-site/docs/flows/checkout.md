@@ -16,7 +16,8 @@ flowchart TB
     T --> S[Save PENDING order, clear cart]
     S --> E[After commit: order.created]
     E --> Z{amountDue = 0?}
-    Z -- yes --> P[Mark PAID]
+    Z -- yes --> P[Marked PAID at once]
+    Z -- no --> Q[Customer pays by card]
 ```
 
 ## Idempotent checkout

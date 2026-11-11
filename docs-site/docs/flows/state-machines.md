@@ -10,13 +10,11 @@ All lifecycle diagrams in one place. Each links to the page with the rules.
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: checkout
-    PENDING --> PAID: card captured / tenders cover total / admin
-    PENDING --> CANCELLED: customer or admin cancel
-    PAID --> SHIPPED: fulfilment SHIPPED / admin
-    PAID --> CANCELLED: cancel while NONE or AWAITING_PICK,<br/>warehouse cancel while AWAITING_PICK or PICKED
-    SHIPPED --> DELIVERED: fulfilment DELIVERED / admin
-    DELIVERED --> [*]
-    CANCELLED --> [*]
+    PENDING --> PAID: paid
+    PAID --> SHIPPED: shipped
+    SHIPPED --> DELIVERED: delivered
+    PENDING --> CANCELLED: cancel
+    PAID --> CANCELLED: cancel before packing
 ```
 
 A failed card payment leaves the order `PENDING`. Refunds do not change the
@@ -61,21 +59,20 @@ stateDiagram-v2
 ## Payment (payment-service)
 
 ```mermaid
-stateDiagram-v2
-    [*] --> REQUIRES_ACTION
-    [*] --> PROCESSING
-    [*] --> CAPTURED
-    [*] --> FAILED
-    REQUIRES_ACTION --> CAPTURED: 3-D Secure 123456
-    REQUIRES_ACTION --> FAILED: THREE_DS_FAILED / THREE_DS_EXPIRED
-    PROCESSING --> CAPTURED: settled
-    PROCESSING --> FAILED: PROVIDER_TIMEOUT
-    CAPTURED --> VOIDED: ORDER_NOT_PAYABLE
-    CAPTURED --> PARTIALLY_REFUNDED
-    CAPTURED --> REFUNDED
-    PARTIALLY_REFUNDED --> REFUNDED
+flowchart TB
+    S[Card submitted] --> K{Test card}
+    K -->|success| C1[CAPTURED]
+    K -->|declined| F1[FAILED]
+    K -->|3-D Secure| A[REQUIRES_ACTION]
+    K -->|async| P[PROCESSING]
+    A -->|code 123456| C2[CAPTURED]
+    A -->|wrong code or 15 min| F2[FAILED]
+    P -->|settles after 10 s| C3[CAPTURED]
+    P -->|timeout card| F3[FAILED]
 ```
 
+After a capture: `CAPTURED → VOIDED` (backend says the order is not payable),
+`CAPTURED → PARTIALLY_REFUNDED → REFUNDED`, or `CAPTURED → REFUNDED`.
 See [Card payments](payments.md).
 
 ## Return (warehouse-service)
@@ -96,14 +93,13 @@ See [Returns and refunds](returns-refunds.md).
 
 ```mermaid
 stateDiagram-v2
-    direction LR
     [*] --> DRAFT
-    DRAFT --> SUBMITTED
-    DRAFT --> CANCELLED
-    SUBMITTED --> CANCELLED
-    SUBMITTED --> PARTIALLY_RECEIVED
-    SUBMITTED --> RECEIVED
-    PARTIALLY_RECEIVED --> RECEIVED
+    DRAFT --> SUBMITTED: submit
+    SUBMITTED --> PARTIALLY_RECEIVED: receive some
+    PARTIALLY_RECEIVED --> RECEIVED: receive rest
+    SUBMITTED --> RECEIVED: receive all
+    DRAFT --> CANCELLED: cancel
+    SUBMITTED --> CANCELLED: cancel
 ```
 
 See [Purchasing and suppliers](purchasing.md).

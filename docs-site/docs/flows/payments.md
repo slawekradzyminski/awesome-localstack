@@ -45,19 +45,26 @@ month; the number must pass the Luhn check (otherwise `400`).
 ## Payment lifecycle
 
 ```mermaid
-stateDiagram-v2
-    [*] --> CAPTURED: 4242...
-    [*] --> FAILED: declined
-    [*] --> REQUIRES_ACTION: 3DS card
-    [*] --> PROCESSING: async card
-    REQUIRES_ACTION --> CAPTURED: code ok
-    REQUIRES_ACTION --> FAILED: bad code
-    PROCESSING --> CAPTURED: settled
-    PROCESSING --> FAILED: timeout
-    CAPTURED --> VOIDED: not payable
-    CAPTURED --> PARTIALLY_REFUNDED
-    CAPTURED --> REFUNDED
-    PARTIALLY_REFUNDED --> REFUNDED
+flowchart TB
+    S[Card submitted] --> K{Test card}
+    K -->|success| C1[CAPTURED]
+    K -->|declined| F1[FAILED]
+    K -->|3-D Secure| A[REQUIRES_ACTION]
+    K -->|async| P[PROCESSING]
+    A -->|code 123456| C2[CAPTURED]
+    A -->|wrong code or 15 min| F2[FAILED]
+    P -->|settles after 10 s| C3[CAPTURED]
+    P -->|timeout card| F3[FAILED]
+```
+
+After a capture:
+
+```mermaid
+flowchart LR
+    C[CAPTURED] -->|backend says not payable| V[VOIDED]
+    C -->|partial refund| PR[PARTIALLY_REFUNDED]
+    PR -->|rest refunded| R[REFUNDED]
+    C -->|full refund| R
 ```
 
 An order is **payable** when the backend reports it `PENDING` and it has no
@@ -77,10 +84,10 @@ sequenceDiagram
     C->>P: Pay order 42
     P->>B: Read order 42
     B-->>P: PENDING, due 83.00
-    P->>P: Charge card
+    Note over P: Charge the card
     P-->>C: CAPTURED
     P->>B: Signed result
-    B->>B: Order PAID
+    Note over B: Order 42 is now PAID
     B-->>P: 200
 ```
 
@@ -146,12 +153,12 @@ sequenceDiagram
     participant B as Backend
     C->>P: Pay (3DS card)
     P-->>C: REQUIRES_ACTION
-    C->>B: Cancel order
+    Note over B: Customer cancels order 42
     C->>P: Code 123456
     P-->>C: CAPTURED
     P->>B: Signed result
     B-->>P: 409 not payable
-    P->>P: VOIDED
+    Note over P: Payment VOIDED
 ```
 
 ## Refunds to the card

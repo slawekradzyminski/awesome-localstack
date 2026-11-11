@@ -116,7 +116,7 @@ sequenceDiagram
     participant Backend as Spring Boot<br/>Backend
 
     User->>Browser: Click "Google" button
-    Browser->>Browser: Generate PKCE (state, nonce,<br/>code_verifier, code_challenge)
+    Note over Browser: Generate PKCE (state, nonce,<br/>code_verifier, code_challenge)
     Browser->>AT: GET /auth?client_id=awesome-testing-frontend<br/>&response_type=code&code_challenge=...<br/>&kc_idp_hint=google
 
     Note over AT: kc_idp_hint=google<br/>skips the Keycloak<br/>login form
@@ -125,7 +125,7 @@ sequenceDiagram
 
     GM->>User: Show mock Google login form
     User->>GM: Enter google-user / GoogleUser123!
-    GM->>GM: Validate credentials
+    Note over GM: Validate credentials
     GM->>AT: 302 Redirect to broker endpoint<br/>with authorization code
 
     Note over AT: Keycloak exchanges code<br/>for google-mock tokens,<br/>provisions federated identity,<br/>creates awesome-testing session
@@ -137,12 +137,12 @@ sequenceDiagram
 
     Browser->>Backend: POST /api/v1/users/sso/exchange<br/>{idToken: "..."}
     Backend->>AT: Fetch JWKS (cached)
-    Backend->>Backend: Validate JWT signature,<br/>issuer, audience, expiry
-    Backend->>Backend: Extract identity_provider claim<br/>(value: "google")
-    Backend->>Backend: Provision or update<br/>local user (authProvider: "google")
+    Note over Backend: Validate JWT signature,<br/>issuer, audience, expiry
+    Note over Backend: Extract identity_provider claim<br/>(value: "google")
+    Note over Backend: Provision or update<br/>local user (authProvider: "google")
     Backend-->>Browser: {token, refreshToken, username, ...}
 
-    Browser->>Browser: Store app tokens in localStorage
+    Note over Browser: Store app tokens in localStorage
     Browser->>User: Redirect to home page
 ```
 

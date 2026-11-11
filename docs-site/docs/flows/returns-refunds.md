@@ -59,7 +59,7 @@ sequenceDiagram
     W->>B: Restock items
     A->>W: Refund return 7
     W->>B: Book refund 45.00
-    B->>B: Split card first
+    Note over B: Split, card first
     B-->>W: 200
     B->>P: Card refund
     P-->>B: Refund status

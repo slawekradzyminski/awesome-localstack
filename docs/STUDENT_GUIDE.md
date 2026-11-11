@@ -44,30 +44,17 @@ Make sure `8081`, `8082` and `11434` are free before you start.
 ## Lightweight Architecture
 
 ```mermaid
-flowchart LR
-    U[Browser]
-    G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
-    F[Frontend]
-    B[Backend]
-    W[warehouse-service]
-    PS[payment-service]
-    P[(PostgreSQL)]
-    K[Keycloak<br/>localhost:8082]
-    O[Ollama Mock<br/>localhost:11434]
-
-    U --> G
-    U --> K
-    G --> F
-    G --> B
-    G --> W
-    G --> PS
-    W --> B
-    PS --> B
-    B --> P
+flowchart TB
+    U[Browser] --> G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
+    U --> K[Keycloak<br/>localhost:8082]
+    G --> F[Frontend]
+    G --> B[Backend]
+    G --> W[warehouse-service]
+    G --> PS[payment-service]
+    B --> P[(PostgreSQL)]
     W --> P
     PS --> P
-    B --> K
-    B --> O
+    B --> O[Ollama Mock<br/>localhost:11434]
 ```
 
 The gateway sends fulfilment paths (`/api/v1/warehouse/...`, returns, suppliers,
