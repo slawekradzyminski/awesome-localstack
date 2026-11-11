@@ -46,21 +46,18 @@ month; the number must pass the Luhn check (otherwise `400`).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CAPTURED: success card
-    [*] --> FAILED: declined / insufficient funds
-    [*] --> REQUIRES_ACTION: 3-D Secure card
+    [*] --> CAPTURED: 4242...
+    [*] --> FAILED: declined
+    [*] --> REQUIRES_ACTION: 3DS card
     [*] --> PROCESSING: async card
-    REQUIRES_ACTION --> CAPTURED: code 123456
-    REQUIRES_ACTION --> FAILED: wrong code or 15 min timeout
-    PROCESSING --> CAPTURED: settlement after delay
-    PROCESSING --> FAILED: PROVIDER_TIMEOUT
-    CAPTURED --> VOIDED: backend answers 409 Order is not payable
-    CAPTURED --> PARTIALLY_REFUNDED: partial refund
-    CAPTURED --> REFUNDED: full refund
-    PARTIALLY_REFUNDED --> REFUNDED: remaining refund
-    FAILED --> [*]
-    VOIDED --> [*]
-    REFUNDED --> [*]
+    REQUIRES_ACTION --> CAPTURED: code ok
+    REQUIRES_ACTION --> FAILED: bad code
+    PROCESSING --> CAPTURED: settled
+    PROCESSING --> FAILED: timeout
+    CAPTURED --> VOIDED: not payable
+    CAPTURED --> PARTIALLY_REFUNDED
+    CAPTURED --> REFUNDED
+    PARTIALLY_REFUNDED --> REFUNDED
 ```
 
 An order is **payable** when the backend reports it `PENDING` and it has no
@@ -77,17 +74,14 @@ sequenceDiagram
     actor C as Customer
     participant P as payment-service
     participant B as Backend
-    C->>P: POST /api/v1/payments (Idempotency-Key K, card 4242…)
-    P->>B: GET /internal/v1/orders/42 (X-Service-Token)
-    B-->>P: {status: PENDING, username, amountDue: 83.00}
-    P->>P: lock order, check payable, Luhn, expiry
-    P->>P: payment CAPTURED + outbox row (one transaction)
-    P-->>C: 201 {status: CAPTURED, cardLast4: 4242}
-    P->>B: POST /internal/v1/orders/42/payment<br/>X-Payment-Signature t=…,v1=…
-    B->>B: verify token + HMAC + 5 min skew, requestId new?
-    B->>B: amount == amountDue → PENDING → PAID, ORDER_PAID
-    B-->>P: 200 {orderId: 42, orderStatus: PAID}
-    Note over B: emails PAYMENT_RECEIVED, LOYALTY_POINTS_EARNED,<br/>webhook order.paid
+    C->>P: Pay order 42
+    P->>B: Read order 42
+    B-->>P: PENDING, due 83.00
+    P->>P: Charge card
+    P-->>C: CAPTURED
+    P->>B: Signed result
+    B->>B: Order PAID
+    B-->>P: 200
 ```
 
 The frontend's `/orders/:id/pay` page submits the card with a fresh
@@ -101,11 +95,11 @@ sequenceDiagram
     actor C as Customer
     participant P as payment-service
     participant B as Backend
-    C->>P: POST /api/v1/payments (card 4000 0000 0000 3220)
-    P-->>C: 201 {status: REQUIRES_ACTION, nextAction: {type: THREE_DS_CHALLENGE, hint}}
-    C->>P: POST /api/v1/payments/{id}/3ds {code: "123456"}
-    P-->>C: 200 {status: CAPTURED}
-    P->>B: signed result CAPTURED
+    C->>P: Pay (3DS card)
+    P-->>C: REQUIRES_ACTION
+    C->>P: Code 123456
+    P-->>C: CAPTURED
+    P->>B: Signed result
 ```
 
 A challenge not answered within `payment.three-ds-timeout` (15 minutes) fails
@@ -150,15 +144,14 @@ sequenceDiagram
     actor C as Customer
     participant P as payment-service
     participant B as Backend
-    C->>P: POST /api/v1/payments (3-D Secure card)
+    C->>P: Pay (3DS card)
     P-->>C: REQUIRES_ACTION
-    C->>B: POST /api/v1/orders/42/cancel
-    B-->>C: 200 CANCELLED
-    C->>P: POST /api/v1/payments/{id}/3ds {code: 123456}
-    P-->>C: 200 CAPTURED
-    P->>B: signed result CAPTURED
-    B-->>P: 409 Order is not payable
-    P->>P: VOIDED, refundedAmount = amount, failureCode ORDER_NOT_PAYABLE
+    C->>B: Cancel order
+    C->>P: Code 123456
+    P-->>C: CAPTURED
+    P->>B: Signed result
+    B-->>P: 409 not payable
+    P->>P: VOIDED
 ```
 
 ## Refunds to the card

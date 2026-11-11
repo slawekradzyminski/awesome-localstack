@@ -26,15 +26,14 @@ status; they add `refundedAmount`. See [Checkout](checkout.md#after-checkout).
 
 ```mermaid
 stateDiagram-v2
-    direction LR
     [*] --> NONE
-    NONE --> AWAITING_PICK: release (order PAID)
+    NONE --> AWAITING_PICK: release
     AWAITING_PICK --> PICKED
     PICKED --> PACKED
     PACKED --> SHIPPED
     SHIPPED --> DELIVERED
-    NONE --> CANCELLED: customer / admin
-    AWAITING_PICK --> CANCELLED: customer / admin / warehouse
+    NONE --> CANCELLED
+    AWAITING_PICK --> CANCELLED
     PICKED --> CANCELLED: warehouse only
 ```
 
@@ -44,13 +43,12 @@ See [Warehouse fulfilment](fulfilment.md).
 
 ```mermaid
 stateDiagram-v2
-    direction LR
     [*] --> AWAITING_PICK
     AWAITING_PICK --> PICKED: pick
-    PICKED --> PACKED: pack (weightKg)
-    PACKED --> SHIPPED: ship (carrier)
-    SHIPPED --> DELIVERED: deliver / simulated carrier
-    AWAITING_PICK --> CANCELLED: cancel / reconciler
+    PICKED --> PACKED: pack
+    PACKED --> SHIPPED: ship
+    SHIPPED --> DELIVERED: deliver
+    AWAITING_PICK --> CANCELLED: cancel
     PICKED --> CANCELLED: cancel
 ```
 

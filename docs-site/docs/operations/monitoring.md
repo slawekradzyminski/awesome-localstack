@@ -3,13 +3,12 @@
 ## Production pipeline
 
 ```mermaid
-flowchart LR
-    N[node-exporter<br/>host] --> P[Prometheus<br/>30 days / 5 GB]
-    CA[cAdvisor<br/>containers] --> P
-    S[backend, consumer,<br/>warehouse-service, payment-service<br/>/actuator/prometheus] --> P
-    BB[blackbox-exporter] -->|public HTTPS probes, 30 s| P
-    P --> AM[Alertmanager] -->|critical only| T[Telegram]
-    P --> GR[Grafana<br/>127.0.0.1:3000]
+flowchart TB
+    X[Exporters and services] --> P[Prometheus]
+    BB[Blackbox probes] --> P
+    P --> GR[Grafana]
+    P --> AM[Alertmanager]
+    AM -->|critical only| T[Telegram]
 ```
 
 | Prometheus job | Target |

@@ -7,16 +7,13 @@ consumer only delivers what it receives.
 ## Pipeline
 
 ```mermaid
-flowchart LR
-    subgraph backend
-        S[Business change<br/>or internal notification] --> R[CustomerEmailRenderer]
-        R --> E[(email_event)]
-        E --> T{app.email.transport}
-    end
-    T -- jms --> Q[ActiveMQ queue email] --> C[consumer] --> SMTP[Mailpit :1025]
-    T -- local-outbox --> O[In-memory outbox<br/>GET /api/v1/local/email/outbox]
-    J[EmailRetryJob<br/>every minute] -. resend failed .-> T
-    W[warehouse-service<br/>notification_outbox] -- POST /internal/v1/notifications --> S
+flowchart TB
+    S[Business change] --> R[Backend renders email]
+    W[warehouse-service notification] --> R
+    R --> E[(email_event)]
+    E --> T{Transport}
+    T -- jms --> Q[ActiveMQ] --> C[consumer] --> M[Mailpit]
+    T -- local-outbox --> O[Local outbox endpoint]
 ```
 
 | Profile | Transport | Where to read the email |

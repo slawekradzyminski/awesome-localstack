@@ -4,16 +4,12 @@ All three Spring services use **one PostgreSQL 16 server** and one database,
 but each owns a separate **schema** and connects as its own **role**.
 
 ```mermaid
-flowchart LR
-    subgraph "PostgreSQL database testdb (aitesters on the sandbox)"
-        PUB[schema public<br/>owner postgres]
-        WH[schema warehouse<br/>owner role warehouse]
-        PAY[schema payment<br/>owner role payment]
-    end
-    B[backend<br/>user postgres] --> PUB
-    W[warehouse-service<br/>user warehouse] --> WH
-    P[payment-service<br/>user payment] --> PAY
-    R[postgres-roles one-shot] -. creates roles, hands over schema ownership .-> WH & PAY
+flowchart TB
+    B[backend] --> PUB[(schema public)]
+    W[warehouse-service] --> WH[(schema warehouse)]
+    P[payment-service] --> PAY[(schema payment)]
+    R[postgres-roles] -.->|prepares| WH
+    R -.->|prepares| PAY
 ```
 
 ## Roles and isolation

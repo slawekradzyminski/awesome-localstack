@@ -9,7 +9,7 @@
 | Python pins | `docs-site/requirements.txt` (exact versions) |
 | Mermaid | `mermaid.min.js` 11.17.2, downloaded at image build time with a pinned SHA-256 and served by the site itself (no CDN at view time); no web fonts are loaded. The header's repository badge asks the GitHub API for star and fork counts |
 | Image | `docs-site/Dockerfile`: `python:3.13-slim` builds with `mkdocs build --strict`, `nginx:1.31.3-trixie` serves `/docs/` (both pinned by digest) |
-| Runtime | nginx with one worker, `mem_limit: 32m`, healthcheck on `/docs/` |
+| Runtime | nginx with one worker, `mem_limit: 32m`, healthcheck on `/docs/`; pages are sent with `Cache-Control: no-cache` so a rebuilt wiki shows up at once, assets are cached for 7 days |
 
 `docs/` stays the source of truth for the documents that already existed; the
 hook adds each file to the build as `reference/<NAME>.md` and rewrites links
@@ -80,6 +80,14 @@ which fails on broken internal links and anchors, and builds the image.
 
 - English only; describe what the code and configuration do, and link the
   source document instead of copying long tables.
+- Keep diagrams narrow: top-to-bottom layouts, a few words per label, at most
+  four participants in a sequence diagram; put endpoints and field names in
+  the text or a table below. A diagram wider than the page is scaled down
+  until its text is unreadable. Every diagram can also be clicked to open at
+  full size (`docs/assets/javascripts/diagram-zoom.js`).
+- Never use `;` inside a Mermaid sequence diagram: it ends the statement, the
+  diagram fails to parse and the page shows the raw source. The hook turns it
+  into a build warning, so the strict build fails.
 - New pages must be added to `nav` in `docs-site/mkdocs.yml`.
 - New files in `docs/` appear automatically under Reference once added to the
   `Reference` section of `nav`.

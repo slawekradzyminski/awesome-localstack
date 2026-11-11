@@ -10,12 +10,16 @@ The source directory is $REPO_DOCS_DIR, or ../docs next to docs-site/.
 
 from __future__ import annotations
 
+import logging
 import os
 import posixpath
 import re
 from pathlib import Path
 
 from mkdocs.structure.files import File
+
+log = logging.getLogger("mkdocs.hooks.repo_docs")
+MERMAID_BLOCK = re.compile(r"^```mermaid\n(?P<body>.*?)^```", re.MULTILINE | re.DOTALL)
 
 GITHUB_BLOB = "https://github.com/slawekradzyminski/awesome-localstack/blob/main/"
 REFERENCE_DIR = "reference"
@@ -55,7 +59,43 @@ def _rewrite(match: re.Match, available: set[str]) -> str:
     return f"]({GITHUB_BLOB}{repo_path}{anchor}{title})"
 
 
+def _separate_headings(markdown: str) -> str:
+    """Put a blank line before ATX headings outside code fences.
+
+    GitHub renders a heading that directly follows a table; Python-Markdown
+    treats it as another table row.
+    """
+    lines = markdown.split("\n")
+    result: list[str] = []
+    fence = None
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            marker = stripped[:3]
+            fence = None if fence == marker else (fence or marker)
+        elif fence is None and re.match(r"#{1,6} ", line) and result and result[-1].strip():
+            result.append("")
+        result.append(line)
+    return "\n".join(result)
+
+
+def _check_mermaid(markdown: str, src_uri: str) -> None:
+    """Warn (and so fail the strict build) on Mermaid that would not render.
+
+    In sequence diagrams `;` ends a statement, so a message or note containing
+    one is a parse error and Material shows the raw source instead of a diagram.
+    """
+    for block in MERMAID_BLOCK.finditer(markdown):
+        body = block.group("body")
+        if not body.lstrip().startswith("sequenceDiagram"):
+            continue
+        for line in body.splitlines():
+            if ";" in line and not line.strip().startswith("%%"):
+                log.warning("%s: Mermaid sequence diagram line contains ';': %s", src_uri, line.strip())
+
+
 def on_page_markdown(markdown, page, config, files):
+    _check_mermaid(markdown, page.file.src_uri)
     if not page.file.src_uri.startswith(f"{REFERENCE_DIR}/"):
         return markdown
     available = {
@@ -68,7 +108,7 @@ def on_page_markdown(markdown, page, config, files):
         f"    This page is `docs/{posixpath.basename(page.file.src_uri)}` from the repository, "
         "published unchanged. Edit it there.\n\n"
     )
-    body = LINK.sub(lambda m: _rewrite(m, available), markdown)
+    body = LINK.sub(lambda m: _rewrite(m, available), _separate_headings(markdown))
     # Keep the H1 first so the page title stays the document title.
     lines = body.split("\n", 1)
     if lines[0].startswith("# ") and len(lines) == 2:

@@ -5,11 +5,11 @@ card and loyalty points are **tenders** that pay part of the total, lowering
 the **amount due** on the card.
 
 ```mermaid
-flowchart LR
-    S[Subtotal<br/>Σ price × qty] -->|minus coupon discount| T[totalAmount]
-    T -->|minus giftCardAmount| A1[ ]
-    A1 -->|minus pointsAmount| D[amountDue<br/>paid by card]
-    style A1 fill:none,stroke:none
+flowchart TB
+    S[Subtotal] -->|minus coupon| T[totalAmount]
+    T -->|minus gift card| G[ ]
+    G -->|minus points| D[amountDue, paid by card]
+    style G fill:none,stroke:none
 ```
 
 ## Cart endpoints

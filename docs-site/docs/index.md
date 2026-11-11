@@ -40,22 +40,22 @@ and deployed — so you can design meaningful tests instead of guessing.
 ## The platform in one picture
 
 ```mermaid
-flowchart TB
-    U[Browser / test tool] --> G[Gateway nginx]
-    G -->|/| F[Frontend SPA]
-    G -->|/api/v1/...| B[Backend]
-    G -->|warehouse, returns,<br/>purchasing, tracking| W[warehouse-service]
-    G -->|payments| P[payment-service]
-    G -->|/docs/| D[This wiki]
-    W -->|/internal/v1 + service token| B
-    P -->|/internal/v1 + service token<br/>signed results| B
-    B -->|refunds| P
+flowchart LR
+    U([You]) --> G[gateway]
+    G --> F[shop UI]
+    G --> B[backend]
+    G --> W[warehouse-service]
+    G --> P[payment-service]
     B --> DB[(PostgreSQL)]
-    W -->|schema warehouse| DB
-    P -->|schema payment| DB
-    B -->|JMS| MQ[ActiveMQ Artemis] --> C[Email consumer] --> M[Mailpit]
-    B --> L[LLM: ollama-mock or Docker Model Runner]
+    W --> B
+    P --> B
 ```
+
+The **gateway** sends each path to the right service. The **backend** owns
+users, products, carts and orders; **warehouse-service** ships parcels and
+handles returns; **payment-service** charges test cards. Both small services
+ask the backend for order data and report back to it. Emails, the LLM and
+monitoring sit behind the backend; see [Architecture](architecture/index.md).
 
 ## Where it runs
 

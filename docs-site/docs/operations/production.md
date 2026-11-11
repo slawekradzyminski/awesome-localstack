@@ -22,19 +22,20 @@ the server.
 ## What `deploy.yml` does
 
 ```mermaid
-flowchart TD
-    A[swap role<br/>guarded; no-op on the LXC host] --> B[postgres_backup<br/>encrypted pre-deploy backup]
-    B --> C[deployment_silence<br/>15 min silences for warning alerts]
-    C --> D[app role]
+flowchart TB
+    A[Swap check] --> B[Encrypted backup]
+    B --> C[Silence warnings 15 min]
+    C --> D[app role: files, secrets, build, up]
     D --> E[verify role]
-    E --> F[expire silences]
-    F --> G[cleanup role]
-    D -.- D1[validate Vault keys and image gates]
-    D -.- D2[copy compose file, nginx, prometheus,<br/>alertmanager, postgres, docs, docs-site ...]
-    D -.- D3[render .env.runtime, .env.warehouse, .env.payment,<br/>.env.aitesters* from Vault]
-    D -.- D4[build the docs image, docker compose up]
-    D -.- D5[recreate gateway and edge]
+    E --> F[Expire silences]
+    F --> G[Cleanup]
 ```
+
+The `app` role, in order: validates the Vault keys and the image gates; copies
+the Compose file and the `nginx`, `prometheus`, `alertmanager`, `postgres`,
+`docs` and `docs-site` directories; renders `.env.runtime`, `.env.warehouse`,
+`.env.payment` and the `.env.aitesters*` files from Vault; builds the docs
+image; runs `docker compose up`; and recreates `gateway` and `edge`.
 
 A deploy that leaves the gateway returning `502` is a **failed** deploy:
 verification is part of the playbook, not a follow-up.

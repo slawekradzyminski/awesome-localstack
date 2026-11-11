@@ -21,8 +21,11 @@ diagram of who calls whom. Paths are gateway paths.
 
 ## The order journey
 
-The happy path of one order across all services, with a card that is captured
-immediately and the simulated carrier.
+The happy path of one order across all services: a card that is captured
+immediately and a parcel handed to the simulated carrier. It is split into
+three stages.
+
+### 1. Buy and pay
 
 ```mermaid
 sequenceDiagram
@@ -30,36 +33,74 @@ sequenceDiagram
     actor C as Customer
     participant B as Backend
     participant P as payment-service
-    participant W as warehouse-service
-    actor WH as Warehouse operator
-    C->>B: POST /api/v1/users/signin
-    B-->>C: token + refreshToken
-    C->>B: POST /api/v1/cart/items, PUT /api/v1/cart/coupon
-    C->>B: POST /api/v1/orders (Idempotency-Key)
-    B-->>C: 201 order PENDING (VAT, tenders, amountDue)
-    C->>P: POST /api/v1/payments (Idempotency-Key, card 4242…)
-    P->>B: GET /internal/v1/orders/{id}
-    P-->>C: 201 payment CAPTURED
-    P->>B: POST /internal/v1/orders/{id}/payment (signed)
-    B->>B: order PENDING → PAID, ORDER_PAID event
-    B-->>C: emails PAYMENT_RECEIVED, LOYALTY_POINTS_EARNED; webhook order.paid
-    WH->>W: GET /api/v1/warehouse/queue
-    W->>B: GET /internal/v1/orders?status=PAID&fulfilment=NONE
-    WH->>W: POST /api/v1/warehouse/shipments {orderId}
-    W->>B: PUT /internal/v1/orders/{id}/fulfilment AWAITING_PICK
-    WH->>W: pick, pack {weightKg}, ship {carrier}
-    W->>B: PUT fulfilment PICKED, PACKED, SHIPPED
-    B-->>C: email ORDER_SHIPPED; webhook shipment.shipped
-    loop every step interval (simulated carrier)
-        W->>W: IN_TRANSIT, OUT_FOR_DELIVERY, ...
-    end
-    W->>B: PUT fulfilment DELIVERED
-    B-->>C: email ORDER_DELIVERED; webhook shipment.delivered
-    C->>W: GET /api/v1/orders/{id}/shipment/tracking
+    C->>B: Sign in
+    B-->>C: Tokens
+    C->>B: Add items, coupon
+    C->>B: Check out
+    B-->>C: Order 42 PENDING
+    C->>P: Pay with card
+    P->>B: Read order 42
+    P-->>C: CAPTURED
+    P->>B: Signed result
+    B->>B: Order 42 PAID
+    B-->>C: Emails
 ```
 
+Endpoints: `POST /api/v1/users/signin`, `POST /api/v1/cart/items`,
+`PUT /api/v1/cart/coupon`, `POST /api/v1/orders`, `POST /api/v1/payments`;
+internally `GET /internal/v1/orders/42` and
+`POST /internal/v1/orders/42/payment`. Details: [Checkout](checkout.md),
+[Card payments](payments.md).
+
+### 2. Warehouse
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor O as Operator
+    participant W as warehouse-service
+    participant B as Backend
+    O->>W: Open queue
+    W->>B: List PAID orders
+    B-->>W: Order 42
+    O->>W: Create shipment
+    W->>B: AWAITING_PICK
+    O->>W: Pick
+    W->>B: PICKED
+    O->>W: Pack
+    W->>B: PACKED
+    O->>W: Ship (DHL)
+    W->>B: SHIPPED
+```
+
+Endpoints: `GET /api/v1/warehouse/queue`, `POST /api/v1/warehouse/shipments`,
+`POST /api/v1/warehouse/shipments/{id}/pick|pack|ship`; internally
+`PUT /internal/v1/orders/42/fulfilment`. Details:
+[Warehouse fulfilment](fulfilment.md).
+
+### 3. Delivery
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as warehouse-service
+    participant B as Backend
+    actor C as Customer
+    loop each carrier step
+        W->>W: Next scan
+    end
+    W->>B: DELIVERED
+    B-->>C: Email
+    C->>W: Track parcel
+    W-->>C: Scans
+```
+
+Endpoints: `GET /api/v1/orders/42/shipment/tracking` (or the public
+`GET /api/v1/tracking/{number}`). Details: [Carrier tracking](tracking.md).
+
 After delivery the customer may [review the product](catalog-search.md#reviews-and-ratings)
-and, within 30 days, [request a return](returns-refunds.md).
+and, within 30 days, [request a return](returns-refunds.md). Every status change
+above also triggers the customer's [webhooks](webhooks.md).
 
 ## Domain events
 

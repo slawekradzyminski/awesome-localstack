@@ -72,23 +72,15 @@ upstreams: the gateway waits for a healthy backend.
 
 ## What a failure looks like
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant G as Gateway
-    participant W as warehouse-service
-    participant B as Backend
-    C->>G: GET /api/v1/orders/42/shipment
-    alt warehouse-service down
-        G-->>C: 502 Bad Gateway
-    else backend down
-        G->>W: proxy
-        W->>B: GET /internal/v1/orders/42
-        B--xW: connection refused
-        W-->>G: 503 {"message":"Backend unavailable"}
-        G-->>C: 503
-    end
-```
+Example request: `GET /api/v1/orders/42/shipment` (served by warehouse-service,
+which asks the backend for the order).
+
+| What is down | Who answers | Response |
+| --- | --- | --- |
+| Nothing | warehouse-service | `200` with the shipment |
+| warehouse-service | the gateway (no upstream) | `502 Bad Gateway` |
+| backend | warehouse-service (cannot read the order) | `503 {"message":"Backend unavailable"}` |
+| backend and the request is a backend path, e.g. `/api/v1/orders` | the gateway | `502 Bad Gateway` |
 
 ## Proxy headers
 

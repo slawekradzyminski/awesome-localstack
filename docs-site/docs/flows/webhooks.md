@@ -71,13 +71,10 @@ secret.
 
 ```mermaid
 stateDiagram-v2
-    direction LR
-    [*] --> PENDING: event committed
-    PENDING --> DELIVERED: 2xx within 5 s
-    PENDING --> PENDING: failure, retry after 1, 2, 4... min
-    PENDING --> FAILED: 8th failed attempt, SSRF block,<br/>missing inbox, subscription disabled
-    DELIVERED --> [*]
-    FAILED --> [*]
+    [*] --> PENDING
+    PENDING --> DELIVERED: 2xx in 5 s
+    PENDING --> PENDING: retry later
+    PENDING --> FAILED: 8 attempts or blocked
 ```
 
 - Success = `2xx` within 5 seconds (connect + response). Redirects are never

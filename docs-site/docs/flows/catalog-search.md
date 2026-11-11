@@ -72,14 +72,14 @@ type errors read `must be a number`, `must be true or false`,
 `must be an integer`.
 
 ```mermaid
-flowchart LR
-    R[Request params] --> V{ProductSearchCriteria<br/>valid?}
+flowchart TB
+    R[Request] --> V{Valid?}
     V -- no --> E[400 field map]
-    V -- yes --> S[Specification:<br/>q, category, price, rating, stock]
-    S --> P[Page query<br/>ordering in SQL]
-    S --> X[Facet query<br/>same filters minus category]
-    P --> RT[Ratings for the page<br/>one grouped query]
-    P & X & RT --> J[200 page + facets]
+    V -- yes --> F[Apply filters]
+    F --> P[Page of products]
+    F --> X[Facets, without the category filter]
+    P --> J[Response]
+    X --> J
 ```
 
 ## Reviews and ratings

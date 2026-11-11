@@ -42,24 +42,21 @@ also `400`.
 
 ```mermaid
 sequenceDiagram
-    actor WH as Warehouse operator
+    actor O as Operator
     participant W as warehouse-service
     participant B as Backend
-    WH->>W: GET /api/v1/warehouse/queue
-    W->>B: GET /internal/v1/orders?status=PAID&fulfilment=NONE
-    WH->>W: POST /shipments {orderId: 42}
-    W->>B: GET /internal/v1/orders/42 (PAID, NONE?)
-    W->>W: save shipment AWAITING_PICK
-    W->>B: PUT /internal/v1/orders/42/fulfilment {AWAITING_PICK}
-    WH->>W: POST /shipments/1/pick
-    W->>B: PUT fulfilment PICKED
-    WH->>W: POST /shipments/1/pack {weightKg: 1.2}
-    W->>B: PUT fulfilment PACKED
-    WH->>W: POST /shipments/1/ship {carrier: DHL}
-    W->>B: PUT fulfilment SHIPPED (order status SHIPPED)
-    W->>W: outbox ORDER_SHIPPED + LABEL_CREATED scan
-    W->>B: POST /internal/v1/notifications (after commit)
-    Note over W,B: deliver (manual or carrier) → PUT fulfilment DELIVERED,<br/>order DELIVERED, ORDER_DELIVERED email
+    O->>W: Create shipment
+    W->>B: Read order (PAID?)
+    W->>B: AWAITING_PICK
+    O->>W: Pick
+    W->>B: PICKED
+    O->>W: Pack (weight)
+    W->>B: PACKED
+    O->>W: Ship (carrier)
+    W->>B: SHIPPED
+    W->>B: Email request
+    O->>W: Deliver
+    W->>B: DELIVERED
 ```
 
 ## Two state machines, kept in step

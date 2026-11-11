@@ -36,17 +36,15 @@ sequenceDiagram
     actor U as User
     participant F as Frontend
     participant B as Backend
-    U->>F: username + password
-    F->>B: POST /api/v1/users/signin
-    B-->>F: 200 {token, refreshToken, roles, mfaRequired:false}
-    F->>F: store token + refreshToken
-    Note over F,B: one hour later
-    F->>B: GET /api/v1/orders (expired token)
+    U->>F: Username + password
+    F->>B: Sign in
+    B-->>F: Access + refresh token
+    Note over F,B: 1 hour later
+    F->>B: API call (expired)
     B-->>F: 401
-    F->>B: POST /api/v1/users/refresh {refreshToken}
-    B->>B: mark old token consumed, issue a new one in the same family
-    B-->>F: 200 {token, refreshToken}
-    F->>B: retry GET /api/v1/orders
+    F->>B: Refresh
+    B-->>F: New token pair
+    F->>B: Retry API call
 ```
 
 If an attacker replays a refresh token that was already exchanged, the backend
@@ -61,13 +59,13 @@ they must sign in again.
 sequenceDiagram
     actor U as User
     participant B as Backend
-    participant A as Authenticator app
-    U->>B: POST /api/v1/users/2fa/setup (Bearer)
-    B-->>U: secret, otpAuthUri, qrCodeDataUri (pending 15 min)
-    U->>A: scan QR / type secret
+    participant A as Authenticator
+    U->>B: Start setup
+    B-->>U: Secret + QR code
+    U->>A: Scan QR code
     A-->>U: 6-digit code
-    U->>B: POST /api/v1/users/2fa/confirm {code}
-    B-->>U: recoveryCodes (shown once)
+    U->>B: Confirm with code
+    B-->>U: Recovery codes
 ```
 
 ### Sign-in with a second factor
@@ -76,12 +74,12 @@ sequenceDiagram
 sequenceDiagram
     actor U as User
     participant B as Backend
-    U->>B: POST /api/v1/users/signin {username, password}
-    B-->>U: 200 {mfaRequired:true, challengeToken, challengeExpiresAt} (no tokens)
-    U->>B: POST /api/v1/users/signin/2fa {challengeToken, code}
-    alt code valid (current step ± 1, not replayed) or unused recovery code
-        B-->>U: 200 {token, refreshToken}
-    else
+    U->>B: Username + password
+    B-->>U: Challenge (no tokens)
+    U->>B: Challenge + code
+    alt code valid
+        B-->>U: Tokens
+    else invalid
         B-->>U: 401
     end
 ```
@@ -103,14 +101,13 @@ Rules worth testing:
 sequenceDiagram
     actor U as User
     participant B as Backend
-    participant M as Email (outbox / Mailpit)
-    U->>B: POST /api/v1/users/password/forgot {identifier}
-    B-->>U: 202 "If the account exists, ..."
-    B->>B: delete older tokens, store a hash of a new 32-byte token (valid 30 min)
-    B->>M: PASSWORD_RESET_REQUESTED with link .../reset?token=...
-    U->>B: POST /api/v1/users/password/reset {token, newPassword, confirmPassword}
-    B->>B: set password, revoke all refresh tokens, delete reset tokens
-    B->>M: PASSWORD_RESET_CONFIRMED
+    participant M as Inbox
+    U->>B: Forgot password
+    B-->>U: 202 (always)
+    B->>M: Reset link (30 min)
+    U->>B: Token + new password
+    B->>B: Revoke refresh tokens
+    B->>M: Password changed
     B-->>U: 200
 ```
 
@@ -127,18 +124,16 @@ sequenceDiagram
 sequenceDiagram
     actor U as User
     participant F as Frontend
-    participant K as Keycloak :8082
+    participant K as Keycloak
     participant B as Backend
     U->>F: Sign in with SSO
-    F->>K: /authorize (code + PKCE, client awesome-testing-frontend)
-    U->>K: sso-e2e-client / SsoClient123!
-    K-->>F: redirect /auth/sso/callback?code=...
-    F->>K: /token (code + verifier)
-    K-->>F: id_token
-    F->>B: POST /api/v1/users/sso/exchange {idToken}
-    B->>K: JWKS (cached), validate issuer, audience, signature, expiry
-    B->>B: find or provision local user (preferred_username, email, names)
-    B-->>F: 200 {token, refreshToken}
+    F->>K: Redirect (PKCE)
+    U->>K: Log in
+    K-->>F: Code
+    F->>K: Code for ID token
+    K-->>F: ID token
+    F->>B: Exchange ID token
+    B-->>F: App tokens
 ```
 
 Keycloak users: `sso-e2e-client` / `SsoClient123!`, `sso-admin` /

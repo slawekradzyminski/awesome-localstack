@@ -22,16 +22,15 @@ by **one scan**:
 
 ```mermaid
 stateDiagram-v2
-    direction LR
-    [*] --> LABEL_CREATED: ship (Awesome Testing Warehouse, Krakow)
-    LABEL_CREATED --> IN_TRANSIT: carrier hub
-    IN_TRANSIT --> IN_TRANSIT_DEPOT: delivery depot
-    IN_TRANSIT_DEPOT --> OUT_FOR_DELIVERY
+    [*] --> LABEL_CREATED: ship
+    LABEL_CREATED --> HUB: next step
+    HUB --> DEPOT
+    DEPOT --> OUT_FOR_DELIVERY
     OUT_FOR_DELIVERY --> DELIVERED
-    OUT_FOR_DELIVERY --> DELIVERY_FAILED: deterministic failure (first attempt only)
-    DELIVERY_FAILED --> OUT_FOR_DELIVERY: second attempt
-    DELIVERED --> [*]
-    state "IN_TRANSIT (depot)" as IN_TRANSIT_DEPOT
+    OUT_FOR_DELIVERY --> DELIVERY_FAILED: 1 in 5 parcels
+    DELIVERY_FAILED --> OUT_FOR_DELIVERY: retry
+    state "IN_TRANSIT (hub)" as HUB
+    state "IN_TRANSIT (depot)" as DEPOT
 ```
 
 | Setting | Default | Lightweight / full (`demo` profile) |

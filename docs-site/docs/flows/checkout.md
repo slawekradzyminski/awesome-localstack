@@ -6,25 +6,17 @@ with status `PENDING`; payment happens afterwards.
 ## What happens inside checkout
 
 ```mermaid
-sequenceDiagram
-    actor C as Customer
-    participant O as OrderService (backend)
-    participant V as VatCheckoutContributor @Order(100)
-    participant T as TenderCheckoutContributor @Order(1000)
-    participant DB as PostgreSQL
-    C->>O: POST /api/v1/orders {shippingAddress} + Idempotency-Key?
-    O->>DB: replay? (key, user, 24 h)
-    alt same key, same address
-        O-->>C: 201 original order + Idempotent-Replayed: true
-    else same key, other address
-        O-->>C: 409
-    end
-    O->>O: price items, re-validate coupon (409 if no longer valid)
-    O->>V: resolve country, store VAT contained in the total
-    O->>T: lock + re-validate gift card and points, cap tenders
-    O->>DB: save order PENDING, reserve stock, redeem coupon, clear cart
-    O-->>C: 201 OrderDto
-    Note over O: after commit: ORDER_CREATED event,<br/>if amountDue = 0 → mark PAID (ORDER_PAID)
+flowchart TB
+    A[POST /api/v1/orders] --> K{Key seen before?}
+    K -- same address --> R[201, original order]
+    K -- other address --> X[409]
+    K -- no --> C[Price items, re-check coupon]
+    C --> V[Store VAT for the country]
+    V --> T[Lock and apply gift card, points]
+    T --> S[Save PENDING order, clear cart]
+    S --> E[After commit: order.created]
+    E --> Z{amountDue = 0?}
+    Z -- yes --> P[Mark PAID]
 ```
 
 ## Idempotent checkout

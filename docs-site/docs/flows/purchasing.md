@@ -21,16 +21,13 @@ raises stock in the backend through the internal receipts API. UI page:
 
 ```mermaid
 stateDiagram-v2
-    direction LR
-    [*] --> DRAFT: create
-    DRAFT --> DRAFT: update lines
+    [*] --> DRAFT
     DRAFT --> SUBMITTED: submit
     DRAFT --> CANCELLED: cancel
     SUBMITTED --> CANCELLED: cancel
-    SUBMITTED --> PARTIALLY_RECEIVED: receipt (some)
-    SUBMITTED --> RECEIVED: receipt (all)
-    PARTIALLY_RECEIVED --> PARTIALLY_RECEIVED: receipt (more)
-    PARTIALLY_RECEIVED --> RECEIVED: receipt (rest)
+    SUBMITTED --> PARTIALLY_RECEIVED: some
+    SUBMITTED --> RECEIVED: all
+    PARTIALLY_RECEIVED --> RECEIVED: rest
 ```
 
 ## Receipts
@@ -48,12 +45,11 @@ sequenceDiagram
     actor A as Admin
     participant W as warehouse-service
     participant B as Backend
-    A->>W: POST /purchase-orders/5/receipts {requestId R, lines}
-    W->>W: validate outstanding quantities
-    W->>B: POST /internal/v1/inventory/receipts (PURCHASE_RECEIVED, requestId derived from 5 + R)
-    B-->>W: {movementIds}
-    W->>W: store receipt, PARTIALLY_RECEIVED / RECEIVED
-    W-->>A: 200 purchase order
+    A->>W: Receipt (requestId)
+    W->>W: Check quantities
+    W->>B: Add stock
+    B-->>W: Movement ids
+    W-->>A: Updated order
 ```
 
 ## Reorder suggestions

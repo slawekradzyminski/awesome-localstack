@@ -19,15 +19,13 @@ the manifest digest.
 ## Release sequence
 
 ```mermaid
-flowchart LR
-    A[Merge green change<br/>in the source repo] --> B[Set version,<br/>tag vX.Y.Z]
-    B --> C[Workflow publishes<br/>Docker Hub + GHCR]
-    C --> D[Copy manifest digest]
-    D --> E[Pin tag@sha256 in all<br/>awesome-localstack profiles]
-    E --> F[make sync-release-images<br/>sibling dev compose files]
-    F --> G[verify-image-pins.py<br/>verify-release-images.py --remote]
-    G --> H[Compose gates:<br/>lightweight, full]
-    H --> I[Merge, backup,<br/>make ansible-deploy]
+flowchart TB
+    A[Merge in source repo] --> B[Tag vX.Y.Z]
+    B --> C[Publish image]
+    C --> D[Pin tag@sha256 here]
+    D --> E[Run contract scripts]
+    E --> F[Run Compose gates]
+    F --> G[Merge and deploy]
 ```
 
 Multi-repository releases publish in dependency order — backend first (both

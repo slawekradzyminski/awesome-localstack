@@ -36,14 +36,13 @@ sequenceDiagram
     participant C as Client
     participant P as payment-service
     participant B as Backend
-    C->>P: POST /api/v1/payments (Bearer JWT, kid=k1)
-    alt kid k1 not cached
-        P->>B: GET /internal/v1/jwks.json (X-Service-Token)
-        B-->>P: {"keys":[{"kid":"k1","kty":"RSA","alg":"RS256",...}]}
-        P->>P: cache key by kid
+    C->>P: Request + JWT (kid k1)
+    opt key k1 not cached yet
+        P->>B: Get public keys (JWKS)
+        B-->>P: Keys
     end
-    P->>P: verify RS256 signature, exp, read sub + auth
-    P-->>C: 201 PaymentDto
+    P->>P: Check signature + expiry
+    P-->>C: Response
 ```
 
 - warehouse-service and payment-service hold **no signing material**. They

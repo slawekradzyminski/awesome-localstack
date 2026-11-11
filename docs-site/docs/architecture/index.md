@@ -7,36 +7,24 @@ smaller services own **warehouse fulfilment** and **card payments**.
 
 ```mermaid
 flowchart TB
-    subgraph Edge
-        E[edge nginx<br/>server profile only<br/>host :80]
-        G[gateway nginx<br/>:8081 local / 127.0.0.1:8080 server]
-    end
-    subgraph Apps
-        F[frontend<br/>React SPA, nginx :80]
-        B[backend<br/>Spring Boot native :4001]
-        W[warehouse-service<br/>native :4003]
-        P[payment-service<br/>native :4004]
-        D[docs<br/>this wiki, nginx :80]
-    end
-    subgraph Data and messaging
-        DB[(PostgreSQL 16<br/>testdb: public, warehouse, payment)]
-        MQ[ActiveMQ Artemis<br/>queue email]
-        C[consumer<br/>JMS to SMTP]
-        M[Mailpit<br/>SMTP sink]
-    end
-    subgraph Identity and AI
-        K[Keycloak<br/>local profiles only]
-        L[ollama-mock or DMR adapter]
-    end
-    E --> G
-    G --> F & B & W & P & D
-    W & P -->|/internal/v1| B
-    B -->|refunds| P
-    B & W & P --> DB
-    B --> MQ --> C --> M
-    B -. JWKS of the SSO realm .-> K
-    B --> L
+    U([Browser or test tool]) --> G[gateway]
+    G --> F[frontend]
+    G --> B[backend]
+    G --> W[warehouse-service]
+    G --> P[payment-service]
+    G --> D[docs wiki]
+    W -->|internal API| B
+    P -->|internal API| B
+    B --> DB[(PostgreSQL)]
+    W --> DB
+    P --> DB
+    B --> MQ[ActiveMQ] --> C[email consumer] --> M[Mailpit]
 ```
+
+Not shown: the **edge** nginx in front of the gateway on the server, **Keycloak**
+for SSO in the local profiles, the **LLM** (ollama-mock or Docker Model Runner)
+behind the backend, and the monitoring stack. Ports and images for every
+container are in [Services and ports](services.md).
 
 ## Design principles
 

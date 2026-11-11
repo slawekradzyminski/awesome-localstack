@@ -68,6 +68,10 @@ extra_javascript:
   # Downloaded with a pinned checksum by the Dockerfile; Material uses a global
   # `mermaid` when present instead of fetching it from a CDN.
   - assets/javascripts/mermaid.min.js
+  - assets/javascripts/diagram-zoom.js
+
+extra_css:
+  - assets/stylesheets/extra.css
 
 plugins:
   - search

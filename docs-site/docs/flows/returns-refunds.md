@@ -9,14 +9,11 @@ used.
 
 ```mermaid
 stateDiagram-v2
-    direction LR
-    [*] --> REQUESTED: customer
-    REQUESTED --> APPROVED: admin approve
-    REQUESTED --> REJECTED: admin reject (note required)
-    APPROVED --> RECEIVED: admin receive (condition per item)
-    RECEIVED --> REFUNDED: admin refund
-    REJECTED --> [*]
-    REFUNDED --> [*]
+    [*] --> REQUESTED
+    REQUESTED --> APPROVED: approve
+    REQUESTED --> REJECTED: reject
+    APPROVED --> RECEIVED: receive
+    RECEIVED --> REFUNDED: refund
 ```
 
 ## Endpoints
@@ -58,19 +55,30 @@ sequenceDiagram
     participant W as warehouse-service
     participant B as Backend
     participant P as payment-service
-    A->>W: POST /api/v1/admin/returns/7/receive
-    W->>B: POST /internal/v1/inventory/receipts (RETURN_RESTOCKED, requestId from "return-7")
-    A->>W: POST /api/v1/admin/returns/7/refund
-    W->>B: POST /internal/v1/orders/42/refunds {requestId from "refund-7", amount: 45.00}
-    B->>B: refundedAmount += 45.00, REFUND_BOOKED
-    B->>B: CardFirstRefundSplitter (same transaction)
-    B->>B: card leg → payment_refund_outbox; rest → gift card, then points
-    B-->>W: 200 order
-    W->>W: return REFUNDED, outbox RETURN_UPDATED
-    B->>P: POST /internal/v1/payments/refunds {requestId, orderId, amount, reason}
-    P-->>B: 200 {refundId, status: PARTIALLY_REFUNDED}
-    Note over B: webhook refund.booked; points earned revoked pro rata
+    A->>W: Receive return 7
+    W->>B: Restock items
+    A->>W: Refund return 7
+    W->>B: Book refund 45.00
+    B->>B: Split card first
+    B-->>W: 200
+    B->>P: Card refund
+    P-->>B: Refund status
 ```
+
+Step by step:
+
+1. **Receive** — warehouse-service restocks resellable items with
+   `POST /internal/v1/inventory/receipts` (`RETURN_RESTOCKED`, `requestId`
+   derived from `"return-" + id`).
+2. **Refund** — it books the refund with `POST /internal/v1/orders/{id}/refunds`
+   (`requestId` derived from `"refund-" + id`), then marks the return
+   `REFUNDED` and queues a `RETURN_UPDATED` email.
+3. **Split** — in the same transaction the backend publishes `REFUND_BOOKED`
+   (webhook `refund.booked`), splits the amount card first, restores the gift
+   card or points part, and revokes earned points pro rata.
+4. **Card** — the card part is delivered from `payment_refund_outbox` to
+   `POST /internal/v1/payments/refunds`; payment-service answers with the new
+   payment status.
 
 ## Refund split
 

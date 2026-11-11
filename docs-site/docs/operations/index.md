@@ -12,14 +12,9 @@
 | How this wiki is built and served | [This documentation site](docs-site.md) |
 
 ```mermaid
-flowchart LR
-    subgraph Laptop
-        R[awesome-localstack checkout] -->|make ansible-deploy| A[Ansible]
-    end
-    subgraph VPS["VPS (1 vCPU, ~4 GiB)"]
-        A -->|copy compose, nginx, configs,<br/>render .env files from Vault| D[/opt/awesome-localstack/]
-        D -->|docker compose up| S[awesome-server stack]
-        A -->|verify role| S
-    end
-    H[Hosting provider HTTPS proxy] --> E[edge :80] --> G[gateway 127.0.0.1:8080] --> S
+flowchart TB
+    L[Laptop: make ansible-deploy] --> A[Ansible]
+    A --> D[VPS: /opt/awesome-localstack]
+    D --> S[docker compose stack]
+    H[HTTPS proxy] --> E[edge] --> G[gateway] --> S
 ```
