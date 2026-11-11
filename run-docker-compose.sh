@@ -77,6 +77,7 @@ urls=(
     "http://localhost:8081/images/applewatch.png"
     "http://localhost:8081/warehouse/v3/api-docs"
     "http://localhost:8081/payment/v3/api-docs"
+    "http://localhost:8081/docs/"
 )
 names=(
     "Backend"
@@ -90,6 +91,7 @@ names=(
     "Gateway-served product image"
     "Warehouse service OpenAPI"
     "Payment service OpenAPI"
+    "Documentation wiki"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do

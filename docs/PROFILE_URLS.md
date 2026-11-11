@@ -39,78 +39,80 @@ That gateway is the intended public surface for:
 
 ## Mermaid Diagrams
 
+In every profile warehouse-service and payment-service also call the backend's
+`/internal/v1` API; those calls are left out of the diagrams to keep them readable.
+
 ### Lightweight
 
 ```mermaid
-flowchart LR
-    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
-    G --> F[Frontend]
-    G --> B[Backend]
-    G -->|warehouse + tracking paths| W[Warehouse Service<br/>internal 4003, PostgreSQL]
-    G -->|payment paths| PS[Payment Service<br/>internal 4004, PostgreSQL]
-    W -->|/internal/v1| B
-    PS -->|/internal/v1| B
-    B --> O[Ollama Mock 11434]
-```
-
-### Full
-
-```mermaid
-flowchart LR
+flowchart TB
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
     G -->|warehouse + tracking paths| W[Warehouse Service<br/>internal 4003]
     G -->|payment paths| PS[Payment Service<br/>internal 4004]
-    W -->|/internal/v1| B
-    PS -->|/internal/v1| B
+    B --> O[Ollama Mock 11434]
+    B --> DB[(PostgreSQL, tmpfs)]
     W --> DB
     PS --> DB
+```
+
+### Full
+
+```mermaid
+flowchart TB
+    U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
+    G --> F[Frontend]
+    G --> B[Backend]
+    G -->|warehouse + tracking paths| W[Warehouse Service<br/>internal 4003]
+    G -->|payment paths| PS[Payment Service<br/>internal 4004]
     B --> DB[(Postgres 5432)]
-    B --> MQ[ActiveMQ 8161/61616/5672]
-    MQ --> C[Consumer 4002]
-    C --> M[Mailpit 8025/1025]
+    W --> DB
+    PS --> DB
+    B --> MQ[ActiveMQ 8161/61616/5672] --> C[Consumer 4002] --> M[Mailpit 8025/1025]
     B --> O[Ollama 11434]
-    P[Prometheus 9090] --> B
-    P --> C
-    P --> W
-    P --> PS
-    GR[Grafana 3000] --> P
-    GR --> I[InfluxDB 8086]
+```
+
+Monitoring in the full profile:
+
+```mermaid
+flowchart TB
+    GR[Grafana 3000] --> P[Prometheus 9090<br/>scrapes backend, consumer,<br/>warehouse and payment]
+    GR --> I[InfluxDB 8086<br/>k6 results]
 ```
 
 ### Server
 
-```mermaid
-flowchart LR
-    U[Browser] --> CF[DNS / CDN / TLS edge]
-    CF --> G[Gateway 80<br/>host-based routing]
+`awesome.byst.re`:
 
-    G -->|awesome.byst.re| F[Frontend]
-    G -->|awesome.byst.re /api| B[Backend<br/>docker,server profile]
-    G -->|awesome.byst.re warehouse paths| W[Warehouse Service<br/>internal, 160 MiB]
-    G -->|awesome.byst.re payment paths| PS[Payment Service<br/>internal, 160 MiB]
-    W -->|/internal/v1| B
-    PS -->|/internal/v1| B
+```mermaid
+flowchart TB
+    U[Browser] --> CF[DNS / CDN / TLS edge] --> G[Gateway<br/>host awesome.byst.re]
+    G -->|/| F[Frontend]
+    G -->|/api| B[Backend<br/>docker,server profile]
+    G -->|warehouse paths| W[Warehouse Service<br/>internal, 160 MiB]
+    G -->|payment paths| PS[Payment Service<br/>internal, 160 MiB]
+    B --> DB[(Postgres internal)]
     W -->|schema warehouse| DB
     PS -->|schema payment| DB
-    B --> DB[(Postgres internal)]
-    B --> MQ[ActiveMQ internal]
-    MQ --> C[Consumer internal]
-    C --> MH[Mailpit private]
+    B --> MQ[ActiveMQ internal] --> C[Consumer internal] --> MH[Mailpit private]
     B --> O[Ollama Mock internal]
+```
 
-    G -->|aitesters.byst.re| AF[Aitesters Frontend]
-    G -->|aitesters.byst.re /api| AB[Aitesters Backend<br/>local profile]
-    G -->|aitesters.byst.re warehouse paths| AW[Aitesters Warehouse Service]
-    G -->|aitesters.byst.re payment paths| APS[Aitesters Payment Service]
-    AW -->|/internal/v1| AB
-    APS -->|/internal/v1| AB
+`aitesters.byst.re` (same gateway, separate sandbox services):
+
+```mermaid
+flowchart TB
+    U[Browser] --> CF[DNS / CDN / TLS edge] --> G[Gateway<br/>host aitesters.byst.re]
+    G -->|/| AF[Aitesters Frontend]
+    G -->|/api| AB[Aitesters Backend<br/>aitesters profile]
+    G -->|warehouse paths| AW[Aitesters Warehouse Service]
+    G -->|payment paths| APS[Aitesters Payment Service]
+    AB --> LO[Local email outbox]
+    AB --> O[Ollama Mock, shared]
+    AB --> APG[(aitesters-postgres)]
     AW -->|schema warehouse| APG
     APS -->|schema payment| APG
-    AB --> APG[(aitesters-postgres)]
-    AB --> LO[Local email outbox]
-    AB --> O
 ```
 
 ## Full Profile

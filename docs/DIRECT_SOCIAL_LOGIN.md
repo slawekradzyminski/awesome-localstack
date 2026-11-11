@@ -23,35 +23,18 @@ This is not how the local training stack currently implements social login. The 
 ## Overview
 
 ```mermaid
-graph TB
-    subgraph Browser
-        FE[Application Frontend]
-    end
-
-    subgraph "External Social Provider"
-        PROVIDER[Google / GitHub / Facebook]
-        CONSENT[Login and consent screen]
-    end
-
-    subgraph "Application Backend"
-        BE[Backend API]
-        DB[(Application database)]
-    end
-
-    FE -->|"Authorization Code + PKCE"| PROVIDER
-    PROVIDER --> CONSENT
-    CONSENT -->|"Authorization code"| FE
-    FE -->|"code + code_verifier"| BE
-    BE -->|"Exchange code with client secret"| PROVIDER
-    PROVIDER -->|"ID token and/or access token"| BE
-    BE -->|"Validate provider token or call userinfo"| PROVIDER
-    BE -->|"Create/reuse local user"| DB
-    BE -->|"App access token + refresh token"| FE
-
-    style PROVIDER fill:#34A853,color:#fff
-    style CONSENT fill:#F4B400,color:#000
-    style FE fill:#61DAFB,color:#000
-    style BE fill:#6DB33F,color:#fff
+sequenceDiagram
+    participant FE as Frontend
+    participant SP as Social provider
+    participant BE as Backend
+    FE->>SP: Log in (code + PKCE)
+    Note over SP: Login and consent screen
+    SP-->>FE: Authorization code
+    FE->>BE: Code + code_verifier
+    BE->>SP: Exchange code (client secret)
+    SP-->>BE: ID / access token
+    Note over BE: Validate token, create or reuse local user
+    BE-->>FE: App access + refresh token
 ```
 
 The application owns the provider integration. For each social provider, the application must register an OAuth app, store client credentials, configure redirect URLs, validate provider responses, and decide how external identities map to local users.
@@ -84,13 +67,16 @@ Direct social login usually uses one of two shapes.
 ### Backend-Mediated Code Exchange
 
 ```mermaid
-graph LR
-    Browser -->|"Start login"| Provider
-    Provider -->|"code"| Browser
-    Browser -->|"code"| Backend
-    Backend -->|"code + client_secret"| Provider
-    Provider -->|"tokens"| Backend
-    Backend -->|"app tokens"| Browser
+sequenceDiagram
+    participant Browser
+    participant Provider
+    participant Backend
+    Browser->>Provider: Start login
+    Provider-->>Browser: code
+    Browser->>Backend: code
+    Backend->>Provider: code + client_secret
+    Provider-->>Backend: tokens
+    Backend-->>Browser: app tokens
 ```
 
 This is the preferred shape for many web apps because the provider client secret stays on the backend. The frontend starts the redirect flow and handles the callback, but the backend completes the provider token exchange.
@@ -98,13 +84,16 @@ This is the preferred shape for many web apps because the provider client secret
 ### Frontend Token Exchange With PKCE
 
 ```mermaid
-graph LR
-    Browser -->|"Start login with PKCE"| Provider
-    Provider -->|"code"| Browser
-    Browser -->|"code + code_verifier"| Provider
-    Provider -->|"tokens"| Browser
-    Browser -->|"ID token"| Backend
-    Backend -->|"app tokens"| Browser
+sequenceDiagram
+    participant Browser
+    participant Provider
+    participant Backend
+    Browser->>Provider: Start login (PKCE)
+    Provider-->>Browser: code
+    Browser->>Provider: code + code_verifier
+    Provider-->>Browser: tokens
+    Browser->>Backend: ID token
+    Backend-->>Browser: app tokens
 ```
 
 This can work for public clients where the provider supports PKCE. The backend still must validate the ID token before issuing application tokens. The risk is that more provider token handling happens in the browser, so the implementation needs careful storage and lifetime choices.
@@ -119,18 +108,18 @@ sequenceDiagram
     participant Backend as Application Backend
 
     User->>Browser: Click "Continue with Google"
-    Browser->>Browser: Generate state, nonce,<br/>code_verifier, code_challenge
+    Note over Browser: Generate state, nonce,<br/>code_verifier, code_challenge
     Browser->>Provider: GET /authorize?client_id=...<br/>&redirect_uri=...<br/>&scope=openid email profile<br/>&code_challenge=...
     Provider->>User: Show provider login/consent
     User->>Provider: Authenticate and approve
     Provider->>Browser: Redirect to app callback<br/>?code=...&state=...
-    Browser->>Browser: Verify state
+    Note over Browser: Verify state
     Browser->>Backend: POST /auth/social/google/callback<br/>{code, codeVerifier, redirectUri}
     Backend->>Provider: POST /token<br/>code + client credentials or PKCE
     Provider-->>Backend: ID token and/or access token
-    Backend->>Backend: Validate token, issuer,<br/>audience, nonce, expiry
+    Note over Backend: Validate token, issuer,<br/>audience, nonce, expiry
     Backend->>Provider: Optional: GET /userinfo
-    Backend->>Backend: Create or reuse local user
+    Note over Backend: Create or reuse local user
     Backend-->>Browser: App access token + refresh token
 ```
 
@@ -303,22 +292,14 @@ Useful debug artifacts:
 
 ```mermaid
 flowchart TB
-    subgraph Direct["Direct social login"]
-        D1[Frontend starts provider flow]
-        D2[Backend exchanges provider code]
-        D3[Backend validates Google/GitHub tokens]
-        D4[Backend maps provider identity]
-    end
-
-    subgraph Brokered["Brokered social login"]
-        B1[Frontend starts Keycloak flow]
-        B2[Keycloak redirects to provider]
-        B3[Keycloak validates provider tokens]
-        B4[Backend validates only Keycloak token]
-    end
-
-    D1 --> D2 --> D3 --> D4
-    B1 --> B2 --> B3 --> B4
+    D0([Direct social login]) --> D1[Frontend starts provider flow]
+    D1 --> D2[Backend exchanges provider code]
+    D2 --> D3[Backend validates Google/GitHub tokens]
+    D3 --> D4[Backend maps provider identity]
+    B0([Brokered social login]) --> B1[Frontend starts Keycloak flow]
+    B1 --> B2[Keycloak redirects to provider]
+    B2 --> B3[Keycloak validates provider tokens]
+    B3 --> B4[Backend validates only Keycloak token]
 ```
 
 | Area | Direct social login | Brokered social login |

@@ -513,6 +513,22 @@
   no_log: true
   when: postgres_password_reconciliation is changed
 
+# The docs wiki is the only image built on the server: static MkDocs output on
+# a digest-pinned nginx base, built from the copied docs/ and docs-site/
+# directories. BuildKit's cache keeps unchanged builds to a few seconds; the
+# deploy below recreates the container when the image ID changed.
+- name: Build the documentation wiki image
+  ansible.builtin.shell:
+    cmd: >-
+      set -eu;
+      before="$(docker image inspect --format '{{ '{{.Id}}' }}' awesome-localstack/docs:local 2>/dev/null || true)";
+      docker compose -f {{ app_compose_file }} build docs >&2;
+      after="$(docker image inspect --format '{{ '{{.Id}}' }}' awesome-localstack/docs:local)";
+      if [ "$before" != "$after" ]; then echo rebuilt; fi
+    chdir: "{{ app_dir }}"
+  register: docs_image_build
+  changed_when: "'rebuilt' in docs_image_build.stdout"
+
 - name: Deploy Docker Compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"

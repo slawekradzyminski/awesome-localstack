@@ -16,3 +16,6 @@ tmp/
 outputs
 __pycache__/
 *.pyc
+docs-site/site/
+docs-site/.cache/
+docs-site/docs/assets/javascripts/mermaid.min.js

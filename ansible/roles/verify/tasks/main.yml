@@ -438,6 +438,28 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify the direct docs wiki route
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - http://docs/docs/
+    chdir: "{{ app_dir }}"
+  register: verify_docs_direct
+  changed_when: false
+  until: verify_docs_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Read active Prometheus targets
   ansible.builtin.command:
     argv:
@@ -851,6 +873,8 @@
     - path: /warehouse/v3/api-docs
       status: 200
     - path: /payment/v3/api-docs
+      status: 200
+    - path: /docs/
       status: 200
     - path: /api/v1/tracking/VERIFY-UNKNOWN-TRACKING
       status: 404

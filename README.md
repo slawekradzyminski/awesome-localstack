@@ -11,6 +11,12 @@ This README is organized by the three main profiles:
 
 For the detailed published-port matrix, see [docs/PROFILE_URLS.md](docs/PROFILE_URLS.md).
 
+Every profile also serves a browsable documentation wiki (architecture,
+business flows, operations, test ideas) at `/docs/`, for example
+`http://localhost:8081/docs/` or `https://awesome.byst.re/docs/`. Its sources
+are in [docs-site/](docs-site/); the existing `docs/*.md` files are published
+unchanged in its Reference section.
+
 For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
 For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
@@ -612,6 +618,8 @@ Across the main profiles, the gateway serves:
   `/warehouse/v3/api-docs` and payment-service OpenAPI under
   `/payment/v3/api-docs`
 - `/internal/` always returns `404`
+- the documentation wiki under `/docs/` (MkDocs site built from `docs-site/`,
+  served by the `docs` container; see `docs-site/docs/operations/docs-site.md`)
 - public health status at `/actuator/health`; other actuator routes are blocked by the gateway
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
