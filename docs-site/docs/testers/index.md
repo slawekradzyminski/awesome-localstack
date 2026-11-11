@@ -4,6 +4,92 @@ Test ideas per feature, chosen because each one exercises a real rule in the
 code. Every scenario names the expected result so it can become an automated
 check. Use the lightweight profile unless a scenario says otherwise.
 
+## Useful links
+
+### Where to test
+
+=== "Stable (awesome.byst.re)"
+
+    Public playground with the same data for everyone. Look, but keep load
+    tests and destructive scenarios for the sandbox or your laptop.
+
+    | What | Link |
+    | --- | --- |
+    | Shop | [awesome.byst.re/login](https://awesome.byst.re/login) |
+    | Swagger UI (backend, warehouse, payment) | [awesome.byst.re/swagger-ui/index.html](https://awesome.byst.re/swagger-ui/index.html) |
+    | GraphiQL | [awesome.byst.re/api/v1/graphiql](https://awesome.byst.re/api/v1/graphiql) |
+    | This wiki | [awesome.byst.re/docs/](https://awesome.byst.re/docs/) |
+
+=== "Sandbox (aitesters.byst.re)"
+
+    Disposable copy of the stack for API and UI tests; its database is reset
+    daily, so create your own users and data freely.
+
+    | What | Link |
+    | --- | --- |
+    | Shop | [aitesters.byst.re/login](https://aitesters.byst.re/login) |
+    | Swagger UI (backend, warehouse, payment) | [aitesters.byst.re/swagger-ui/index.html](https://aitesters.byst.re/swagger-ui/index.html) |
+    | GraphiQL | [aitesters.byst.re/api/v1/graphiql](https://aitesters.byst.re/api/v1/graphiql) |
+    | This wiki | [aitesters.byst.re/docs/](https://aitesters.byst.re/docs/) |
+
+=== "Your laptop (localhost:8081)"
+
+    Start the stack first: [Running locally](../operations/running-locally.md).
+    Demo users and their passwords are listed there too.
+
+    | What | Link |
+    | --- | --- |
+    | Shop | [localhost:8081/login](http://localhost:8081/login) |
+    | Swagger UI (backend, warehouse, payment) | [localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) |
+    | GraphiQL | [localhost:8081/api/v1/graphiql](http://localhost:8081/api/v1/graphiql) |
+    | Keycloak admin (`admin` / `admin`) | [localhost:8082/admin/](http://localhost:8082/admin/) |
+    | Mailpit inbox (full profile) | [localhost:8025](http://localhost:8025/) |
+    | Grafana with the k6 dashboard (full profile) | [localhost:3000](http://localhost:3000/login) |
+
+### API documents
+
+Raw OpenAPI documents, for contract tests or for generating a client. Swap
+the host for the environment you test.
+
+| Service | Document |
+| --- | --- |
+| Backend (JSON) | [/v3/api-docs](https://awesome.byst.re/v3/api-docs) |
+| Backend (YAML) | [/v3/api-docs.yaml](https://awesome.byst.re/v3/api-docs.yaml) |
+| warehouse-service | [/warehouse/v3/api-docs](https://awesome.byst.re/warehouse/v3/api-docs) |
+| payment-service | [/payment/v3/api-docs](https://awesome.byst.re/payment/v3/api-docs) |
+| Inventory gRPC contract | [inventory.proto](https://github.com/slawekradzyminski/test-secure-backend/blob/master/src/main/proto/awesome/inventory/v1/inventory.proto) |
+
+How to sign in inside Swagger UI, GraphiQL and gRPC: [API explorers](../operations/api-explorers.md).
+
+### Training material
+
+| What | Where |
+| --- | --- |
+| Start here: run the lightweight profile and check it works | [Student guide](../reference/STUDENT_GUIDE.md) |
+| Every URL per profile and host | [Profile URLs](../reference/PROFILE_URLS.md) |
+| What each business feature does, end to end | [Business flows](../flows/index.md) |
+| Test cards and their outcomes | [Card payments](../flows/payments.md#test-cards) |
+| Allowed status transitions | [State machines](../flows/state-machines.md) |
+| SSO, social login and MFA labs | [SSO flow](../reference/SSO_FLOW.md), [Social login](../reference/SOCIAL_LOGIN.md) |
+| REST vs GraphQL vs gRPC labs | [Protocol testing lab](../reference/PROTOCOL_TESTING_LAB.md), [gRPC training runbook](../reference/GRPC_TRAINING_RUNBOOK.md) |
+| Words used across the platform | [Glossary](../glossary.md) |
+| Blog behind the training | [awesome-testing.com](https://www.awesome-testing.com/) |
+
+### Source code
+
+All repositories are public. Read the code when a test result surprises
+you: the rule is usually one class away.
+
+| Repository | What it is | Image |
+| --- | --- | --- |
+| [awesome-localstack](https://github.com/slawekradzyminski/awesome-localstack) | Compose profiles, gateway, deployment, this wiki | — |
+| [test-secure-backend](https://github.com/slawekradzyminski/test-secure-backend) | Spring Boot backend: users, catalog, cart, orders, emails, webhooks | [backend](https://hub.docker.com/r/slawekradzyminski/backend) |
+| [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend) | React shop and admin UI | [frontend](https://hub.docker.com/r/slawekradzyminski/frontend) |
+| [warehouse-service](https://github.com/slawekradzyminski/warehouse-service) | Picking, packing, shipping, returns, purchasing | [warehouse-service](https://hub.docker.com/r/slawekradzyminski/warehouse-service) |
+| [payment-service](https://github.com/slawekradzyminski/payment-service) | Card payments with a fake provider | [payment-service](https://hub.docker.com/r/slawekradzyminski/payment-service) |
+| [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer) | Reads email messages from ActiveMQ and sends them to Mailpit | [consumer](https://hub.docker.com/r/slawekradzyminski/consumer) |
+| [ollama-mock](https://github.com/slawekradzyminski/ollama-mock) | Predictable LLM for AI-feature tests | [ollama-mock](https://hub.docker.com/r/slawekradzyminski/ollama-mock) |
+
 ## Accounts and security
 
 | Scenario | Expected |
