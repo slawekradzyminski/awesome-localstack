@@ -91,6 +91,8 @@ def main():
             restored = [event for event in records if event["event"] == "fixture"]
             assert restored and restored[-1]["exit"] == 0 and restored[-1]["value"] == "42", (
                 "Encrypted fixture data was not restored")
+            assert (fixture / "backups/restore-check.ok").is_file(), (
+                "A successful restore check must write the stamp the host watchdog reads")
             print("Restore regression passed: waited for permanent server, restored fixture, cleaned up")
         finally:
             if events.exists():

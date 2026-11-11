@@ -9,6 +9,17 @@ Production deployments install two systemd timers:
 The deployment also creates a backup immediately before replacing application
 containers when the production PostgreSQL service is running.
 
+## Failure alerts
+
+Both services declare `OnFailure=awesome-watchdog-notify@%n.service`, so a
+failed backup or restore check sends its result and last log lines to the
+Alertmanager Telegram chat through the host watchdog. A successful restore
+check touches `/var/backups/awesome-localstack/postgres/restore-check.ok`. The
+watchdog also reports when the newest daily archive is older than 26 hours or
+that stamp is older than 8 days, which catches a timer that silently stopped
+running. See
+[the lean monitoring plan](PRODUCTION_MONITORING_PLAN.md#lean-monitoring-phases-a-b-and-c).
+
 ## Required vault configuration
 
 Add a dedicated encryption passphrase to the encrypted production vault:

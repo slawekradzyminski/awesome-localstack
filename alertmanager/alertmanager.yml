@@ -4,9 +4,10 @@ global:
 templates:
   - /etc/alertmanager/templates/*.tmpl
 
-# Low-noise policy: this is a training stack and an external uptime monitor covers
-# public availability. Warnings stay visible in Prometheus, Grafana and the
-# Alertmanager API but are not delivered; only sustained criticals reach Telegram.
+# Low-noise policy: this is a training stack. Warnings stay visible in the
+# Prometheus and Alertmanager APIs (SSH tunnel) but are not delivered; only
+# sustained criticals reach Telegram. The host watchdog (ansible/roles/watchdog)
+# sends its own messages to the same bot and chat.
 route:
   receiver: dashboard-only
   group_by:

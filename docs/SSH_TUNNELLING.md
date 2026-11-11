@@ -6,17 +6,17 @@ The recommended path is to use the Ansible-backed `make` targets. They resolve S
 
 Current intended private UIs:
 
-- Grafana on remote `127.0.0.1:3000`
+- Prometheus on remote `127.0.0.1:9090` (production has no Grafana since lean monitoring phase A)
 - Mailpit UI and API on remote `127.0.0.1:8025`
 
 Mailpit is private on purpose. The public demo uses application-owned endpoints such as `GET /api/v1/users/me/email-events` instead of exposing the inbox API on the public hostname.
 
 ## Recommended usage
 
-Grafana only:
+Prometheus only:
 
 ```bash
-make ansible-tunnel-grafana
+make ansible-tunnel-prometheus
 ```
 
 Mailpit only:
@@ -25,7 +25,7 @@ Mailpit only:
 make ansible-tunnel-mailpit
 ```
 
-Grafana and Mailpit together:
+Prometheus and Mailpit together:
 
 ```bash
 make ansible-tunnel-all
@@ -33,7 +33,7 @@ make ansible-tunnel-all
 
 Then open:
 
-- `http://localhost:3000`
+- `http://localhost:9090`
 - `http://localhost:8025`
 
 ## How to stop the tunnel
@@ -62,10 +62,10 @@ kill <PID>
 
 ### Make targets
 
-Kill Grafana-only tunnels:
+Kill Prometheus-only tunnels:
 
 ```bash
-make ansible-tunnel-kill-grafana
+make ansible-tunnel-kill-prometheus
 ```
 
 Kill Mailpit-only tunnels:
@@ -74,7 +74,7 @@ Kill Mailpit-only tunnels:
 make ansible-tunnel-kill-mailpit
 ```
 
-Kill the combined Grafana + Mailpit tunnel:
+Kill the combined Prometheus + Mailpit tunnel:
 
 ```bash
 make ansible-tunnel-kill-all
@@ -82,10 +82,10 @@ make ansible-tunnel-kill-all
 
 ### Raw process kill examples
 
-Kill Grafana-only tunnels:
+Kill Prometheus-only tunnels:
 
 ```bash
-pkill -f 'ssh -N .*3000:127.0.0.1:3000'
+pkill -f 'ssh -N .*9090:127.0.0.1:9090'
 ```
 
 Kill Mailpit-only tunnels:
@@ -97,7 +97,7 @@ pkill -f 'ssh -N .*8025:127.0.0.1:8025'
 Kill any supported tunnel:
 
 ```bash
-pkill -f 'ssh -N .*3000:127.0.0.1:3000|ssh -N .*8025:127.0.0.1:8025'
+pkill -f 'ssh -N .*9090:127.0.0.1:9090|ssh -N .*8025:127.0.0.1:8025'
 ```
 
 ## How to verify the tunnel is active
@@ -105,13 +105,13 @@ pkill -f 'ssh -N .*3000:127.0.0.1:3000|ssh -N .*8025:127.0.0.1:8025'
 Check local listeners:
 
 ```bash
-lsof -iTCP:3000 -sTCP:LISTEN
+lsof -iTCP:9090 -sTCP:LISTEN
 lsof -iTCP:8025 -sTCP:LISTEN
 ```
 
 Or just open:
 
-- `http://localhost:3000`
+- `http://localhost:9090`
 - `http://localhost:8025`
 
 If the tunnel is down, the browser will fail to connect.

@@ -66,3 +66,5 @@ if [[ ! "${table_count}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 echo "Restore verification passed for ${latest_backup} (${table_count} public tables)"
+# The host watchdog alerts when this stamp is older than its restore-check limit.
+touch "${BACKUP_ROOT}/restore-check.ok"

@@ -1,0 +1,13 @@
+[Unit]
+Description=Awesome Server host watchdog (containers, OOM, disk, memory, backups)
+# Ordered after Docker but not bound to it: the watchdog must still run, and
+# report, when the Docker daemon is down.
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock --nonblock /run/awesome-watchdog.lock {{ watchdog_script_path }} run
+TimeoutStartSec=55s
+Nice=5
+NoNewPrivileges=true
+PrivateTmp=true

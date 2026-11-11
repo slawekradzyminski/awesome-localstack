@@ -462,6 +462,35 @@ These features need backend 3.15.0, warehouse-service 1.2.0, payment-service
 1.0.0 and frontend 3.12.0 (see
 [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)).
 
+## Performance Testing With k6 (Monitoring Overlay)
+
+For k6 exercises, start the same profile with the monitoring overlay. It adds
+Prometheus, Grafana, InfluxDB, cAdvisor and Node Exporter and needs the extra
+ports `3000`, `9090` and `8086`:
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+- Grafana: `http://localhost:3000` (`admin` / `grafana`) with the **k6 Load
+  Testing Results**, **Spring Boot 3.x Statistics**, **Spring Boot Http (3.x)**
+  and **Container Resources** dashboards
+- Prometheus: `http://localhost:9090` (Status, Targets: every target `UP`)
+- send k6 results to InfluxDB with
+  `k6 run --out influxdb=http://localhost:8086/db0 script.js`, or to
+  Prometheus with
+  `K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write k6 run -o experimental-prometheus-rw script.js`
+
+If one of those ports is taken, set `GRAFANA_PORT`, `PROMETHEUS_PORT` or
+`INFLUXDB_PORT` before the command. Stop it with the same two `-f` files:
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.yml down
+```
+
+The overlay keeps k6 results in the `influxdb-storage` volume; add `--volumes`
+to `down` to discard them.
+
 ## Stop The Profile
 
 ```bash
@@ -469,7 +498,8 @@ docker compose -f lightweight-docker-compose.yml down
 ```
 
 Because PostgreSQL runs in memory, `down` already discards all data. The profile
-creates no named volumes, so `down --volumes` is not needed.
+creates no named volumes, so `down --volumes` is not needed (the monitoring
+overlay above is the exception).
 
 ## Additional GraphQL and gRPC exercises
 

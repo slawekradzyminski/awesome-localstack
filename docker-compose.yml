@@ -1,5 +1,9 @@
 name: awesome-full-native
 
+# Monitoring (Prometheus, Grafana, InfluxDB for k6, cAdvisor, Node Exporter) is an
+# opt-in overlay: add -f docker-compose.monitoring.yml, or use
+# ./run-docker-compose.sh, which includes it by default.
+
 services:
   backend:
     image: slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b
@@ -276,37 +280,6 @@ services:
     networks:
       - my-private-ntwk
 
-  prometheus:
-    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
-    restart: always
-    volumes:
-      - ./prometheus/:/etc/prometheus/
-    ports:
-      - "9090:9090"
-    depends_on:
-      - backend
-    networks:
-      - my-private-ntwk
-
-  grafana:
-    image: grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: grafana
-    volumes:
-      - ./grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./grafana/provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
-      - ./grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:/etc/grafana/provisioning/dashboards/k6-load-testing-results_rev1.json:ro
-      - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
-      - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
-    restart: always
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
-      - influxdb
-    networks:
-      - my-private-ntwk
-
   activemq:
     image: apache/artemis:2.55.0@sha256:a192eee9c46e6352625ca9dbf0beebe4a34c363111c628bbb10c4aff1227341d
     restart: always
@@ -362,22 +335,8 @@ services:
     networks:
       - my-private-ntwk
 
-  influxdb:
-    image: influxdb:1.12.4@sha256:7f65020ddef923f0366dfee0ce753adc0d20b97b0b110b0988c03e0426932396
-    ports:
-      - '8086:8086'
-    volumes:
-      - influxdb-storage:/var/lib/influxdb
-    environment:
-      - INFLUXDB_DB=db0
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin
-    networks:
-      - my-private-ntwk
-
 volumes:
   activemq-data:
-  influxdb-storage:
   postgres-data:
 
 models:

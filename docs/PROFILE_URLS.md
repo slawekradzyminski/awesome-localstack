@@ -73,11 +73,13 @@ flowchart TB
     B --> O[Ollama 11434]
 ```
 
-Monitoring in the full profile:
+Opt-in monitoring overlay (`-f docker-compose.monitoring.yml`, with the full
+or the lightweight profile; `./run-docker-compose.sh` adds it to the full
+profile):
 
 ```mermaid
 flowchart TB
-    GR[Grafana 3000] --> P[Prometheus 9090<br/>scrapes backend, consumer,<br/>warehouse and payment]
+    GR[Grafana 3000] --> P[Prometheus 9090<br/>scrapes backend, consumer,<br/>warehouse, payment,<br/>cAdvisor and Node Exporter]
     GR --> I[InfluxDB 8086<br/>k6 results]
 ```
 
@@ -155,15 +157,15 @@ Published host ports:
 | --- | --- | --- |
 | Gateway | `http://localhost:8081` | Main app entrypoint |
 | Postgres | `localhost:5432` | Direct DB access |
-| Prometheus | `http://localhost:9090/graph` | Monitoring UI |
-| Grafana | `http://localhost:3000/login` | Login `admin/grafana` |
+| Prometheus | `http://localhost:9090/graph` | Monitoring overlay only |
+| Grafana | `http://localhost:3000/login` | Monitoring overlay only; login `admin/grafana` |
 | ActiveMQ console | `http://localhost:8161` | Admin console |
 | ActiveMQ JMS | `localhost:61616` | Broker port |
 | ActiveMQ AMQP | `localhost:5672` | AMQP port |
 | Mailpit UI | `http://localhost:8025/` | Dev inbox UI |
 | Mailpit SMTP | `localhost:1025` | SMTP sink |
 | Consumer metrics | `http://localhost:4002/actuator/prometheus` | Direct metrics |
-| InfluxDB | `localhost:8086` | K6 / time-series |
+| InfluxDB | `localhost:8086` | Monitoring overlay only; k6 results |
 | Ollama | `http://localhost:11434/api/tags` | Raw model API |
 | Keycloak | `http://localhost:8082` | Local SSO identity provider |
 What is internal only:
@@ -218,9 +220,8 @@ What is not included:
 - ActiveMQ
 - Mailpit
 - consumer
-- Prometheus
-- Grafana
-- InfluxDB
+- Prometheus, Grafana and InfluxDB (add `-f docker-compose.monitoring.yml`
+  for them)
 
 ## Local Login Credentials
 
@@ -335,7 +336,6 @@ Published host ports:
 Not published on the host:
 
 - Postgres `5432`
-- Grafana `3000`
 - Mailpit UI `8025`
 - Mailpit SMTP `1025`
 - ActiveMQ console `8161`
@@ -344,7 +344,8 @@ Not published on the host:
 - backend `4001`
 - warehouse-service `4003`
 - payment-service `4004`
-- Prometheus `9090`
+- Prometheus `9090` (loopback `127.0.0.1:9090` only, for
+  `make ansible-tunnel-prometheus`)
 - Alertmanager `9093`
 - Blackbox Exporter `9115`
 - Node Exporter `9100`
@@ -369,8 +370,8 @@ Special behavior:
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus
 - Blackbox Exporter probes the public login, backend OpenAPI,
-  warehouse-service OpenAPI and payment-service OpenAPI URLs every 30 seconds
-  through public DNS and validated TLS
+  warehouse-service OpenAPI and payment-service OpenAPI URLs and the aitesters
+  login and OpenAPI URLs every 30 seconds through public DNS and validated TLS
 - `aitesters.byst.re` has its own `aitesters-warehouse-service` and
   `aitesters-payment-service` on `aitesters-postgres`, with their own tokens and
   webhook secret, so sandbox tokens and data never reach the stable site
@@ -380,10 +381,12 @@ Special behavior:
 - Alertmanager stores silences and notification state in a named volume and
   sends grouped notifications to a Vault-configured Telegram chat; a firing
   critical alert suppresses the warning that shares its `alert_family` label
-- Grafana provisions the private `Production Resources` and
-  `Production Availability & Safeguards` dashboards from the repository
-- Blackbox checks, alert delivery, and dashboards are server-profile-only;
-  the full and lightweight local profiles are unchanged
+- there is no Grafana in production (lean monitoring phase A); the host
+  watchdog (`awesome-watchdog.timer`) reports unhealthy, exited or missing
+  containers, OOM kills, disk, memory and backup problems to the same Telegram
+  chat
+- Blackbox checks, Alertmanager and the watchdog are server-profile-only; the
+  local profiles get Prometheus and Grafana from the monitoring overlay
 
 ## Gateway Route Map
 

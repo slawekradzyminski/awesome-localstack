@@ -1,0 +1,64 @@
+# Host watchdog (docs/PRODUCTION_MONITORING_PLAN.md, "Lean monitoring"). A
+# systemd timer runs the stdlib-only Python script every minute; it keeps no
+# resident process and reports through the Alertmanager Telegram bot and chat.
+watchdog_enabled: true
+watchdog_script_path: /usr/local/sbin/awesome-watchdog
+watchdog_config_dir: /etc/awesome-watchdog
+watchdog_state_dir: /var/lib/awesome-watchdog
+watchdog_maintenance_file: /run/awesome-watchdog.maintenance
+watchdog_maintenance_max_minutes: 30
+watchdog_schedule: minutely
+
+# Optional dead-man ping (for example a Healthchecks.io check URL). Every run
+# pings it, failing runs ping `<url>/fail`; empty disables the ping. Keep the
+# real URL in Ansible Vault: anyone who knows it can ping the check.
+watchdog_healthcheck_url: ""
+
+watchdog_host_label: awesome.byst.re
+watchdog_telegram_bot_token: "{{ alertmanager_telegram_bot_token | default('', true) }}"
+watchdog_telegram_chat_id: "{{ alertmanager_telegram_chat_id | default('', true) | string }}"
+
+# The expected container set is the deployed Compose file's services minus the
+# one-shot services, so a service added to docker-compose.server.yml is watched
+# without editing this role.
+watchdog_compose: "{{ lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml }}"
+watchdog_compose_project: "{{ watchdog_compose.name }}"
+watchdog_oneshot_services: "{{ verify_oneshot_services }}"
+watchdog_expected_services: "{{ watchdog_compose.services.keys() | list | difference(watchdog_oneshot_services) | sort }}"
+watchdog_ignored_services: []
+
+# A problem must persist for this many consecutive one-minute runs before it is
+# reported, so deploys, the nightly aitesters reset and healthcheck start-up
+# windows stay quiet.
+watchdog_confirm_runs:
+  missing: 2
+  not_running: 2
+  unhealthy: 3
+  http: 2
+watchdog_restart_window_minutes: 10
+
+# Copied from prometheus/rules/host.yml so both systems agree during the
+# parallel run.
+watchdog_disk_paths:
+  - /
+watchdog_disk_used_percent_thresholds:
+  - 85
+  - 90
+watchdog_inode_used_percent_max: 92
+watchdog_memory_available_min_mib: 300
+watchdog_memory_confirm_runs: 10
+
+# Daily backups run at 02:15 with up to 15 minutes of random delay; the weekly
+# restore check runs on Sunday.
+watchdog_backup_max_age_hours: 26
+watchdog_restore_check_max_age_days: 8
+
+# consumer is a distroless native image without a shell, so it cannot carry a
+# Docker healthcheck; the watchdog probes it with the gateway container's curl.
+watchdog_internal_http_checks:
+  - name: consumer
+    via: gateway
+    url: http://consumer:4002/actuator/health
+
+# 0 reports a persisting problem once; N repeats it every N hours.
+watchdog_repeat_hours: 0

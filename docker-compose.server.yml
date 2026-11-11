@@ -64,6 +64,23 @@ services:
       - "127.0.0.1:9091:9091"
     expose:
       - "4001"
+    healthcheck:
+      # Same probe as the image's own HEALTHCHECK, stated here so the watchdog
+      # and depends_on conditions do not rely on an image detail.
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4001;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+      start_interval: 2s
     # GraalVM native image: no JIT warm-up; the heap cap is a runtime argument.
     command: ["-Xmx384m"]
     mem_limit: 640m
@@ -345,6 +362,13 @@ services:
     logging: *default-logging
     expose:
       - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
     mem_limit: 64m
     networks:
       - my-private-ntwk
@@ -403,6 +427,23 @@ services:
       - "127.0.0.1:9092:9091"
     expose:
       - "4001"
+    healthcheck:
+      # Same probe as the image's own HEALTHCHECK, stated here so the watchdog
+      # and depends_on conditions do not rely on an image detail.
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4001;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+      start_interval: 2s
     # GraalVM native image: no JIT warm-up; the heap cap is a runtime argument.
     command: ["-Xmx256m"]
     mem_limit: 448m
@@ -415,6 +456,13 @@ services:
     logging: *default-logging
     expose:
       - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
     mem_limit: 64m
     networks:
       - my-private-ntwk
@@ -456,6 +504,8 @@ services:
         condition: service_healthy
       aitesters-frontend:
         condition: service_started
+      # The stable site must not wait for the sandbox: started is enough for
+      # nginx to resolve the upstream at start-up.
       aitesters-backend:
         condition: service_started
     ports:
@@ -465,6 +515,15 @@ services:
       - ./images:/usr/share/nginx/html/images:ro
       - ./branding:/usr/share/nginx/html/branding:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    healthcheck:
+      # A static file nginx serves itself, so the gateway's health does not
+      # depend on any upstream (those have their own healthchecks).
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/images/iphone.png"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
     mem_limit: 128m
     networks:
       - my-private-ntwk
@@ -475,10 +534,19 @@ services:
     network_mode: host
     logging: *default-logging
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     volumes:
       - ./nginx/conf.d/edge-gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/conf.d/header-buffers.conf:/etc/nginx/conf.d/header-buffers.conf:ro
+    healthcheck:
+      # The edge's job is the hop to the gateway, so probe that path.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "-H", "Host: awesome.byst.re", "http://127.0.0.1/images/iphone.png"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
     mem_limit: 128m
 
   node-exporter:
@@ -582,31 +650,10 @@ services:
       - cadvisor
       - alertmanager
       - blackbox-exporter
-    expose:
-      - "9090"
-    mem_limit: 512m
-    networks:
-      - my-private-ntwk
-
-  grafana:
-    image: grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
-    restart: unless-stopped
-    logging: *default-logging
-    env_file:
-      - path: .env.runtime
-        required: false
-    volumes:
-      - ./grafana/server-provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./grafana/server-provisioning/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
-      - ./grafana/provisioning/dashboards/spring_dashboard.json:/etc/grafana/provisioning/dashboards/spring_dashboard.json:ro
-      - ./grafana/provisioning/dashboards/spring_http_dashboard.json:/etc/grafana/provisioning/dashboards/spring_http_dashboard.json:ro
-      - ./grafana/provisioning/dashboards/production_resources.json:/etc/grafana/provisioning/dashboards/production_resources.json:ro
-      - ./grafana/provisioning/dashboards/production_safeguards.json:/etc/grafana/provisioning/dashboards/production_safeguards.json:ro
-    depends_on:
-      - prometheus
+    # Loopback only: `make ansible-tunnel-prometheus` replaces the Grafana tunnel.
     ports:
-      - "127.0.0.1:3000:3000"
-    mem_limit: 640m
+      - "127.0.0.1:9090:9090"
+    mem_limit: 512m
     networks:
       - my-private-ntwk
 
@@ -668,6 +715,14 @@ services:
           create_host_path: false
       - activemq-data:/var/lib/artemis-instance
     hostname: activemq
+    healthcheck:
+      # The image has bash but no curl: a TCP connect proves the core acceptor listens.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/61616"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+      start_interval: 3s
     mem_limit: 768m
     networks:
       - my-private-ntwk
@@ -700,9 +755,11 @@ services:
     expose:
       - "4002"
     hostname: consumer
+    # Distroless native image (no shell or curl), so no Docker healthcheck; the
+    # host watchdog probes /actuator/health through the gateway's curl.
     depends_on:
       activemq:
-        condition: service_started
+        condition: service_healthy
       mailpit:
         condition: service_healthy
     extra_hosts:

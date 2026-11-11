@@ -28,10 +28,11 @@
 | `keycloak-init` | `curlimages/curl` | — | lightweight, full | One-shot: sets the mock social-login users' passwords |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | host `11434` (lightweight), internal (server) | lightweight, server, model-mock override | Deterministic Ollama-compatible LLM mock |
 | `ollama-dmr-adapter` | built locally | internal `11434` | full | Adapter in front of Docker Model Runner (the real local model) |
-| `prometheus` | `prom/prometheus:v3.13.2` | host `9090` (full), internal (server) | full, server | Metrics; production keeps 30 days / 5 GB |
-| `grafana` | `grafana/grafana:13.1.1` | host `3000` (full), `127.0.0.1:3000` (server) | full, server | Dashboards |
-| `influxdb` | `influxdb:1.12.4` | host `8086` | full | k6 load-test results |
-| `node-exporter`, `cadvisor`, `blackbox-exporter`, `alertmanager` | Prometheus ecosystem | internal | server | Host metrics, container metrics, public HTTPS probes, Telegram alerts |
+| `prometheus` | `prom/prometheus:v3.13.2` | host `9090` (monitoring overlay), `127.0.0.1:9090` (server) | monitoring overlay, server | Metrics; production keeps 30 days / 5 GB |
+| `grafana` | `grafana/grafana:13.1.1` | host `3000` | monitoring overlay | Dashboards (k6, Spring, container resources); not in production |
+| `influxdb` | `influxdb:1.12.4` | host `8086` | monitoring overlay | k6 load-test results |
+| `node-exporter`, `cadvisor` | Prometheus ecosystem | internal | monitoring overlay, server | Host and container metrics |
+| `blackbox-exporter`, `alertmanager` | Prometheus ecosystem | internal | server | Public HTTPS probes, Telegram alerts |
 
 ## The aitesters sandbox (server profile)
 
@@ -58,7 +59,7 @@ are deliberately overcommitted (see [Ansible: memory budget](../reference/ANSIBL
 | postgres / aitesters-postgres | 512m / 160m | |
 | activemq | 768m | JVM |
 | ollama-mock | 512m | JVM |
-| prometheus / grafana | 512m / 640m | |
+| prometheus | 512m | (Grafana's 640m left production in lean phase A) |
 | gateway / edge | 128m each | |
 | frontend / aitesters-frontend | 64m each | |
 | docs | 32m | nginx, one worker |

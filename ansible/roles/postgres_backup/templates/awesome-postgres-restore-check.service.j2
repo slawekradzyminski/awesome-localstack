@@ -2,6 +2,9 @@
 Description=Verify the latest Awesome Testing PostgreSQL backup
 Requires=docker.service
 After=docker.service awesome-postgres-backup.service
+# The watchdog role installs the notifier; it sends the unit's result and last
+# log lines to the Alertmanager Telegram chat.
+OnFailure=awesome-watchdog-notify@%n.service
 
 [Service]
 Type=oneshot

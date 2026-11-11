@@ -1,0 +1,81 @@
+- name: Validate the watchdog Telegram credentials
+  ansible.builtin.assert:
+    that:
+      - (watchdog_telegram_bot_token | length) > 0
+      - (watchdog_telegram_chat_id | length) > 0
+    fail_msg: >-
+      The watchdog reuses alertmanager_telegram_bot_token and
+      alertmanager_telegram_chat_id; configure both in Ansible Vault.
+    quiet: true
+  no_log: true
+  when: watchdog_enabled | bool
+
+- name: Validate the watched container set
+  ansible.builtin.assert:
+    that:
+      - watchdog_compose_project == 'awesome-server'
+      - watchdog_expected_services | length > 0
+      - "'backend' in watchdog_expected_services"
+      - watchdog_expected_services | intersect(watchdog_oneshot_services) | length == 0
+    fail_msg: The watchdog must watch every long-running service of docker-compose.server.yml.
+    quiet: true
+  when: watchdog_enabled | bool
+
+- name: Ensure watchdog configuration and state directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ watchdog_config_dir }}"
+    - "{{ watchdog_state_dir }}"
+  when: watchdog_enabled | bool
+
+- name: Install the watchdog script
+  ansible.builtin.copy:
+    src: awesome-watchdog.py
+    dest: "{{ watchdog_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+  when: watchdog_enabled | bool
+
+- name: Render the watchdog configuration
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ watchdog_config_dir }}/config.json"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: watchdog_enabled | bool
+
+- name: Install the watchdog systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - awesome-watchdog.service
+    - awesome-watchdog.timer
+    - awesome-watchdog-notify@.service
+  register: watchdog_systemd_units
+  when: watchdog_enabled | bool
+
+- name: Reload systemd after installing watchdog units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when:
+    - watchdog_enabled | bool
+    - watchdog_systemd_units is changed
+
+- name: Enable the watchdog timer
+  ansible.builtin.systemd_service:
+    name: awesome-watchdog.timer
+    enabled: true
+    state: started
+  when: watchdog_enabled | bool

@@ -2,9 +2,14 @@
 
 # Start the full profile explicitly. CI opts into a deterministic mock because
 # hosted runners do not provide Docker Desktop Model Runner.
+# The local monitoring overlay (Prometheus, Grafana, InfluxDB, cAdvisor, Node
+# Exporter) is included for k6 trainings; WITH_MONITORING=false skips it.
 COMPOSE_FILES=(-f docker-compose.yml)
 if [ "${USE_OLLAMA_MOCK:-false}" = "true" ]; then
     COMPOSE_FILES+=(-f docker-compose.model-mock.yml)
+fi
+if [ "${WITH_MONITORING:-true}" = "true" ]; then
+    COMPOSE_FILES+=(-f docker-compose.monitoring.yml)
 fi
 docker compose "${COMPOSE_FILES[@]}" up -d --remove-orphans
 
@@ -68,8 +73,6 @@ wait_for_http_200() {
 urls=(
     "http://localhost:8081/swagger-ui/index.html"
     "http://localhost:8081/login"
-    "http://localhost:9090/graph"
-    "http://localhost:3000/login"
     "http://localhost:8161"
     "http://localhost:8025/"
     "http://localhost:4002/actuator/prometheus"
@@ -82,8 +85,6 @@ urls=(
 names=(
     "Backend"
     "Frontend"
-    "Prometheus"
-    "Grafana"
     "Active MQ"
     "Mailpit"
     "Email consumer"
@@ -93,6 +94,18 @@ names=(
     "Payment service OpenAPI"
     "Documentation wiki"
 )
+if [ "${WITH_MONITORING:-true}" = "true" ]; then
+    urls+=(
+        "http://localhost:${PROMETHEUS_PORT:-9090}/graph"
+        "http://localhost:${GRAFANA_PORT:-3000}/login"
+        "http://admin:grafana@localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/XKhgaUpik"
+    )
+    names+=(
+        "Prometheus"
+        "Grafana"
+        "Grafana k6 dashboard"
+    )
+fi
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do
         wait_for_http_200 "${urls[$i]}" "${names[$i]}"

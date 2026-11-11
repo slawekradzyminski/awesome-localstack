@@ -84,6 +84,9 @@ scrape_configs:
           - https://awesome.byst.re/v3/api-docs
           - https://awesome.byst.re/warehouse/v3/api-docs
           - https://awesome.byst.re/payment/v3/api-docs
+          # The aitesters sandbox shares the edge and gateway but has its own backend.
+          - https://aitesters.byst.re/login
+          - https://aitesters.byst.re/v3/api-docs
         labels:
           service: public-edge
     relabel_configs:

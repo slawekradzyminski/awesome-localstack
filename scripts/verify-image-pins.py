@@ -16,6 +16,8 @@ COMPOSE_PROFILES = (
     ("docker-compose.yml",),
     ("docker-compose.yml", "docker-compose.model-mock.yml"),
     ("lightweight-docker-compose.yml",),
+    ("docker-compose.yml", "docker-compose.monitoring.yml"),
+    ("lightweight-docker-compose.yml", "docker-compose.monitoring.yml"),
     ("docker-compose.server.yml",),
 )
 # Marker used in docker-compose.server.yml until payment-service is published.
