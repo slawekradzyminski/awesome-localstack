@@ -6,10 +6,9 @@ the **amount due** on the card.
 
 ```mermaid
 flowchart TB
-    S[Subtotal] -->|minus coupon| T[totalAmount]
-    T -->|minus gift card| G[ ]
-    G -->|minus points| D[amountDue, paid by card]
-    style G fill:none,stroke:none
+    S["Subtotal<br/>sum of price × quantity"] -->|minus coupon discount| T[totalAmount]
+    T -->|minus gift card| G[Left after gift card]
+    G -->|minus loyalty points| D["amountDue<br/>paid by card"]
 ```
 
 ## Cart endpoints
