@@ -2,7 +2,7 @@
 name: awesome-compatibility
 
 x-backend: &backend
-  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.14.1@sha256:cd1a12810a1b4f82eb23b3519362add3f20704e2652ebc3710f1a5d88e5712e4}
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b}
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
