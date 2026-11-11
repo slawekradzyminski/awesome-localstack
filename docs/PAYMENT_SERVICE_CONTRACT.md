@@ -11,7 +11,7 @@ it. The backend side of the result notification is also summarised in
 
 | Item | Value |
 | --- | --- |
-| Repository | `payment-service` (sibling repository; first release 1.0.0 pending publication) |
+| Repository | `payment-service` ([slawekradzyminski/payment-service](https://github.com/slawekradzyminski/payment-service)) |
 | Image | `slawekradzyminski/payment-service`, GraalVM native image, `-Xmx64m` in a 160 MiB container |
 | Port | 4004 (internal only, behind the gateway) |
 | Database | PostgreSQL schema `payment` of the backend database, owned by the `payment` role (`currentSchema=payment`); Flyway V1 baseline, V2 order payment locks, V3 event feed cursor (`event_cursors`, `processed_events`, 1.1.0) |
