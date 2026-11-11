@@ -512,13 +512,31 @@ def cmd_verify(shell, args):
         check_clock_drift(shell)
         output = Path(tempfile.mkdtemp(prefix="release-train-compat-"))
         output.rmdir()
-        step = ["python3", "scripts/verify-course-compatibility.py", "--output", str(output)]
+        course_repo = find_course_repo(args.course_repo)
+        subprocess.run(["git", "-C", str(course_repo), "fetch", "--quiet", "origin"], check=False)
+        step = compat_command(output, course_repo, args.course_ref)
         print(f"+ {shlex.join(step)}", flush=True)
         if subprocess.run(step, cwd=ROOT).returncode != 0:
             failures.append(shlex.join(step))
     if failures:
         raise SystemExit("verify failed:\n  " + "\n  ".join(failures))
     print("verify: OK")
+
+
+def find_course_repo(explicit: str | None) -> Path:
+    """The ai-testers-api checkout: explicit path, a sibling of this repository, or ~/IdeaProjects."""
+    candidates = [Path(explicit)] if explicit else [ROOT.parent / "ai-testers-api",
+                                                    Path.home() / "IdeaProjects" / "ai-testers-api"]
+    for candidate in candidates:
+        if (candidate / ".git").exists():
+            return candidate
+    raise SystemExit("ai-testers-api checkout not found; pass --course-repo")
+
+
+def compat_command(output: Path, course_repo: Path, course_ref: str) -> list[str]:
+    """The pinned course suite: always the published lesson (origin/master by default), never a local branch."""
+    return ["python3", "scripts/verify-course-compatibility.py", "--output", str(output),
+            "--course-repo", str(course_repo), "--ref", course_ref, "--graphql-preview"]
 
 
 def changed_release_files(shell: Shell) -> list[str]:
@@ -596,6 +614,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify")
     verify.add_argument("--compat", action="store_true", help="also run the course compatibility suite")
     verify.add_argument("--offline", action="store_true", help="skip the registry manifest check")
+    verify.add_argument("--course-repo", help="ai-testers-api checkout (default: sibling or ~/IdeaProjects)")
+    verify.add_argument("--course-ref", default="origin/master", help="course revision (default origin/master)")
     pr = sub.add_parser("pr")
     pr.add_argument("--merge", action="store_true", help="squash-merge once CI is green")
     deploy = sub.add_parser("deploy")

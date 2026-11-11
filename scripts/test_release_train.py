@@ -195,3 +195,13 @@ class Parser(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompatCommandTest(unittest.TestCase):
+    def test_passes_the_course_repo_and_published_ref(self):
+        command = rt.compat_command(Path("/tmp/out"), Path("/x/ai-testers-api"), "origin/master")
+        self.assertEqual(command[:4], ["python3", "scripts/verify-course-compatibility.py", "--output", "/tmp/out"])
+        self.assertIn("--course-repo", command)
+        self.assertEqual(command[command.index("--ref") + 1], "origin/master")
+        self.assertIn("--graphql-preview", command)
+

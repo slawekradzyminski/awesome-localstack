@@ -132,6 +132,39 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0 — 11 November 2026
+
+Published and pinned by `scripts/release-train.py` (first train). The publish
+workflows skipped the duplicated verification for the first time (identical
+tree already verified on the PR): backend 16 min instead of 27, services 10
+instead of 20.
+
+- **Correlation IDs end to end.** Every Spring service validates or generates
+  `X-Request-Id` and W3C `traceparent`, logs them (MDC `requestId`, `traceId`,
+  `spanId`) and returns `X-Request-Id`; outbound calls send a child
+  `traceparent`. Feed events (backend V17), outboxes (warehouse V5, payment V4,
+  backend email/webhook rows) keep the ids, so asynchronous work logs under the
+  request that caused it. The backend logs one line per recorded domain event.
+- **Gateway** validates or generates both headers in every server block, echoes
+  `X-Request-Id` and writes a JSON access log.
+- **JSON logs in production.** `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs` for the
+  backends, warehouse and payment services; local profiles stay readable.
+  How to search: the wiki page Operations, Tracing a request
+  (`docs-site/docs/operations/tracing.md`).
+
+Upgrade order: backend first (V17 is additive), services in the same deploy;
+`make ansible-deploy-backend-upgrade`. Rollback: backend 3.16.0's Flyway does not know V17 and refuses the migrated
+schema, so a rollback restores the encrypted pre-deploy backup with the previous
+pins, as for earlier releases.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264` | [PR #96](https://github.com/slawekradzyminski/test-secure-backend/pull/96), `032913a` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43068503449) |
+| `slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033` | [PR #9](https://github.com/slawekradzyminski/warehouse-service/pull/9), `6d0479f` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43068506492) |
+| `slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31` | [PR #5](https://github.com/slawekradzyminski/payment-service/pull/5), `869e98e` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43068511976) |
+| `slawekradzyminski/frontend:3.12.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Warehouse-service 1.3.1: read-only shipment GET — 11 November 2026
 
 | Image | Source | Release workflow |
@@ -678,16 +711,16 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Commerce wave 3, released 11 November 2026:
+Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0, released 11 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` |
+| Backend | `slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264` |
 | Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.3.1@sha256:b56f51fa3a80caf3cc7cc56704d540051e5550e59b8ccbf31961e1b5c6b07a29` |
-| Payment service | `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033` |
+| Payment service | `slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31` |
 
 ## Backend 3.9.1 traffic preview patch
 
