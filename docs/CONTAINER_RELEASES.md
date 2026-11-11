@@ -974,6 +974,17 @@ publish in dependency order and pin everything in one LocalStack change:
 
 An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set. Backward compatibility is maintained for persisted data and external contracts where required; the deployment does not keep stale application images running as compatibility variants.
 
+After every deploy, run the feature smoke test against both production hosts
+(customer-level checks only; they create throwaway accounts and orders):
+
+```bash
+scripts/smoke-features.sh https://awesome.byst.re client
+scripts/smoke-features.sh https://aitesters.byst.re client
+```
+
+Locally and in CI (`verifyLightweight`) the same script runs with `full`, which
+adds the admin and warehouse flows using the demo accounts.
+
 ## GraphQL/gRPC 3.8.0 release
 
 Backend [PR #59](https://github.com/slawekradzyminski/test-secure-backend/pull/59)
