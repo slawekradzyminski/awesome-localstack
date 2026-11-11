@@ -32,11 +32,11 @@ services:
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
-      # The backend calls payment-service (refunds) with the same payment token and
-      # verifies payment result notifications with the webhook secret.
+      # payment-service calls the internal API (order data, payment results, the event
+      # feed with card refunds) with the payment token; the backend verifies payment
+      # result notifications with the webhook secret. The backend never calls it.
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
-      PAYMENT_BASE_URL: http://payment-service:4004
     models:
       local_llm:
         endpoint_var: DMR_MODEL_ENDPOINT

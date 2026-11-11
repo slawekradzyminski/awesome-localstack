@@ -52,7 +52,6 @@ services:
       JWT_REQUIRE_SECURE_KEY: "true"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://awesome.byst.re,https://awesome.byst.re,http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      PAYMENT_BASE_URL: http://payment-service:4004
     depends_on:
       postgres:
         condition: service_healthy
@@ -417,7 +416,6 @@ services:
       SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "200"
       SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "200"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
-      PAYMENT_BASE_URL: http://aitesters-payment-service:4004
     depends_on:
       aitesters-postgres:
         condition: service_healthy

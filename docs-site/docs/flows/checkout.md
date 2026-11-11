@@ -93,6 +93,6 @@ the VAT it contains (`order_refunds.tax_amount`, not exposed).
 | Action | Endpoint | Rule |
 | --- | --- | --- |
 | Pay by card | `POST /api/v1/payments` (payment-service) | Order must be `PENDING`; see [Card payments](payments.md) |
-| Cancel | `POST /api/v1/orders/{id}/cancel` | Allowed while `fulfilmentState` is `NONE` or `AWAITING_PICK`; `409` from `PICKED` on; `400` for shipped or delivered orders. Restores stock, coupon, gift card and points; queues a card refund when a payment was captured |
+| Cancel | `POST /api/v1/orders/{id}/cancel` | Allowed while `fulfilmentState` is `NONE` or `AWAITING_PICK`; `409` from `PICKED` on; `400` for shipped or delivered orders. Restores stock, coupon, gift card and points; when a payment was captured, publishes a card refund on the [event feed](../reference/EVENT_FEED.md), which payment-service carries out within about 5–8 s |
 | Admin status | `PUT /api/v1/orders/{id}/status` | Legacy admin endpoint; `409` while the order is in the warehouse (`AWAITING_PICK` … `SHIPPED`) |
 | Admin list | `GET /api/v1/orders/admin` | All orders |

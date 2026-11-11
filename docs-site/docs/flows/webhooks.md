@@ -34,7 +34,9 @@ or redeliver (20 per 15 min) calls when rate limiting is on.
 Event names: `order.created`, `order.paid`, `order.cancelled`,
 `shipment.shipped`, `shipment.delivered`, `refund.booked`, `payment.failed`,
 plus `webhook.ping`. Each committed event creates one delivery per **active**
-subscription of the order's owner that lists the event.
+subscription of the order's owner that lists the event. The internal
+`card-refund.requested` event is not offered: only payment-service reads it,
+from the [event feed](../reference/EVENT_FEED.md).
 
 ```json
 {"id":"6a1f0f57-0f7c-4bb4-8a43-2f9d8f7e8c11","type":"order.created","createdAt":"2026-11-10T20:40:33.120Z","data":{"orderId":42,"status":"PENDING","totalAmount":40.00}}

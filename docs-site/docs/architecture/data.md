@@ -1,7 +1,8 @@
 # Data and databases
 
 All three Spring services use **one PostgreSQL 16 server** and one database,
-but each owns a separate **schema** and connects as its own **role**.
+but each owns a separate **schema** and connects as its own **role** (why:
+[ADR 4](../reference/ARCHITECTURE_DECISIONS.md#adr-4-database-per-service-on-one-postgresql-server)).
 
 ```mermaid
 flowchart TB
@@ -31,9 +32,9 @@ role checks exactly that after every deploy. The services connect with
 
 | Service | Flyway location | Migrations |
 | --- | --- | --- |
-| backend | `public` schema | `V1` baseline … `V7` commerce, `V8` order fulfilment state, `V9` email retry and order refunds, `V10` commerce foundation, `V11` payments, `V12` loyalty and gift cards, `V13` VAT and currency, `V14` webhooks, `V15` product search indexes |
-| warehouse-service | `warehouse` | `V1` schema, `V2` notification outbox and order locks, `V3` shipment tracking (`shipments.simulated`, `tracking_events`) |
-| payment-service | `payment` | `V1` baseline, `V2` order payment locks |
+| backend | `public` schema | `V1` baseline … `V7` commerce, `V8` order fulfilment state, `V9` email retry and order refunds, `V10` commerce foundation, `V11` payments, `V12` loyalty and gift cards, `V13` VAT and currency, `V14` webhooks, `V15` product search indexes, `V16` domain event feed (`domain_events`, `card_refund_requests`; drops `payment_refund_outbox`) |
+| warehouse-service | `warehouse` | `V1` schema, `V2` notification outbox and order locks, `V3` shipment tracking (`shipments.simulated`, `tracking_events`), `V4` event feed consumer (`event_cursors`, `processed_events`) |
+| payment-service | `payment` | `V1` baseline, `V2` order payment locks, `V3` event feed consumer (`event_cursors`, `processed_events`) |
 
 ## Main tables
 
@@ -47,7 +48,8 @@ role checks exactly that after every deploy. The services connect with
     | Orders | `orders` (incl. `fulfilment_state`, tax and tender columns), `order_items`, `order_idempotency_keys`, `order_refunds` |
     | Coupons | `coupons`, `coupon_redemptions` |
     | Gift cards and loyalty | `gift_cards`, `gift_card_transactions`, `loyalty_accounts`, `loyalty_transactions` |
-    | Payments (backend side) | `order_payments`, `payment_notifications`, `payment_refund_outbox` |
+    | Payments (backend side) | `order_payments`, `payment_notifications`, `card_refund_requests` |
+    | Event feed | `domain_events` (every domain event, kept 30 days) |
     | Tax and money | `vat_rates`, `currency_rates` |
     | Messaging | `email_event` |
     | Webhooks | `webhook_subscriptions`, `webhook_deliveries`, `webhook_inboxes`, `webhook_inbox_requests` |
@@ -57,7 +59,8 @@ role checks exactly that after every deploy. The services connect with
 
     `shipments`, `tracking_events`, `return_requests`, `return_items`,
     `suppliers`, `purchase_orders`, `purchase_order_lines`,
-    `purchase_receipts`, `notification_outbox`, `order_locks`.
+    `purchase_receipts`, `notification_outbox`, `order_locks`,
+    `event_cursors`, `processed_events`.
 
     warehouse-service stores **snapshots** (order id, owner, unit prices,
     totals) instead of foreign keys into the backend: it never joins across
@@ -66,7 +69,7 @@ role checks exactly that after every deploy. The services connect with
 === "payment"
 
     `payments`, `payment_idempotency_keys`, `payment_outbox`, `refunds`,
-    `order_payment_locks`.
+    `order_payment_locks`, `event_cursors`, `processed_events`.
 
     Only the card brand and the last four digits are stored. The
     idempotency fingerprint is an HMAC of the request, never the card number.

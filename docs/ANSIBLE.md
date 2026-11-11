@@ -403,9 +403,10 @@ database passwords (superusers, warehouse and payment roles of both databases)
 are all distinct. `.env.payment` and `.env.aitesters-payment` (root-owned,
 mode 0600) contain only `PAYMENT_SERVICE_TOKEN`, `PAYMENT_WEBHOOK_SECRET` and
 `SPRING_DATASOURCE_PASSWORD`; payment-service verifies access tokens with its
-backend's JWKS and holds no signing key. The backends reach payment-service at
-`PAYMENT_BASE_URL` (`http://payment-service:4004`,
-`http://aitesters-payment-service:4004`), set in Compose.
+backend's JWKS and holds no signing key. The backends never call
+payment-service (backend 3.16.0 removed `PAYMENT_BASE_URL`); each
+payment-service polls its own backend's event feed for card refunds through
+`BACKEND_BASE_URL`, set in Compose.
 
 The one-shot `postgres-roles` services prepare the `payment` role and schema
 next to `warehouse`, so the payment role password is required for both

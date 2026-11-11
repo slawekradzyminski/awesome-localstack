@@ -157,6 +157,8 @@ nav:
       - Commerce features: reference/COMMERCE_FULFILMENT.md
       - Warehouse service contract: reference/WAREHOUSE_SERVICE_CONTRACT.md
       - Payment service contract: reference/PAYMENT_SERVICE_CONTRACT.md
+      - Event feed: reference/EVENT_FEED.md
+      - Architecture decisions: reference/ARCHITECTURE_DECISIONS.md
       - Webhooks: reference/WEBHOOKS.md
       - SSO flow: reference/SSO_FLOW.md
       - Social login: reference/SOCIAL_LOGIN.md
