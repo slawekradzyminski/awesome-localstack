@@ -44,6 +44,10 @@
 :   An image reference of the form `name:tag@sha256:<digest>`, which cannot
     silently change.
 
+**Docker Model Runner (DMR)**
+:   Docker Desktop feature that runs a real LLM on the host. Used only by
+    the full profile, through `ollama-dmr-adapter`. See [LLM integration](architecture/llm.md).
+
 **Domain event**
 :   A backend `CommerceEvent` (`order.created`, `order.paid`, …) published inside
     the transaction and handled after commit.
@@ -117,6 +121,15 @@
 **MFA / TOTP**
 :   Multi-factor authentication with time-based one-time passwords (RFC 6238, 30-second steps).
 
+**NDJSON**
+:   Newline-delimited JSON: one JSON object per line. The format the model
+    or mock streams to the backend. See [Streaming and WebSockets](architecture/realtime.md).
+
+**ollama-mock**
+:   Scripted, deterministic stand-in for an LLM that speaks the Ollama API.
+    Answers only known prompts. Used everywhere except the full profile. See
+    [LLM integration](architecture/llm.md#the-mock-ollama-mock).
+
 **Outbox (transactional)**
 :   A table written in the same transaction as a business change and
     delivered afterwards with retries.
@@ -134,6 +147,11 @@
 **RMA**
 :   Return merchandise authorisation — a return request.
 
+**Server-Sent Events (SSE)**
+:   A `text/event-stream` HTTP response that stays open and carries
+    `data:` events. How LLM answers reach the browser. See
+    [Streaming and WebSockets](architecture/realtime.md#http-streaming-llm-answers).
+
 **Service token**
 :   Shared secret per calling service sent as `X-Service-Token`.
 
@@ -144,8 +162,17 @@
 :   Server-side request forgery; webhook URLs are checked so they cannot reach
     internal addresses.
 
+**STOMP over SockJS**
+:   Messaging layer on top of the WebSocket used by the traffic monitor
+    (`/api/v1/ws-traffic`, topics `/topic/traffic/<session id>`).
+
 **Tender**
 :   A way to pay part of an order other than the card: gift card or loyalty points.
+
+**Tool calling**
+:   The model answers with a request to run a named function; the backend
+    runs it on the real catalog and sends the result back. See
+    [LLM integration](architecture/llm.md#tool-calling-chat-tools).
 
 **Tracking number**
 :   Carrier-specific parcel number: InPost 24 digits, DPD 14, DHL 10, UPS `1Z` + 16.
@@ -158,3 +185,7 @@
 
 **Void**
 :   Reversal of a capture that the backend refused (`409 Order is not payable`).
+
+**WebSocket**
+:   A long-lived two-way connection that starts as an HTTP `Upgrade`. Used
+    by the traffic monitor. See [Streaming and WebSockets](architecture/realtime.md#websocket-traffic-monitor).

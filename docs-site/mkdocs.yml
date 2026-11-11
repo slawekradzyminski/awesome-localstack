@@ -122,6 +122,8 @@ nav:
       - Authentication: architecture/auth.md
       - Service-to-service trust: architecture/service-trust.md
       - Data and databases: architecture/data.md
+      - LLM integration: architecture/llm.md
+      - Streaming and WebSockets: architecture/realtime.md
   - Business flows:
       - flows/index.md
       - Accounts, MFA and SSO: flows/accounts.md
