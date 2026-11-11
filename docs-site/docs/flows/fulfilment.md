@@ -14,7 +14,7 @@ Endpoints under `/api/v1/warehouse` require `ROLE_WAREHOUSE` or `ROLE_ADMIN`
 | `GET /api/v1/warehouse/queue` | `PAID` orders without a shipment, oldest first |
 | `POST /api/v1/warehouse/shipments` `{orderId}` | Create a shipment (`AWAITING_PICK`); the order must be `PAID` and unreleased (`409` otherwise or when one exists) |
 | `GET /api/v1/warehouse/shipments?status=` | List |
-| `GET /api/v1/warehouse/shipments/{id}` | One shipment; also cancels an `AWAITING_PICK` shipment whose order was cancelled (a side effect of a GET, kept from before the event feed and [marked for removal](../reference/ARCHITECTURE_DECISIONS.md#follow-ups)) |
+| `GET /api/v1/warehouse/shipments/{id}` | One shipment as stored; read-only since warehouse-service 1.3.1 (cancellations arrive through the [event feed](../reference/EVENT_FEED.md)) |
 | `GET /api/v1/warehouse/shipments/{id}/pick-list` | Items to pick |
 | `POST /api/v1/warehouse/shipments/{id}/pick` | `AWAITING_PICK → PICKED` |
 | `POST /api/v1/warehouse/shipments/{id}/pack` `{weightKg}` | `PICKED → PACKED`; weight 0.01–30.00 kg |
