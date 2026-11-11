@@ -28,6 +28,28 @@ flowchart TB
     F --> G[Merge and deploy]
 ```
 
+### Release train
+
+`scripts/release-train.py` runs the sequence for backend, warehouse-service,
+payment-service and frontend (`--with-consumer` adds the consumer). Each step
+recomputes the release set from GitHub and the pinned Compose files, so it can
+be rerun after a fix; `--dry-run` performs only reads and prints every action.
+
+```bash
+python3 scripts/release-train.py --dry-run plan   # versions, tags, pins, actions
+python3 scripts/release-train.py tag              # only when the head's CI is green
+python3 scripts/release-train.py wait             # fails fast with the run URL
+python3 scripts/release-train.py pin              # digests, Compose files, compatibility set, release stub
+python3 scripts/release-train.py verify --compat  # Compose config, contract scripts, course suite
+python3 scripts/release-train.py pr --merge       # PR, CI, squash-merge
+python3 scripts/release-train.py deploy --yes     # merged main, clean, Vault links present
+```
+
+`deploy` picks `make ansible-deploy-backend-upgrade` when the backend version
+changed (quiesce, backup, migrate), otherwise `make ansible-deploy`. Every
+step, its checks and its refusals:
+[Container releases — Release sequence](../reference/CONTAINER_RELEASES.md#release-sequence).
+
 Multi-repository releases publish in dependency order — backend first (both
 services call its internal API and poll its event feed; the backend calls
 neither), then warehouse-service and payment-service, then the frontend — and
@@ -44,6 +66,8 @@ Vault keys go in before the deploy; backend migrations use
 | `scripts/verify-java-security.py` | The frozen Java certificate blocklist is mounted in every JVM container |
 | `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties |
 | `scripts/verify-edge-proxy.sh` | The edge only trusts forwarded headers from the provider range |
+| `scripts/verify-correlation-ids.py` | Every gateway server block validates or generates `X-Request-Id` and `traceparent`, passes them from every proxied location, returns `X-Request-Id` and logs JSON; the server's Spring services log ECS JSON. `--routing` proves it against stub upstreams ([Tracing a request](tracing.md)) |
+| `scripts/test_release_train.py` | Unit tests of the release train: version parsing, pin replacement, release-section rendering, deploy target |
 
 The current pins and the release history are in
 [Container releases](../reference/CONTAINER_RELEASES.md#current-compatibility-set).

@@ -85,11 +85,38 @@ which asks the backend for the order).
 ## Proxy headers
 
 Every proxied location sets `Host`, `X-Real-IP`, `X-Forwarded-For`,
-`X-Forwarded-Host`, `X-Forwarded-Port` and `X-Forwarded-Proto`. The Spring
+`X-Forwarded-Host`, `X-Forwarded-Port`, `X-Forwarded-Proto`, and the
+correlation headers `X-Request-Id` and `traceparent` (below). The Spring
 services run with `SERVER_FORWARD_HEADERS_STRATEGY=framework`, so redirects,
 generated links and the OpenAPI `servers` URL use the public scheme and host.
 Swagger UI's "Try it out" therefore calls `https://awesome.byst.re` in
 production and `http://localhost:8081` locally.
+
+## Correlation ids
+
+Every server block (both hosts on the server, `localhost` locally, and the
+edge) validates or generates `X-Request-Id` and `traceparent` with nginx `map`
+blocks, passes both to every proxied location, returns `X-Request-Id` on every
+response (also on the gateway's own `404`s) and logs one JSON line per request:
+
+```nginx
+map $http_x_request_id $corr_request_id {
+  "~^[A-Za-z0-9._-]{1,128}$" $http_x_request_id;
+  default $request_id;
+}
+map $http_traceparent $corr_traceparent {
+  "~^00-(?!0{32})[0-9a-f]{32}-(?!0{16})[0-9a-f]{16}-[0-9a-f]{2}$" $http_traceparent;
+  default $corr_generated_traceparent;   # 00-$request_id-<last 16 hex>-01
+}
+```
+
+A location that sets any `proxy_set_header` does not inherit the server's, so
+each proxied location sets both headers itself; the contract script
+`scripts/verify-correlation-ids.py` fails when one is missing. The upstream's
+own `X-Request-Id` is hidden so the client receives the header once. See
+[Tracing a request](../operations/tracing.md).
+
+## Edge proxy
 
 On the server, the **edge** proxy trusts `X-Forwarded-For` only from the
 hosting provider's proxy range (`set_real_ip_from 2a01:4f9::/32`), so a client

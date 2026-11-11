@@ -40,6 +40,25 @@ jobs:
     - name: Verify trusted edge proxy sanitization
       run: bash ./scripts/verify-edge-proxy.sh
 
+  verifyCorrelationIds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7.0.1
+    # Static contract (every server block and proxied location, ECS logging),
+    # then the pinned nginx with stub upstreams: ids generated, preserved when
+    # valid, replaced when invalid, passed upstream and echoed back once.
+    - name: Verify gateway correlation IDs
+      run: python3 scripts/verify-correlation-ids.py --routing
+
+  verifyReleaseTrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Unit-test the release train (no network)
+      run: python3 -m unittest discover -s scripts -p test_release_train.py -v
+
   runDocker:
     runs-on: ubuntu-latest
     services:

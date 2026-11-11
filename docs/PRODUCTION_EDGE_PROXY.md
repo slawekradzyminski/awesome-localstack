@@ -9,6 +9,11 @@ Production uses two nginx layers with different responsibilities:
 2. `gateway` is bound only to `127.0.0.1:8080`. It performs hostname and path
    routing and passes the already-sanitized address to the Spring backends.
 
+Both layers validate or generate the correlation headers `X-Request-Id` and
+`traceparent` with the same rules; the edge's ids are valid, so the gateway
+keeps them and both access logs (JSON) carry the same request id. See the
+wiki page "Tracing a request" (`docs-site/docs/operations/tracing.md`).
+
 This separation is required because Docker's IPv6-to-IPv4 userland proxy makes
 all traffic inside an ordinary bridge container appear to originate at the
 Docker bridge gateway. Without the host-network edge, direct origin callers and

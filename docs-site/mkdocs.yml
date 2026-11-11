@@ -146,6 +146,7 @@ nav:
       - Production deployment: operations/production.md
       - Releases and image pinning: operations/releases.md
       - Monitoring and alerts: operations/monitoring.md
+      - Tracing a request: operations/tracing.md
       - Backups: operations/backups.md
       - Troubleshooting: operations/troubleshooting.md
       - This documentation site: operations/docs-site.md

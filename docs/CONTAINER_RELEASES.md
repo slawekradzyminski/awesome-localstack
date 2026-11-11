@@ -873,6 +873,46 @@ PostgreSQL restore tool. Locally built `:local` images are the only exception.
 
 ## Release sequence
 
+`scripts/release-train.py` automates the sequence below for backend
+(`test-secure-backend`), warehouse-service, payment-service and frontend
+(`vite-react-frontend`); `--with-consumer` adds `jms-email-consumer`, and
+`--only backend,payment-service` narrows the set. Every subcommand recomputes
+the release set from GitHub and `docker-compose.server.yml`, so a failed step
+can be fixed and rerun. The global `--dry-run` performs only reads (GitHub
+API, registry, files) and prints every action that would tag, write, commit,
+push, merge or deploy.
+
+```bash
+python3 scripts/release-train.py plan               # what would be released
+python3 scripts/release-train.py tag                # v<version> on green default-branch heads
+python3 scripts/release-train.py wait               # publish workflows; fails fast with the run URL
+python3 scripts/release-train.py pin                # digests -> Compose files and this document
+make sync-release-images                            # sibling development Compose files
+python3 scripts/release-train.py verify [--compat]  # Compose config + every contract script
+python3 scripts/release-train.py pr --merge         # branch, commit, push, PR, CI, squash-merge
+# then, from the main checkout (Vault links present), on merged main:
+python3 scripts/release-train.py deploy --yes
+```
+
+| Step | What it does | Refuses when |
+| --- | --- | --- |
+| `plan` | Per repository: default-branch head, version from `pom.xml` / `package.json` (through `gh api`), latest `v*` tag, currently pinned version, and the action: `tag, publish, pin`, `pin` (tag exists), `up to date`, or `skip` (SNAPSHOT, older than the latest tag or the pin). Also prints the deploy target. | — |
+| `tag` | Creates an annotated `v<version>` tag on the default-branch head of every repository whose version is untagged. | The head's CI workflow (`verify.yml` for the backend, `ci.yml` elsewhere) is not `success`; nothing is tagged then. |
+| `wait` | Polls each repository's `publish-image.yml` run for the tag (`--timeout`, `--interval`). | A job fails or the run concludes with anything but `success`: exits at once with the run URL. |
+| `pin` | Resolves the Docker Hub digest (`docker buildx imagetools inspect`), replaces the **current** pin of each image in every Compose file (other versions, e.g. rollback references in documents, are left alone), updates the image rows of [Current compatibility set](#current-compatibility-set) and inserts a release-section stub (PR, commit, run links; text marked TODO) above the newest dated section. | The publish run is not `success`. |
+| `verify` | `docker compose config --quiet` for every profile (overlays on their base), every contract script, the release-train unit tests and `verify-release-images.py --remote` (`--offline` skips it). `--compat` first checks that Docker's clock is within 5 s of the host's (JWT issued-at checks fail otherwise), then runs `verify-course-compatibility.py`. | Any check fails. |
+| `pr` | Creates `release/<image>-<version>…`, commits only the Compose files and this document, pushes, opens the PR, waits for its checks; `--merge` squash-merges. | Nothing was pinned. |
+| `deploy` | `make ansible-deploy-backend-upgrade` when the backend version differs from the previous commit's (`--since`, default `HEAD~1`: the squash-merged release), else `make ansible-deploy`. | No `--yes`; not on `main`; `HEAD` is not `origin/main`; dirty tree; the Vault links `ansible/.vault_pass` or `ansible/inventory/group_vars/production/vault.yml` missing (presence only, never read). |
+
+Fill in the release-section stub (what changes, LocalStack changes, upgrade
+order, rollback) in the release PR before merging. New Vault keys still go in
+before `deploy`, and the course suite (`l20`) runs after it. The pure parts
+(version parsing, pin replacement, release-section rendering, deploy target)
+are unit-tested in `scripts/test_release_train.py` (CI job
+`verifyReleaseTrain`).
+
+The manual sequence the script follows:
+
 1. Merge a green source change to that repository's default branch.
 2. Set the Maven or npm version intended for release and merge its verification change.
 3. Create the matching signed or annotated `vX.Y.Z` tag, or run an explicit candidate from the intended commit.

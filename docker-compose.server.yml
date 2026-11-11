@@ -27,6 +27,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
       SPRING_DATASOURCE_USERNAME: postgres
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       SECURITY_RATE_LIMIT_ENABLED: "true"
       SECURITY_RATE_LIMIT_TRUST_FORWARDED_HEADERS: "true"
       SECURITY_RATE_LIMIT_SIGNUP_IP_CAPACITY: "2000"
@@ -101,6 +103,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
       SPRING_DATASOURCE_USERNAME: warehouse
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
     depends_on:
@@ -147,6 +151,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-postgres:5432/aitesters?currentSchema=warehouse
       SPRING_DATASOURCE_USERNAME: warehouse
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       BACKEND_BASE_URL: http://aitesters-backend:4001
     depends_on:
@@ -193,6 +199,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=payment
       SPRING_DATASOURCE_USERNAME: payment
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
     depends_on:
@@ -239,6 +247,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-postgres:5432/aitesters?currentSchema=payment
       SPRING_DATASOURCE_USERNAME: payment
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       BACKEND_BASE_URL: http://aitesters-backend:4001
     depends_on:
@@ -390,6 +400,8 @@ services:
       GRPC_PORT: "9091"
       GRPC_REFLECTION_ENABLED: "false"
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # JSON (Elastic Common Schema) console logs with MDC requestId/traceId fields.
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: https://aitesters.byst.re/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: https://aitesters.byst.re/swagger-ui/oauth2-redirect.html
