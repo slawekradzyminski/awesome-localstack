@@ -56,7 +56,9 @@ flowchart TB
    `X-Request-Id` and a child `traceparent` (same trace id, new parent id)
    when they call the backend's internal API.
 4. **Event feed.** The backend stores `request_id` and `trace_id` with each
-   domain event, written in the transaction of the request that caused it.
+   domain event, written in the transaction of the request that caused it,
+   and logs one INFO line per event (`Recorded order.cancelled #42 for order 7`)
+   under that request's ids, so the backend side shows up in the same search.
    A consumer handling the event (a card refund, a cancelled shipment) logs
    with those ids, so a refund processed seconds later by payment-service
    carries the id of the cancel request.
