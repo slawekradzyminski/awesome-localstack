@@ -11,6 +11,7 @@ Awesome LocalStack consumes application images but does not build another reposi
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | API contract tests and container smoke |
 | `jms-email-consumer` | `slawekradzyminski/consumer` | Maven tests and Artemis-to-Mailpit integration smoke |
 | `warehouse-service` | `slawekradzyminski/warehouse-service` | Maven tests, GraalVM native build and container smoke |
+| `payment-service` | `slawekradzyminski/payment-service` | Maven tests, GraalVM native build and container smoke |
 
 The same build is also published under the source repository name in GitHub Container Registry. Docker Hub remains the deployment registry during the migration because existing Compose releases already use those names. Do not assume two registries have the same manifest digest; record and pin the digest resolved from the registry used by Compose.
 
@@ -130,6 +131,61 @@ This catalog result is scoped dependency evidence, not an assessment of OS
 packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
+
+## Commerce wave 3: backend 3.15.0, warehouse-service 1.2.0, payment-service 1.0.0, frontend 3.12.0 — 11 November 2026
+
+All four images are published as native (backend, warehouse, payment) or
+nginx (frontend) multi-arch images. ai-testers-api `l20` passed 190/190 against
+the published backend 3.15.0 (11 November 2026).
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` | [PR #93](https://github.com/slawekradzyminski/test-secure-backend/pull/93), `3fb1cc9` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42907355443) |
+| `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` | [PR #5](https://github.com/slawekradzyminski/warehouse-service/pull/5), `60c1c8f` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/42897115628) |
+| `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` | [payment-service](https://github.com/slawekradzyminski/payment-service) `26a057a` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/42982591094) |
+| `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` | [PR #95](https://github.com/slawekradzyminski/vite-react-frontend/pull/95), `37316e5` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42991982733) |
+| `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` | unchanged | unchanged |
+
+What the wave adds:
+
+- **Payments.** New `payment-service` (port 4004, schema and role `payment`,
+  native image, `-Xmx64m` in 160 MiB) with simulated test cards, 3-D Secure,
+  idempotency keys and refunds; it reports results to the backend with signed
+  notifications. Contract:
+  [PAYMENT_SERVICE_CONTRACT.md](PAYMENT_SERVICE_CONTRACT.md).
+- **Shipment tracking.** warehouse-service 1.2.0 simulates a carrier and
+  publishes `/api/v1/orders/{id}/shipment/tracking` and the public
+  `/api/v1/tracking/{number}`; see the addendum in
+  [WAREHOUSE_SERVICE_CONTRACT.md](WAREHOUSE_SERVICE_CONTRACT.md).
+- **Backend 3.15.0.** Product search with facets, loyalty points and gift
+  cards, VAT rates and currency conversion, user webhooks with a built-in
+  inbox ([WEBHOOKS.md](WEBHOOKS.md)), and the payment result endpoint.
+  Flyway V10 to V15; warehouse-service V3; payment-service V1.
+- **Frontend 3.12.0.** Screens for the features above.
+
+LocalStack changes in this release:
+
+- `payment-service` in the lightweight and full profiles and
+  `payment-service` plus `aitesters-payment-service` on the server, each after
+  a healthy backend and the `postgres-roles` one-shot;
+- `postgres/warehouse-role.sh` became `postgres/service-role.sh` (one role and
+  schema per call) with `postgres/service-roles.sh` preparing `warehouse` and
+  `payment`; warehouse behaviour is unchanged;
+- gateway routes for payments and tracking in every server block, payment
+  OpenAPI at `/payment/v3/api-docs`;
+- both backends get `PAYMENT_SERVICE_TOKEN`, `PAYMENT_WEBHOOK_SECRET` and
+  `PAYMENT_BASE_URL`;
+- six new Vault keys, `.env.payment` and `.env.aitesters-payment`, the image
+  gate, verification, Prometheus job `spring_payment_micrometer`, a public
+  probe, a `CriticalContainerMissing` rule, the deployment silence, the
+  aitesters reset and the coordinated-upgrade stop list (see
+  [ANSIBLE.md](ANSIBLE.md#payment-service-secrets-and-image-gate)).
+
+Rollback: backend 3.14.1's Flyway does not know V10 to V15 and would refuse
+the migrated schema, so a rollback restores the encrypted pre-deploy backup
+taken by the backend upgrade (`make ansible-deploy-backend-upgrade`) together
+with the 3.14.1 / 1.1.1 / 3.11.0 references and without the payment
+services; data written after the upgrade is lost.
 
 ## Warehouse definition in Swagger UI: backend 3.14.1, warehouse-service 1.1.1 — 10 November 2026
 
@@ -527,13 +583,17 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
+Commerce wave 3, released 11 November 2026:
+
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.13.0@sha256:3cd23cef97589733eef13ad8372cc2454b6702f7d8286b9e6409cb73a470e8d4` |
-| Frontend | `slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0` |
-| Consumer | `slawekradzyminski/consumer:3.5.0@sha256:c21c33b73fe6fbd4943dc543ecd2688fd7434517bc2a1d259e9deb075a1863d0` |
+| Backend | `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` |
+| Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
+| Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.0.0@sha256:9fb2c27b9706072a95f7eef1445ce2bc1c14cab8f0dc4a21f025c8f1c3e669e9` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` |
+| Payment service | `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` |
+
 ## Backend 3.9.1 traffic preview patch
 
 Backend [PR #76](https://github.com/slawekradzyminski/test-secure-backend/pull/76)
@@ -679,11 +739,13 @@ Rollback backend reference: `slawekradzyminski/backend:3.7.16@sha256:71cd8913a27
 
 ## LocalStack compatibility gate
 
-The production compatibility set is the four published first-party services
-above. `warehouse-service` becomes the fifth when its first release is pinned;
-until then the server deployment refuses to run (see `docs/ANSIBLE.md`). When
-pinning it, use the same reference in the lightweight, full and server
-profiles, add it to `PRODUCTION_SERVICES` in `scripts/verify-release-images.py`,
+The production compatibility set is the six first-party services above
+(`PRODUCTION_SERVICES` in `scripts/verify-release-images.py`).
+`payment-service` is listed but not yet published: the server profile carries
+the `PENDING_PAYMENT_SERVICE_DIGEST` placeholder, the verification scripts
+report it explicitly, and the server deployment refuses to run (see
+`docs/ANSIBLE.md`). When pinning it, use the same reference in the lightweight,
+full and server profiles (`payment-service` and `aitesters-payment-service`)
 and replace the table row above with the immutable reference.
 The main and `aitesters` variants do not have separate application release
 lines: `aitesters-backend` must use the exact current backend reference and
@@ -694,9 +756,16 @@ Previous application releases remain rollback references only.
 `scripts/verify-release-images.py` checks that:
 
 - each production service uses a `tag@sha256` reference;
-- full and server agree on backend, frontend, and consumer releases;
-- lightweight and server agree on backend, frontend, and model-mock releases;
-- the server's `aitesters` services reuse the exact backend and frontend releases;
+- no profile still uses the `PENDING_PAYMENT_SERVICE_DIGEST` placeholder;
+- full and server agree on backend, frontend, consumer, warehouse-service and
+  payment-service releases;
+- lightweight and server agree on backend, frontend, model-mock,
+  warehouse-service and payment-service releases;
+- the server's `aitesters` services reuse the exact backend, frontend,
+  warehouse-service and payment-service releases;
+- each warehouse- and payment-service uses its own database role, env file,
+  backend and gateway upstream on its site, and both gateways declare the
+  payment and tracking routes in every server block;
 - the model-mock override agrees with the server model-mock release;
 - this document records the exact selected references;
 - with `--remote`, every manifest exists and contains both `linux/amd64` and `linux/arm64`.
@@ -723,6 +792,17 @@ PostgreSQL restore tool. Locally built `:local` images are the only exception.
    `python3 scripts/verify-release-images.py --remote`.
 8. Run the affected direct-service, gateway, lightweight, and full gates.
 9. Merge the LocalStack release PR, create an encrypted production backup when stateful services are affected, and deploy through Ansible.
+
+For a release that spans several repositories (such as commerce wave 3),
+publish in dependency order and pin everything in one LocalStack change:
+
+1. backend (internal API and payment result endpoint first, since both
+   services call it), then warehouse-service and payment-service, then the
+   frontend; the consumer is unchanged;
+2. add any new Vault keys before the deployment (the `app` role refuses to
+   deploy without them);
+3. deploy with `make ansible-deploy-backend-upgrade` when the backend adds
+   migrations, then run the unchanged course suite (`l20`) against the result.
 
 An application release does not require rebuilding unchanged applications. It does require retaining their known-good immutable references in the reviewed compatibility set. Backward compatibility is maintained for persisted data and external contracts where required; the deployment does not keep stale application images running as compatibility variants.
 

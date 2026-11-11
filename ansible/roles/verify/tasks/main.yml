@@ -89,7 +89,7 @@
   loop_control:
     label: "{{ item.item }}"
 
-- name: Verify the warehouse database roles cannot read backend tables
+- name: Verify the warehouse and payment database roles cannot read backend tables
   ansible.builtin.command:
     argv:
       - docker
@@ -106,23 +106,40 @@
       - --no-align
       - >-
         --command=SELECT
-        (SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname = 'warehouse') || ' '
-        || has_table_privilege('warehouse', 'public.orders', 'SELECT')::text || ' '
-        || has_table_privilege('warehouse', 'public.app_user', 'SELECT')::text || ' '
-        || has_schema_privilege('warehouse', 'public', 'CREATE')::text
+        (SELECT nspowner::regrole::text FROM pg_namespace WHERE nspname = '{{ item.role }}') || ' '
+        || has_table_privilege('{{ item.role }}', 'public.orders', 'SELECT')::text || ' '
+        || has_table_privilege('{{ item.role }}', 'public.app_user', 'SELECT')::text || ' '
+        || has_schema_privilege('{{ item.role }}', 'public', 'CREATE')::text || ' '
+        || has_schema_privilege('{{ item.role }}', '{{ item.other }}', 'USAGE')::text
     chdir: "{{ app_dir }}"
   loop:
     - service: postgres
       superuser: postgres
       database: testdb
+      role: warehouse
+      other: payment
     - service: aitesters-postgres
       superuser: aitesters
       database: aitesters
+      role: warehouse
+      other: payment
+    - service: postgres
+      superuser: postgres
+      database: testdb
+      role: payment
+      other: warehouse
+    - service: aitesters-postgres
+      superuser: aitesters
+      database: aitesters
+      role: payment
+      other: warehouse
   loop_control:
-    label: "{{ item.service }}"
-  register: verify_warehouse_role_isolation
+    label: "{{ item.service }} {{ item.role }}"
+  register: verify_service_role_isolation
   changed_when: false
-  failed_when: verify_warehouse_role_isolation.stdout != 'warehouse false false false'
+  # Each role owns its schema and can neither read the backend's tables, create
+  # objects in public, nor use the other service's schema.
+  failed_when: verify_service_role_isolation.stdout != item.role ~ ' false false false false'
 
 - name: Read running production services
   ansible.builtin.command:
@@ -394,6 +411,55 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify the direct payment-service routes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop:
+    - http://payment-service:4004/actuator/health
+    - http://payment-service:4004/v3/api-docs
+    - http://aitesters-payment-service:4004/actuator/health
+    - http://aitesters-payment-service:4004/v3/api-docs
+  register: verify_payment_direct
+  changed_when: false
+  until: verify_payment_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify the direct docs wiki route
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - http://docs/docs/
+    chdir: "{{ app_dir }}"
+  register: verify_docs_direct
+  changed_when: false
+  until: verify_docs_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Read active Prometheus targets
   ansible.builtin.command:
     argv:
@@ -415,6 +481,7 @@
       - spring_backend_micrometer
       - spring_consumer_micrometer
       - spring_warehouse_micrometer
+      - spring_payment_micrometer
       - node
       - cadvisor
       - alertmanager
@@ -455,6 +522,7 @@
     - spring_backend_micrometer
     - spring_consumer_micrometer
     - spring_warehouse_micrometer
+    - spring_payment_micrometer
     - node
     - cadvisor
     - alertmanager
@@ -584,7 +652,7 @@
   changed_when: false
   until:
     - public_probe_response.rc == 0
-    - ((public_probe_response.stdout | from_json).data.result | length) == 3
+    - ((public_probe_response.stdout | from_json).data.result | length) == 4
     - >-
       (
         (public_probe_response.stdout | from_json).data.result
@@ -660,7 +728,7 @@
     alertmanager_secret_permissions.rc != 0
     or alertmanager_secret_permissions.stdout != "400:65534:65534"
 
-# GraalVM native images (backends, consumer, warehouse-services) report an
+# GraalVM native images (backends, consumer, warehouse- and payment-services) report an
 # unknown (-1) heap maximum, so their bound is checked on the process arguments.
 - name: Read native-image runtime arguments
   ansible.builtin.shell:
@@ -674,6 +742,8 @@
     - consumer
     - warehouse-service
     - aitesters-warehouse-service
+    - payment-service
+    - aitesters-payment-service
   register: native_runtime_args
   changed_when: false
 
@@ -693,6 +763,8 @@
       consumer: -Xmx64m
       warehouse-service: -Xmx64m
       aitesters-warehouse-service: -Xmx64m
+      payment-service: -Xmx64m
+      aitesters-payment-service: -Xmx64m
 
 - name: Verify the production resource dashboard is provisioned
   ansible.builtin.command:
@@ -791,7 +863,7 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
-- name: Verify aitesters warehouse-service routes through gateway host routing
+- name: Verify aitesters warehouse-service and payment-service routes through gateway host routing
   ansible.builtin.uri:
     url: "http://127.0.0.1{{ item.path }}"
     headers:
@@ -800,6 +872,12 @@
   loop:
     - path: /warehouse/v3/api-docs
       status: 200
+    - path: /payment/v3/api-docs
+      status: 200
+    - path: /docs/
+      status: 200
+    - path: /api/v1/tracking/VERIFY-UNKNOWN-TRACKING
+      status: 404
     - path: /internal/v1/orders/1
       status: 404
   loop_control:

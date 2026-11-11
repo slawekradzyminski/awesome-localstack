@@ -18,6 +18,8 @@ COMPOSE_PROFILES = (
     ("lightweight-docker-compose.yml",),
     ("docker-compose.server.yml",),
 )
+# Marker used in docker-compose.server.yml until payment-service is published.
+PENDING_DIGEST_MARKER = "PENDING_PAYMENT_SERVICE_DIGEST"
 
 
 def resolved_services(files: tuple[str, ...]) -> dict[str, dict[str, object]]:
@@ -43,21 +45,30 @@ def main() -> int:
         for service, config in resolved_services(files).items():
             image = str(config.get("image", ""))
             local_build = bool(config.get("build")) and image.endswith(":local")
-            if not local_build and not PINNED_IMAGE.fullmatch(image):
+            if PENDING_DIGEST_MARKER in image or (
+                    image.startswith("slawekradzyminski/payment-service:") and "@" not in image):
+                failures.append(
+                    f"{profile} service {service} uses the pending payment-service release "
+                    f"{image}: replace it with the published tag@sha256 manifest digest "
+                    f"(placeholder {PENDING_DIGEST_MARKER} on the server profile)"
+                )
+            elif not local_build and not PINNED_IMAGE.fullmatch(image):
                 failures.append(
                     f"{profile} service {service} is not pinned by digest: {image}"
                 )
 
-    dockerfile = ROOT / "Dockerfile"
-    for line_number, line in enumerate(dockerfile.read_text().splitlines(), start=1):
-        if not line.startswith("FROM "):
-            continue
-        tokens = line.split()
-        image = tokens[1]
-        if image.startswith("--platform="):
-            image = tokens[2]
-        if not PINNED_IMAGE.fullmatch(image):
-            failures.append(f"Dockerfile:{line_number} is not pinned by digest: {image}")
+    # Locally built images (Jenkins, the docs wiki) must still pin their bases.
+    for dockerfile in (ROOT / "Dockerfile", ROOT / "docs-site" / "Dockerfile"):
+        name = dockerfile.relative_to(ROOT)
+        for line_number, line in enumerate(dockerfile.read_text().splitlines(), start=1):
+            if not line.startswith("FROM "):
+                continue
+            tokens = line.split()
+            image = tokens[1]
+            if image.startswith("--platform="):
+                image = tokens[2]
+            if not PINNED_IMAGE.fullmatch(image):
+                failures.append(f"{name}:{line_number} is not pinned by digest: {image}")
 
     workflow_image = re.compile(r"^\s+image:\s+(\S+)\s*$")
     for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
@@ -82,7 +93,7 @@ def main() -> int:
             print(f"ERROR: {failure}", file=sys.stderr)
         return 1
 
-    print("Verified immutable image pins for Compose, CI, Dockerfile, and restore tooling")
+    print("Verified immutable image pins for Compose, CI, Dockerfiles, and restore tooling")
     return 0
 
 

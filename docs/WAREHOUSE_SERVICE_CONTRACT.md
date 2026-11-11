@@ -186,3 +186,44 @@ becomes 503 `{message: "Backend unavailable"}`.
 - The consumer runs the GraalVM native image (3.5.0+): `command: ["-Xmx64m"]`,
   `mem_limit: 160m`, no JVM blocklist mount (the blocklist is baked in at build
   time and the distroless runtime has no JDK).
+
+## Addendum: shipment tracking (warehouse-service 1.2.0)
+
+warehouse-service 1.2.0 simulates a parcel carrier (Flyway V3 adds
+`shipments.simulated` and `tracking_events`).
+
+- `ShipShipmentDto.trackingNumber` is optional. Omitted, the shipment uses the
+  simulated carrier and gets a generated tracking number that matches the
+  carrier's format (`simulated = true`); supplied, the manual flow is unchanged.
+- Tracking statuses: `LABEL_CREATED`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`,
+  `DELIVERY_FAILED`, `DELIVERED`.
+- A scheduler (`warehouse.carrier.enabled`, default `true`;
+  `warehouse.carrier.step-interval`, default `PT2M` (`PT30S` in the `local`
+  and `demo` profiles), environment `WAREHOUSE_CARRIER_STEP_INTERVAL`) moves every simulated `SHIPPED` shipment
+  one step per interval. Deterministic failure: when
+  `abs(trackingNumber.hashCode()) % 5 == 0` the first `OUT_FOR_DELIVERY` attempt
+  becomes `DELIVERY_FAILED` and the next step tries again. `DELIVERED` reuses
+  the existing deliver path (backend mirror plus the `ORDER_DELIVERED` email).
+- New outbox templates `SHIPMENT_OUT_FOR_DELIVERY` and
+  `SHIPMENT_DELIVERY_FAILED` (properties `orderId`, `carrier`, `trackingNumber`);
+  backend 3.15.0 adds them to its allowlist and renderer.
+
+| Method and path | Access | Result |
+| --- | --- | --- |
+| `GET /api/v1/orders/{id}/shipment/tracking` | owner or `ROLE_ADMIN` | `TrackingDto` |
+| `GET /api/v1/tracking/{trackingNumber}` | public, no token | `TrackingDto` without `orderId`; 404 for an unknown number |
+| `POST /api/v1/warehouse/shipments/{id}/carrier/advance` | `ROLE_WAREHOUSE` or `ROLE_ADMIN` | one step forward; 409 unless a simulated `SHIPPED` shipment |
+
+```text
+TrackingDto { shipmentId, orderId, carrier, trackingNumber, simulated,
+              currentStatus, estimatedDelivery,
+              events [{status, location, description, occurredAt}] }
+```
+
+Gateway changes (every application gateway server block): the order regex
+becomes `~ ^/api/v1/orders/\d+/(shipment|shipment/tracking|returns)$` and the
+new prefix `/api/v1/tracking/` goes to warehouse-service. Deployment verifies
+that `/api/v1/tracking/<unknown>` answers 404 through the gateway (the backend
+would answer 401 without a token). The default two-minute step interval is
+used in every profile; trainers use the `carrier/advance` endpoint to skip
+ahead.

@@ -22,7 +22,8 @@ def main():
                     "      - pull", "      - --services", "'stop'",
                     "intersect(backend_upgrade_deployed_services.stdout_lines)",
                     "      - backend\n", "      - aitesters-backend", "      - warehouse-service",
-                    "      - aitesters-warehouse-service",
+                    "      - aitesters-warehouse-service", "      - payment-service",
+                    "      - aitesters-payment-service",
                     "awesome-postgres-backup backend-upgrade-quiesced"])
     assert "lookup('file', repo_root ~ '/' ~ app_compose_src)" in tasks
     assert "'--timeout', '60'" in tasks

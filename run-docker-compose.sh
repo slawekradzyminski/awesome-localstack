@@ -75,6 +75,9 @@ urls=(
     "http://localhost:4002/actuator/prometheus"
     "http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration"
     "http://localhost:8081/images/applewatch.png"
+    "http://localhost:8081/warehouse/v3/api-docs"
+    "http://localhost:8081/payment/v3/api-docs"
+    "http://localhost:8081/docs/"
 )
 names=(
     "Backend"
@@ -86,6 +89,9 @@ names=(
     "Email consumer"
     "Keycloak"
     "Gateway-served product image"
+    "Warehouse service OpenAPI"
+    "Payment service OpenAPI"
+    "Documentation wiki"
 )
 # Loop through the URLs and wait for each one
 for i in "${!urls[@]}"; do

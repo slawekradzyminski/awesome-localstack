@@ -1,0 +1,46 @@
+/* Diagrams open full size on click (diagram-zoom.js). */
+.md-typeset .mermaid {
+  cursor: zoom-in;
+}
+
+.md-typeset .mermaid::after {
+  content: "Click to enlarge";
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--md-default-fg-color--lighter);
+  font-size: 0.6rem;
+  text-align: right;
+}
+
+.diagram-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: 3rem 1rem 1rem;
+  background: var(--md-default-bg-color);
+  cursor: zoom-out;
+}
+
+.diagram-zoom__canvas {
+  width: max-content;
+  min-width: 100%;
+  cursor: default;
+}
+
+.diagram-zoom__canvas svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.diagram-zoom__close {
+  position: fixed;
+  top: 0.5rem;
+  right: 1rem;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--md-default-fg-color);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}

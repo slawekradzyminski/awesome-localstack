@@ -357,6 +357,7 @@ The critical-service list should include at least:
 - `backend`;
 - `consumer`;
 - `warehouse-service`;
+- `payment-service`;
 - `gateway`;
 - `edge`;
 - `postgres`;
@@ -421,6 +422,7 @@ must be reviewed after controlled load tests or material traffic growth:
 | `consumer` | `-Xmx64m` runtime argument (GraalVM native image since 3.5.0, ~70 MiB RSS measured) | 160 MiB |
 | `aitesters-backend` | `-Xmx256m` runtime argument (GraalVM native image since 3.13.0) | 448 MiB |
 | `warehouse-service`, `aitesters-warehouse-service` | `-Xmx64m` runtime argument (GraalVM native image, ~58 MiB RSS measured) | 160 MiB each |
+| `payment-service`, `aitesters-payment-service` | `-Xmx64m` runtime argument (GraalVM native image, not yet measured in production) | 160 MiB each |
 | `aitesters-postgres` | Not applicable (disk-backed sandbox database, `shared_buffers=32MB`) | 160 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
 | `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
@@ -492,7 +494,14 @@ The on-VPS Blackbox Exporter monitors:
 
 - `https://awesome.byst.re/login`;
 - `https://awesome.byst.re/v3/api-docs`;
-- `https://awesome.byst.re/warehouse/v3/api-docs`.
+- `https://awesome.byst.re/warehouse/v3/api-docs`;
+- `https://awesome.byst.re/payment/v3/api-docs`.
+
+payment-service is also scraped as `spring_payment_micrometer` and has its own
+`CriticalContainerMissing` rule; the deployment silence covers its scrape
+target while the stack converges. The two payment-services add up to 320 MiB of
+container limits (about 120 MiB expected working set); see the memory budget
+in [ANSIBLE.md](ANSIBLE.md#memory-budget).
 
 The VPS should eventually send a heartbeat every minute to a separate external
 endpoint. Missing heartbeats for five minutes must generate an off-server

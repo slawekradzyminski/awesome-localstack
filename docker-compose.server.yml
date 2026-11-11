@@ -8,12 +8,13 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.14.1@sha256:cd1a12810a1b4f82eb23b3519362add3f20704e2652ebc3710f1a5d88e5712e4
+    image: slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
     env_file:
-      # Supplies JWT_SIGNING_KEY and WAREHOUSE_SERVICE_TOKEN from Ansible Vault.
+      # Supplies JWT_SIGNING_KEY, WAREHOUSE_SERVICE_TOKEN, PAYMENT_SERVICE_TOKEN and
+      # PAYMENT_WEBHOOK_SECRET from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -51,6 +52,7 @@ services:
       JWT_REQUIRE_SECURE_KEY: "true"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://awesome.byst.re,https://awesome.byst.re,http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
+      PAYMENT_BASE_URL: http://payment-service:4004
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +71,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.1.1@sha256:7b1202bea1d6994c8046c5ddef967387907bff01ce5ae8476f01acfa2284c9cf
+    image: slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7
     restart: unless-stopped
     hostname: warehouse-service
     logging: *default-logging
@@ -115,7 +117,7 @@ services:
   aitesters-warehouse-service:
     # The sandbox's own warehouse-service, paired with aitesters-backend and sharing
     # its database (schema warehouse), like warehouse-service on the stable site.
-    image: slawekradzyminski/warehouse-service:1.1.1@sha256:7b1202bea1d6994c8046c5ddef967387907bff01ce5ae8476f01acfa2284c9cf
+    image: slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7
     restart: unless-stopped
     hostname: aitesters-warehouse-service
     logging: *default-logging
@@ -159,15 +161,108 @@ services:
     networks:
       - my-private-ntwk
 
+  payment-service:
+    image: slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed
+    restart: unless-stopped
+    hostname: payment-service
+    logging: *default-logging
+    env_file:
+      # Only PAYMENT_SERVICE_TOKEN, PAYMENT_WEBHOOK_SECRET and the payment role's
+      # SPRING_DATASOURCE_PASSWORD, rendered by Ansible from Vault. Access tokens are
+      # verified with the backend's JWKS.
+      - path: .env.payment
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=payment
+      SPRING_DATASOURCE_USERNAME: payment
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      BACKEND_BASE_URL: http://backend:4001
+    depends_on:
+      postgres-roles:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+    expose:
+      - "4004"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4004;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    command: ["-Xmx64m"]
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
+  aitesters-payment-service:
+    # The sandbox's own payment-service, paired with aitesters-backend and sharing
+    # its database (schema payment), like payment-service on the stable site.
+    image: slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed
+    restart: unless-stopped
+    hostname: aitesters-payment-service
+    logging: *default-logging
+    env_file:
+      # Only its own service token, webhook secret and the payment role's database
+      # password; tokens are verified with aitesters-backend's JWKS, so stable-site
+      # tokens never match.
+      - path: .env.aitesters-payment
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aitesters-postgres:5432/aitesters?currentSchema=payment
+      SPRING_DATASOURCE_USERNAME: payment
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      BACKEND_BASE_URL: http://aitesters-backend:4001
+    depends_on:
+      aitesters-postgres-roles:
+        condition: service_completed_successfully
+        restart: true
+      aitesters-backend:
+        condition: service_healthy
+        restart: true
+    expose:
+      - "4004"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4004;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    command: ["-Xmx64m"]
+    mem_limit: 160m
+    networks:
+      - my-private-ntwk
+
   postgres-roles:
-    # One-shot: gives warehouse-service its own role, limited to schema warehouse of
-    # testdb (postgres/warehouse-role.sh). Runs before every warehouse-service start.
+    # One-shot: gives warehouse-service and payment-service their own roles, each
+    # limited to its own schema of testdb (postgres/service-roles.sh). Runs before
+    # every warehouse-service and payment-service start.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
-    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
     logging: *default-logging
     env_file:
-      # PGPASSWORD (superuser) and WAREHOUSE_DB_PASSWORD from Ansible Vault.
+      # PGPASSWORD (superuser), WAREHOUSE_DB_PASSWORD and PAYMENT_DB_PASSWORD from Ansible Vault.
       - path: .env.postgres-roles
         required: false
     environment:
@@ -187,7 +282,7 @@ services:
     # The same one-shot for the sandbox database; the nightly reset runs it again
     # after renewing aitesters-postgres.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
-    entrypoint: ["bash", "/scripts/warehouse-role.sh"]
+    entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
     logging: *default-logging
     env_file:
@@ -208,8 +303,9 @@ services:
       - my-private-ntwk
 
   aitesters-postgres:
-    # The sandbox database: aitesters-backend (database aitesters) and its warehouse
-    # (schema warehouse), mirroring the stable site. Disk-backed through the image's
+    # The sandbox database: aitesters-backend (database aitesters), its warehouse
+    # (schema warehouse) and its payment-service (schema payment), mirroring the
+    # stable site. Disk-backed through the image's
     # anonymous volume; the nightly reset renews it (--renew-anon-volumes).
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: unless-stopped
@@ -244,7 +340,7 @@ services:
     networks:
       - my-private-ntwk
   frontend:
-    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
+    image: slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -254,7 +350,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.14.1@sha256:cd1a12810a1b4f82eb23b3519362add3f20704e2652ebc3710f1a5d88e5712e4
+    image: slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -297,6 +393,7 @@ services:
       SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "200"
       SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "200"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://aitesters.byst.re,https://aitesters.byst.re,http://aitesters.awesome.byst.re,https://aitesters.awesome.byst.re
+      PAYMENT_BASE_URL: http://aitesters-payment-service:4004
     depends_on:
       aitesters-postgres:
         condition: service_healthy
@@ -313,12 +410,38 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.11.0@sha256:ee573177bb35f0f32fc152b85c004793d2325c08ad70d35e0c105be8df21b7f0
+    image: slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e
     restart: unless-stopped
     logging: *default-logging
     expose:
       - "80"
     mem_limit: 64m
+    networks:
+      - my-private-ntwk
+
+  docs:
+    # Documentation wiki (MkDocs) served at /docs/ through the gateway. Built
+    # from docs-site/ with the repository's docs/ as a second build context;
+    # the gateway starts without it (variable upstream).
+    image: awesome-localstack/docs:local
+    # Never pulled: the name is local-only, so a registry image of the same
+    # name can never replace the build.
+    pull_policy: build
+    build:
+      context: ./docs-site
+      additional_contexts:
+        repo-docs: ./docs
+    restart: unless-stopped
+    expose:
+      - "80"
+    mem_limit: 32m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/docs/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging: *default-logging
     networks:
       - my-private-ntwk
 

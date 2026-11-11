@@ -78,6 +78,9 @@ app_copy_paths:
   - blackbox
   - images
   - branding
+  # Sources of the docs wiki image, built on the server (docker compose build docs).
+  - docs
+  - docs-site
 
 prometheus_server_config_files:
   - prometheus/prometheus.server.yml
@@ -110,6 +113,8 @@ app_runtime_env:
   APP_MFA_ENCRYPTION_SALT: "{{ app_mfa_encryption_salt | default('', true) }}"
   JWT_SIGNING_KEY: "{{ jwt_signing_key | default('', true) }}"
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
+  PAYMENT_SERVICE_TOKEN: "{{ payment_service_token | default('', true) }}"
+  PAYMENT_WEBHOOK_SECRET: "{{ payment_webhook_secret | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
@@ -128,15 +133,34 @@ aitesters_warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
 
-# One-shot postgres-roles services (postgres/warehouse-role.sh): the superuser
-# password and the warehouse role password for each database.
+# payment-service receives only the payment service token (shared with the
+# backend, which uses it for refund calls), the webhook secret that signs its
+# result notifications to the backend, and the password of its own `payment`
+# database role, which owns only the `payment` schema of the backend database.
+# Like warehouse-service it verifies access tokens with the backend's JWKS.
+payment_runtime_env:
+  PAYMENT_SERVICE_TOKEN: "{{ payment_service_token | default('', true) }}"
+  PAYMENT_WEBHOOK_SECRET: "{{ payment_webhook_secret | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ payment_postgres_password | default('', true) }}"
+
+# The aitesters sandbox has its own payment-service with its own token, webhook
+# secret and `payment` role on aitesters-postgres.
+aitesters_payment_runtime_env:
+  PAYMENT_SERVICE_TOKEN: "{{ aitesters_payment_service_token | default('', true) }}"
+  PAYMENT_WEBHOOK_SECRET: "{{ aitesters_payment_webhook_secret | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_payment_postgres_password | default('', true) }}"
+
+# One-shot postgres-roles services (postgres/service-roles.sh): the superuser
+# password and the warehouse and payment role passwords for each database.
 postgres_roles_env:
   PGPASSWORD: "{{ postgres_password | default('', true) }}"
   WAREHOUSE_DB_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
+  PAYMENT_DB_PASSWORD: "{{ payment_postgres_password | default('', true) }}"
 
 aitesters_postgres_roles_env:
   PGPASSWORD: "{{ aitesters_postgres_password | default('', true) }}"
   WAREHOUSE_DB_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+  PAYMENT_DB_PASSWORD: "{{ aitesters_payment_postgres_password | default('', true) }}"
 
 # Compose services that run once and exit; verification expects them exited 0
 # instead of running.
@@ -148,6 +172,8 @@ verify_oneshot_services:
 # checkout). Deployments stop until docker-compose.server.yml pins a published
 # warehouse-service digest; override only for a deliberate pre-built local image.
 warehouse_service_allow_unpinned_image: false
+# The same gate for payment-service (and aitesters-payment-service).
+payment_service_allow_unpinned_image: false
 
 verify_urls:
   - url: http://127.0.0.1/login
@@ -158,6 +184,15 @@ verify_urls:
     status_code: 200
   - url: http://127.0.0.1/warehouse/v3/api-docs
     status_code: 200
+  - url: http://127.0.0.1/payment/v3/api-docs
+    status_code: 200
+  # Documentation wiki (docs container behind the gateway).
+  - url: http://127.0.0.1/docs/
+    status_code: 200
+  # Public tracking reaches warehouse-service, which answers 404 for an unknown
+  # tracking number (the backend would answer 401 without a token).
+  - url: http://127.0.0.1/api/v1/tracking/VERIFY-UNKNOWN-TRACKING
+    status_code: 404
   - url: http://127.0.0.1/internal/v1/orders/1
     status_code: 404
   - url: http://127.0.0.1/mailpit/api/v1/messages

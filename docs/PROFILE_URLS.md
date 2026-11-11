@@ -25,75 +25,94 @@ That gateway is the intended public surface for:
 
 - frontend pages
 - backend API under `/api/v1/...`
-- warehouse-service API under its `/api/v1/...` paths (see
-  [Warehouse-service routes](#warehouse-service-routes))
+- warehouse-service API under its `/api/v1/...` paths, including shipment
+  tracking (see [Warehouse-service routes](#warehouse-service-routes))
+- payment-service API under its `/api/v1/...` paths (see
+  [Payment-service routes](#payment-service-routes))
 - Swagger UI under `/swagger-ui/...`, with a definition dropdown for the backend
-  (JSON and YAML) and "Warehouse service"
-- OpenAPI under `/v3/api-docs` (backend) and `/warehouse/v3/api-docs`
-  (warehouse-service)
+  (JSON and YAML), "Warehouse service" and "Payment service"
+- OpenAPI under `/v3/api-docs` (backend), `/warehouse/v3/api-docs`
+  (warehouse-service) and `/payment/v3/api-docs` (payment-service)
 - actuator under `/actuator/...`
 - traffic WebSocket under `/api/v1/ws-traffic`
 - static images under `/images/...`
 
 ## Mermaid Diagrams
 
+In every profile warehouse-service and payment-service also call the backend's
+`/internal/v1` API; those calls are left out of the diagrams to keep them readable.
+
 ### Lightweight
 
 ```mermaid
-flowchart LR
+flowchart TB
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003, PostgreSQL]
-    W -->|/internal/v1| B
+    G -->|warehouse + tracking paths| W[Warehouse Service<br/>internal 4003]
+    G -->|payment paths| PS[Payment Service<br/>internal 4004]
     B --> O[Ollama Mock 11434]
+    B --> DB[(PostgreSQL, tmpfs)]
+    W --> DB
+    PS --> DB
 ```
 
 ### Full
 
 ```mermaid
-flowchart LR
+flowchart TB
     U[Browser] --> G[Gateway 8081<br/>serves frontend + /images]
     G --> F[Frontend]
     G --> B[Backend]
-    G -->|warehouse paths| W[Warehouse Service<br/>internal 4003]
-    W -->|/internal/v1| B
-    W --> DB
+    G -->|warehouse + tracking paths| W[Warehouse Service<br/>internal 4003]
+    G -->|payment paths| PS[Payment Service<br/>internal 4004]
     B --> DB[(Postgres 5432)]
-    B --> MQ[ActiveMQ 8161/61616/5672]
-    MQ --> C[Consumer 4002]
-    C --> M[Mailpit 8025/1025]
+    W --> DB
+    PS --> DB
+    B --> MQ[ActiveMQ 8161/61616/5672] --> C[Consumer 4002] --> M[Mailpit 8025/1025]
     B --> O[Ollama 11434]
-    P[Prometheus 9090] --> B
-    P --> C
-    P --> W
-    GR[Grafana 3000] --> P
-    GR --> I[InfluxDB 8086]
+```
+
+Monitoring in the full profile:
+
+```mermaid
+flowchart TB
+    GR[Grafana 3000] --> P[Prometheus 9090<br/>scrapes backend, consumer,<br/>warehouse and payment]
+    GR --> I[InfluxDB 8086<br/>k6 results]
 ```
 
 ### Server
 
+`awesome.byst.re`:
+
 ```mermaid
-flowchart LR
-    U[Browser] --> CF[DNS / CDN / TLS edge]
-    CF --> G[Gateway 80<br/>host-based routing]
-
-    G -->|awesome.byst.re| F[Frontend]
-    G -->|awesome.byst.re /api| B[Backend<br/>docker,server profile]
-    G -->|awesome.byst.re warehouse paths| W[Warehouse Service<br/>internal, 160 MiB]
-    W -->|/internal/v1| B
-    W -->|schema warehouse| DB
+flowchart TB
+    U[Browser] --> CF[DNS / CDN / TLS edge] --> G[Gateway<br/>host awesome.byst.re]
+    G -->|/| F[Frontend]
+    G -->|/api| B[Backend<br/>docker,server profile]
+    G -->|warehouse paths| W[Warehouse Service<br/>internal, 160 MiB]
+    G -->|payment paths| PS[Payment Service<br/>internal, 160 MiB]
     B --> DB[(Postgres internal)]
-    B --> MQ[ActiveMQ internal]
-    MQ --> C[Consumer internal]
-    C --> MH[Mailpit private]
+    W -->|schema warehouse| DB
+    PS -->|schema payment| DB
+    B --> MQ[ActiveMQ internal] --> C[Consumer internal] --> MH[Mailpit private]
     B --> O[Ollama Mock internal]
+```
 
-    G -->|aitesters.byst.re| AF[Aitesters Frontend]
-    G -->|aitesters.byst.re /api| AB[Aitesters Backend<br/>local profile]
-    AB --> APG[(aitesters-postgres)]
+`aitesters.byst.re` (same gateway, separate sandbox services):
+
+```mermaid
+flowchart TB
+    U[Browser] --> CF[DNS / CDN / TLS edge] --> G[Gateway<br/>host aitesters.byst.re]
+    G -->|/| AF[Aitesters Frontend]
+    G -->|/api| AB[Aitesters Backend<br/>aitesters profile]
+    G -->|warehouse paths| AW[Aitesters Warehouse Service]
+    G -->|payment paths| APS[Aitesters Payment Service]
     AB --> LO[Local email outbox]
-    AB --> O
+    AB --> O[Ollama Mock, shared]
+    AB --> APG[(aitesters-postgres)]
+    AW -->|schema warehouse| APG
+    APS -->|schema payment| APG
 ```
 
 ## Full Profile
@@ -119,9 +138,11 @@ docker compose -f docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML, "Warehouse service" and "Payment service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
+- payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
+- public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
 - Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
@@ -149,6 +170,7 @@ What is internal only:
 
 - backend raw port `4001`
 - warehouse-service raw port `4003`
+- payment-service raw port `4004`
 - frontend raw port `80`
 
 ## Lightweight Profile
@@ -172,9 +194,11 @@ docker compose -f lightweight-docker-compose.yml down
 Recommended app URLs:
 
 - frontend: `http://localhost:8081/login`
-- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
+- Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML, "Warehouse service" and "Payment service")
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
+- payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
+- public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
 - Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
@@ -228,6 +252,7 @@ What is internal only:
 
 - backend raw port `4001`
 - warehouse-service raw port `4003`
+- payment-service raw port `4004`
 - frontend raw port `80`
 
 ## Server Profile
@@ -253,9 +278,11 @@ Recommended public URLs:
 Stable public playground:
 
 - frontend: `https://awesome.byst.re/login`
-- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
+- Swagger UI: `https://awesome.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML, "Warehouse service" and "Payment service")
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
+- payment-service OpenAPI JSON: `https://awesome.byst.re/payment/v3/api-docs`
+- public parcel tracking: `https://awesome.byst.re/api/v1/tracking/{trackingNumber}`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - authenticated email events: `https://awesome.byst.re/api/v1/users/me/email-events`
 - images through gateway: `https://awesome.byst.re/images/iphone.png`
@@ -263,8 +290,10 @@ Stable public playground:
 Disposable API/UI testing sandbox:
 
 - frontend: `https://aitesters.byst.re/login`
-- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML and "Warehouse service")
+- Swagger UI: `https://aitesters.byst.re/swagger-ui/index.html` (definitions: backend JSON, backend YAML, "Warehouse service" and "Payment service")
 - OpenAPI JSON: `https://aitesters.byst.re/v3/api-docs`
+- warehouse-service OpenAPI JSON: `https://aitesters.byst.re/warehouse/v3/api-docs`
+- payment-service OpenAPI JSON: `https://aitesters.byst.re/payment/v3/api-docs`
 - sign in API: `https://aitesters.byst.re/api/v1/users/signin`
 - local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
 - images through gateway: `https://aitesters.byst.re/images/iphone.png`
@@ -314,6 +343,7 @@ Not published on the host:
 - consumer `4002`
 - backend `4001`
 - warehouse-service `4003`
+- payment-service `4004`
 - Prometheus `9090`
 - Alertmanager `9093`
 - Blackbox Exporter `9115`
@@ -322,6 +352,8 @@ Not published on the host:
 - frontend `80`
 - aitesters-backend `4001`
 - aitesters-frontend `80`
+- aitesters-warehouse-service `4003`
+- aitesters-payment-service `4004`
 - ollama-mock `11434`
 
 Special behavior:
@@ -336,14 +368,14 @@ Special behavior:
 - `aitesters.byst.re` exposes local/test helpers such as `/api/v1/local/email/outbox` by design
 - `aitesters.byst.re` is reset daily by the `aitesters-reset.timer` systemd timer
 - Node Exporter and cAdvisor provide private host and container metrics to Prometheus
-- Blackbox Exporter probes the public login, backend OpenAPI and
-  warehouse-service OpenAPI URLs every 30 seconds through public DNS and
-  validated TLS
-- warehouse fulfilment, returns and purchasing exist only on `awesome.byst.re`;
-  `aitesters.byst.re` has no warehouse-service, so those paths fall through to
-  the sandbox backend there
+- Blackbox Exporter probes the public login, backend OpenAPI,
+  warehouse-service OpenAPI and payment-service OpenAPI URLs every 30 seconds
+  through public DNS and validated TLS
+- `aitesters.byst.re` has its own `aitesters-warehouse-service` and
+  `aitesters-payment-service` on `aitesters-postgres`, with their own tokens and
+  webhook secret, so sandbox tokens and data never reach the stable site
 - `/internal/` returns `404` on every host; the backend internal API is reachable
-  only from warehouse-service on the Compose network
+  only from warehouse-service and payment-service on the Compose network
 - Prometheus stores metrics in a named volume with 30-day and 5 GB retention ceilings
 - Alertmanager stores silences and notification state in a named volume and
   sends grouped notifications to a Vault-configured Telegram chat; a firing
@@ -362,6 +394,7 @@ profiles) handles:
 
 - `/api/v1/ws-traffic` -> backend
 - [warehouse-service routes](#warehouse-service-routes) -> warehouse-service
+- [payment-service routes](#payment-service-routes) -> payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> backend
 - `/swagger-ui/` -> backend
@@ -378,6 +411,7 @@ For `awesome.byst.re`:
 
 - `/api/v1/ws-traffic` -> backend
 - [warehouse-service routes](#warehouse-service-routes) -> warehouse-service
+- [payment-service routes](#payment-service-routes) -> payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> backend
 - `/swagger-ui/` -> backend
@@ -390,6 +424,8 @@ For `awesome.byst.re`:
 For `aitesters.byst.re`:
 
 - `/api/v1/ws-traffic` -> aitesters-backend
+- [warehouse-service routes](#warehouse-service-routes) -> aitesters-warehouse-service
+- [payment-service routes](#payment-service-routes) -> aitesters-payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> aitesters-backend
 - `/swagger-ui/` -> aitesters-backend
@@ -400,8 +436,9 @@ For `aitesters.byst.re`:
 
 ### Warehouse-service routes
 
-Both application gateways send these paths to `warehouse-service:4003`. They
-take precedence over the generic `/api/v1/` backend route:
+Both application gateways send these paths to `warehouse-service:4003`
+(`aitesters-warehouse-service:4003` for `aitesters.byst.re`). They take
+precedence over the generic `/api/v1/` backend route:
 
 | Gateway location | Example |
 | --- | --- |
@@ -411,13 +448,33 @@ take precedence over the generic `/api/v1/` backend route:
 | `= /api/v1/admin/suppliers`, `/api/v1/admin/suppliers/` | `/api/v1/admin/suppliers/2` |
 | `= /api/v1/admin/purchase-orders`, `/api/v1/admin/purchase-orders/` | `/api/v1/admin/purchase-orders/9/receipts` |
 | `= /api/v1/admin/inventory/reorder-suggestions` | exact path only |
-| `~ ^/api/v1/orders/\d+/(shipment\|returns)$` | `/api/v1/orders/42/shipment` |
+| `~ ^/api/v1/orders/\d+/(shipment\|shipment/tracking\|returns)$` | `/api/v1/orders/42/shipment/tracking` |
+| `/api/v1/tracking/` | `/api/v1/tracking/1Z999AA10123456784` (public, no token) |
 | `^~ /warehouse/v3/api-docs` | rewritten to warehouse-service `/v3/api-docs` |
 
 `/warehouse` and `/warehouse/...` (other than the OpenAPI path) remain frontend
 routes. The gateway addresses warehouse-service through Docker DNS at request
 time, so it starts and keeps serving the backend when warehouse-service is
 absent; warehouse paths then return `502`.
+
+### Payment-service routes
+
+Both application gateways send these paths to `payment-service:4004`
+(`aitesters-payment-service:4004` for `aitesters.byst.re`), through the
+request-time `$payment_upstream` variable, ahead of the generic `/api/v1/`
+backend route:
+
+| Gateway location | Example |
+| --- | --- |
+| `= /api/v1/payments` | `POST /api/v1/payments` (header `Idempotency-Key`) |
+| `/api/v1/payments/` | `POST /api/v1/payments/{id}/3ds`, `GET /api/v1/payments/{id}` |
+| `= /api/v1/admin/payments` | `GET /api/v1/admin/payments?status=FAILED` |
+| `~ ^/api/v1/orders/\d+/payments$` | `GET /api/v1/orders/42/payments` |
+| `^~ /payment/v3/api-docs` | rewritten to payment-service `/v3/api-docs` |
+
+Other `/api/v1/orders/...` paths stay on the backend. Without payment-service
+the payment paths return `502` and everything else keeps working. See
+[PAYMENT_SERVICE_CONTRACT.md](PAYMENT_SERVICE_CONTRACT.md).
 
 ## Verification Commands
 
@@ -427,10 +484,12 @@ Full local:
 curl -i http://localhost:8081/login
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/warehouse/v3/api-docs
+curl -i http://localhost:8081/payment/v3/api-docs
 curl -i http://localhost:8081/internal/v1/orders/1
 curl -i http://localhost:8081/images/iphone.png
 curl -i http://localhost:8025/
 docker compose exec warehouse-service bash -c 'exec 3<>/dev/tcp/127.0.0.1/4003; printf "GET /actuator/health HTTP/1.0\r\n\r\n" >&3; cat <&3'
+docker compose exec payment-service bash -c 'exec 3<>/dev/tcp/127.0.0.1/4004; printf "GET /actuator/health HTTP/1.0\r\n\r\n" >&3; cat <&3'
 ```
 
 The internal URL must return `404`; the other gateway URLs return `200`.
@@ -473,12 +532,15 @@ Server:
 curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/warehouse/v3/api-docs
+curl -i https://awesome.byst.re/payment/v3/api-docs
+curl -i https://awesome.byst.re/api/v1/tracking/UNKNOWN
 curl -i https://awesome.byst.re/internal/v1/orders/1
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
 curl -i https://aitesters.byst.re/warehouse/v3/api-docs
+curl -i https://aitesters.byst.re/payment/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
 curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
@@ -488,6 +550,8 @@ Expected:
 - `awesome.byst.re/login` returns `200`
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/warehouse/v3/api-docs` returns `200`
+- `awesome.byst.re/payment/v3/api-docs` returns `200`
+- `awesome.byst.re/api/v1/tracking/UNKNOWN` returns `404` from warehouse-service (no token needed)
 - `awesome.byst.re/internal/v1/orders/1` returns `404`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
@@ -495,6 +559,7 @@ Expected:
 - `aitesters.byst.re/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`
 - `aitesters.byst.re/warehouse/v3/api-docs` returns `200`
+- `aitesters.byst.re/payment/v3/api-docs` returns `200`
 - `aitesters.byst.re/api/v1/local/email/outbox` returns `401` without a token (an admin JWT and the `X-Local-Outbox-Key` header are required)
 
 Internal-only checks on the VPS:
@@ -505,6 +570,8 @@ docker compose -f docker-compose.server.yml exec gateway curl -i http://backend:
 docker compose -f docker-compose.server.yml exec gateway curl -i http://consumer:4002/actuator/prometheus
 docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/actuator/health
 docker compose -f docker-compose.server.yml exec gateway curl -i http://warehouse-service:4003/v3/api-docs
+docker compose -f docker-compose.server.yml exec gateway curl -i http://payment-service:4004/actuator/health
+docker compose -f docker-compose.server.yml exec gateway curl -i http://payment-service:4004/v3/api-docs
 docker compose -f docker-compose.server.yml exec gateway curl -i http://node-exporter:9100/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://cadvisor:8080/metrics
 docker compose -f docker-compose.server.yml exec gateway curl -i http://prometheus:9090/-/ready

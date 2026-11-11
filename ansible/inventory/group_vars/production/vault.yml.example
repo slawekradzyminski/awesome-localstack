@@ -41,6 +41,19 @@ warehouse_service_token: replace-with-at-least-32-random-bytes
 # The aitesters sandbox: its own warehouse service token and aitesters-postgres password.
 aitesters_warehouse_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
 aitesters_postgres_password: replace-with-at-least-16-random-characters
+# Passwords of the `payment` database roles (schema payment only), distinct from
+# every other database password.
+payment_postgres_password: replace-with-a-third-value-of-at-least-16-characters
+aitesters_payment_postgres_password: replace-with-a-fourth-value-of-at-least-16-characters
+# Shared by the backend and payment-service (X-Service-Token both ways). Generate
+# each with `openssl rand -hex 32`; every token must differ from the others.
+payment_service_token: replace-with-at-least-32-random-bytes
+aitesters_payment_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
+# HMAC-SHA256 key of the X-Payment-Signature header on payment result
+# notifications (payment-service -> backend). `openssl rand -hex 32`, distinct
+# per site and from the service tokens.
+payment_webhook_secret: replace-with-at-least-32-random-bytes
+aitesters_payment_webhook_secret: replace-with-a-different-random-value-of-at-least-32-bytes
 
 # Required when postgres_backup_enabled is true. Keep a separate offline copy:
 # losing this passphrase makes encrypted backups unrecoverable.

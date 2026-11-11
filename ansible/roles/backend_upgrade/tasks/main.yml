@@ -34,7 +34,7 @@
   register: backend_upgrade_deployed_services
   changed_when: false
 
-- name: Stop both old backend instances and their warehouse-services before applying incompatible migrations
+- name: Stop both old backend instances and their warehouse- and payment-services before applying incompatible migrations
   ansible.builtin.command:
     argv: >-
       {{ ['docker', 'compose', '-f', app_compose_file, 'stop', '--timeout', '60']
@@ -47,6 +47,8 @@
       - aitesters-backend
       - warehouse-service
       - aitesters-warehouse-service
+      - payment-service
+      - aitesters-payment-service
 
 - name: Create encrypted PostgreSQL backup after backend writes have stopped
   ansible.builtin.command:
