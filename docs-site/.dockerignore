@@ -1,0 +1,4 @@
+site/
+.cache/
+docs/assets/javascripts/mermaid.min.js
+**/__pycache__/

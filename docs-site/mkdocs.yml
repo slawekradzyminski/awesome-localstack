@@ -1,0 +1,165 @@
+site_name: Awesome LocalStack Wiki
+site_description: How the Awesome Testing training platform works, technically and as a business.
+site_url: https://awesome.byst.re/docs/
+repo_url: https://github.com/slawekradzyminski/awesome-localstack
+repo_name: awesome-localstack
+edit_uri: ""
+copyright: Awesome Testing training platform. Built from awesome-localstack/docs-site.
+
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+strict: true
+
+# Fail the strict build on broken internal links and anchors.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+hooks:
+  # Publishes this repository's docs/*.md as the "Reference" section and rewrites
+  # their links to files outside docs/ into GitHub links.
+  - hooks/repo_docs.py
+
+theme:
+  name: material
+  # Self-hosted: no Google Fonts request; mermaid is served from this site.
+  font: false
+  language: en
+  icon:
+    logo: material/book-open-page-variant
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+extra_javascript:
+  # Downloaded with a pinned checksum by the Dockerfile; Material uses a global
+  # `mermaid` when present instead of fetching it from a CDN.
+  - assets/javascripts/mermaid.min.js
+
+plugins:
+  - search
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home:
+      - index.md
+      - How to read this wiki: about.md
+  - Architecture:
+      - architecture/index.md
+      - Services and ports: architecture/services.md
+      - Compose profiles: architecture/profiles.md
+      - Gateway routing: architecture/gateway.md
+      - Authentication: architecture/auth.md
+      - Service-to-service trust: architecture/service-trust.md
+      - Data and databases: architecture/data.md
+  - Business flows:
+      - flows/index.md
+      - Accounts, MFA and SSO: flows/accounts.md
+      - Catalog and search: flows/catalog-search.md
+      - Cart, coupons, gift cards, loyalty: flows/cart.md
+      - Checkout, VAT and tenders: flows/checkout.md
+      - Card payments: flows/payments.md
+      - Warehouse fulfilment: flows/fulfilment.md
+      - Carrier tracking: flows/tracking.md
+      - Returns and refunds: flows/returns-refunds.md
+      - Purchasing and suppliers: flows/purchasing.md
+      - Emails: flows/emails.md
+      - User webhooks: flows/webhooks.md
+      - Currencies: flows/currencies.md
+      - State machines: flows/state-machines.md
+  - Operations:
+      - operations/index.md
+      - Running locally: operations/running-locally.md
+      - API explorers: operations/api-explorers.md
+      - Production deployment: operations/production.md
+      - Releases and image pinning: operations/releases.md
+      - Monitoring and alerts: operations/monitoring.md
+      - Backups: operations/backups.md
+      - Troubleshooting: operations/troubleshooting.md
+      - This documentation site: operations/docs-site.md
+  - For testers:
+      - testers/index.md
+  - Glossary: glossary.md
+  - Reference:
+      - reference/index.md
+      - Student guide: reference/STUDENT_GUIDE.md
+      - Profile URLs: reference/PROFILE_URLS.md
+      - Commerce features: reference/COMMERCE_FULFILMENT.md
+      - Warehouse service contract: reference/WAREHOUSE_SERVICE_CONTRACT.md
+      - Payment service contract: reference/PAYMENT_SERVICE_CONTRACT.md
+      - Webhooks: reference/WEBHOOKS.md
+      - SSO flow: reference/SSO_FLOW.md
+      - Social login: reference/SOCIAL_LOGIN.md
+      - Direct social login: reference/DIRECT_SOCIAL_LOGIN.md
+      - gRPC inventory: reference/GRPC_INVENTORY.md
+      - gRPC training runbook: reference/GRPC_TRAINING_RUNBOOK.md
+      - Protocol testing lab: reference/PROTOCOL_TESTING_LAB.md
+      - Course compatibility: reference/COURSE_COMPATIBILITY.md
+      - Ansible: reference/ANSIBLE.md
+      - Container releases: reference/CONTAINER_RELEASES.md
+      - Production monitoring plan: reference/PRODUCTION_MONITORING_PLAN.md
+      - Production backups: reference/PRODUCTION_BACKUPS.md
+      - Production edge proxy: reference/PRODUCTION_EDGE_PROXY.md
+      - SSH server: reference/SSH_SERVER.md
+      - SSH tunnelling: reference/SSH_TUNNELLING.md

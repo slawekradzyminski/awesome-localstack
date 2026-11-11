@@ -423,6 +423,32 @@ services:
     networks:
       - my-private-ntwk
 
+  docs:
+    # Documentation wiki (MkDocs) served at /docs/ through the gateway. Built
+    # from docs-site/ with the repository's docs/ as a second build context;
+    # the gateway starts without it (variable upstream).
+    image: awesome-localstack/docs:local
+    # Never pulled: the name is local-only, so a registry image of the same
+    # name can never replace the build.
+    pull_policy: build
+    build:
+      context: ./docs-site
+      additional_contexts:
+        repo-docs: ./docs
+    restart: unless-stopped
+    expose:
+      - "80"
+    mem_limit: 32m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/docs/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging: *default-logging
+    networks:
+      - my-private-ntwk
+
   gateway:
     image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
     restart: unless-stopped

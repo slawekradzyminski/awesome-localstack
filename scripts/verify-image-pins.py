@@ -57,16 +57,18 @@ def main() -> int:
                     f"{profile} service {service} is not pinned by digest: {image}"
                 )
 
-    dockerfile = ROOT / "Dockerfile"
-    for line_number, line in enumerate(dockerfile.read_text().splitlines(), start=1):
-        if not line.startswith("FROM "):
-            continue
-        tokens = line.split()
-        image = tokens[1]
-        if image.startswith("--platform="):
-            image = tokens[2]
-        if not PINNED_IMAGE.fullmatch(image):
-            failures.append(f"Dockerfile:{line_number} is not pinned by digest: {image}")
+    # Locally built images (Jenkins, the docs wiki) must still pin their bases.
+    for dockerfile in (ROOT / "Dockerfile", ROOT / "docs-site" / "Dockerfile"):
+        name = dockerfile.relative_to(ROOT)
+        for line_number, line in enumerate(dockerfile.read_text().splitlines(), start=1):
+            if not line.startswith("FROM "):
+                continue
+            tokens = line.split()
+            image = tokens[1]
+            if image.startswith("--platform="):
+                image = tokens[2]
+            if not PINNED_IMAGE.fullmatch(image):
+                failures.append(f"{name}:{line_number} is not pinned by digest: {image}")
 
     workflow_image = re.compile(r"^\s+image:\s+(\S+)\s*$")
     for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
@@ -91,7 +93,7 @@ def main() -> int:
             print(f"ERROR: {failure}", file=sys.stderr)
         return 1
 
-    print("Verified immutable image pins for Compose, CI, Dockerfile, and restore tooling")
+    print("Verified immutable image pins for Compose, CI, Dockerfiles, and restore tooling")
     return 0
 
 

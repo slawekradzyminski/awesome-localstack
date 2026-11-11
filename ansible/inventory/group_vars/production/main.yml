@@ -78,6 +78,9 @@ app_copy_paths:
   - blackbox
   - images
   - branding
+  # Sources of the docs wiki image, built on the server (docker compose build docs).
+  - docs
+  - docs-site
 
 prometheus_server_config_files:
   - prometheus/prometheus.server.yml
@@ -182,6 +185,9 @@ verify_urls:
   - url: http://127.0.0.1/warehouse/v3/api-docs
     status_code: 200
   - url: http://127.0.0.1/payment/v3/api-docs
+    status_code: 200
+  # Documentation wiki (docs container behind the gateway).
+  - url: http://127.0.0.1/docs/
     status_code: 200
   # Public tracking reaches warehouse-service, which answers 404 for an unknown
   # tracking number (the backend would answer 401 without a token).

@@ -386,6 +386,46 @@ def main() -> int:
                 failures,
             )
 
+    # The docs wiki is the one locally built image on the server: built from
+    # docs-site/ on deploy, never pulled, small and reachable at /docs/ on every
+    # gateway host.
+    for profile_name, services in (("docker-compose.server.yml", server_services),
+                                   ("docker-compose.yml", compose_services("docker-compose.yml")),
+                                   ("lightweight-docker-compose.yml",
+                                    compose_services("lightweight-docker-compose.yml"))):
+        docs = services.get("docs", {})
+        build = docs.get("build", {})
+        require(
+            docs.get("image") == "awesome-localstack/docs:local"
+            and str(build.get("context", "")).rstrip("/").endswith("docs-site")
+            and "repo-docs" in build.get("additional_contexts", {})
+            and str(docs.get("mem_limit")) in {"33554432", "32m"},
+            f"{profile_name} must build the docs wiki locally from docs-site/ "
+            "(image awesome-localstack/docs:local, repo-docs context, mem_limit 32m)",
+            failures,
+        )
+        require(
+            "docs" not in services.get("gateway", {}).get("depends_on", {}),
+            f"{profile_name} gateway must not depend on docs (it must start without the wiki)",
+            failures,
+        )
+    docs_upstreams = gateway_upstreams(gateway_config, "docs")
+    require(
+        docs_upstreams.get("awesome.byst.re") == "http://docs:80"
+        and docs_upstreams.get("aitesters.byst.re") == "http://docs:80",
+        f"both gateway hosts must route /docs/ to the docs service: {docs_upstreams}",
+        failures,
+    )
+    for config in (gateway_config, ROOT / "nginx" / "conf.d" / "lightweight-app-gateway.conf"):
+        text = config.read_text()
+        blocks = len(re.findall(r"^server \{", text, flags=re.MULTILINE))
+        for location in ("location = /docs {", "location /docs/ {", "proxy_pass $docs_upstream;"):
+            require(
+                text.count(location) == blocks,
+                f"{config.name} must declare `{location}` in each of its {blocks} server blocks",
+                failures,
+            )
+
     runbook = (ROOT / "docs" / "CONTAINER_RELEASES.md").read_text()
     for service, image in release_images.items():
         if PENDING_DIGEST_MARKER in image:

@@ -83,8 +83,12 @@ jobs:
         trap cleanup EXIT
 
         docker compose -f lightweight-docker-compose.yml config --quiet
-        docker compose -f lightweight-docker-compose.yml up -d --wait --wait-timeout 300 --pull always
+        # Pull every published image fresh, but never look up the locally built
+        # docs image in a registry (its name is local-only).
+        docker compose -f lightweight-docker-compose.yml pull --ignore-buildable
+        docker compose -f lightweight-docker-compose.yml up -d --wait --wait-timeout 300
         curl --fail --silent --show-error http://127.0.0.1:8081/login >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/docs/ | grep -F 'Awesome LocalStack Wiki' >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/v3/api-docs >/dev/null
         # warehouse-service and payment-service through the gateway (up --wait already
         # required their healthchecks and the postgres-roles one-shot to pass).
@@ -94,6 +98,34 @@ jobs:
           --header 'Content-Type: application/json' \
           --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \
           | grep -F '"done":true' >/dev/null
+
+  verifyDocsSite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Build the documentation site in strict mode (broken links and anchors fail)
+      run: |
+        python3 -m venv /tmp/docs-venv
+        /tmp/docs-venv/bin/pip install --quiet -r docs-site/requirements.txt
+        NO_MKDOCS_2_WARNING=1 /tmp/docs-venv/bin/mkdocs build --strict -f docs-site/mkdocs.yml -d /tmp/docs-site
+    - name: Build and smoke-test the docs image
+      shell: bash
+      run: |
+        set -Eeuo pipefail
+        docker build --build-context repo-docs=docs -t awesome-localstack/docs:local docs-site
+        docker run -d --name docs-smoke --memory 32m -p 127.0.0.1:8090:80 awesome-localstack/docs:local
+        trap 'docker logs docs-smoke || true; docker rm -f docs-smoke >/dev/null' EXIT
+        for _ in $(seq 1 30); do
+          curl --fail --silent --output /dev/null http://127.0.0.1:8090/docs/ && break
+          sleep 1
+        done
+        curl --fail --silent --show-error http://127.0.0.1:8090/docs/ | grep -F 'Awesome LocalStack Wiki' >/dev/null
+        curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8090/docs/flows/payments/
+        curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8090/docs/reference/ANSIBLE/
+        curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8090/docs/assets/javascripts/mermaid.min.js
+        test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8090/docs/no-such-page/)" = 404
+        test "$(curl --silent --output /dev/null --write-out '%{http_code} %header{location}' http://127.0.0.1:8090/docs)" = "301 /docs/"
 
   runDocker-Jenkins:
     runs-on: ubuntu-latest

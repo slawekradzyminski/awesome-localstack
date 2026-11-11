@@ -426,3 +426,15 @@ warehouse-services, which measure 58 to 66 MiB each). Their limits add
 and record them in `docs/CONTAINER_RELEASES.md`; if available memory drops
 below 1.5 GiB, lower a limit (the `ContainerMemoryNearLimit` warnings show
 which) before adding further services.
+
+## Documentation wiki image
+
+The `docs` service (the MkDocs wiki at `/docs/`, `mem_limit: 32m`) is the only
+image built on the server. The `app` role copies `docs/` and `docs-site/` and
+runs `docker compose build docs` before `docker compose up`; the image is
+static files on the digest-pinned `nginx:1.31.3-trixie` base (shared with the
+gateway), so no registry release or digest pin is needed for documentation
+edits (`awesome-localstack/docs:local`, `pull_policy: build`, exempt from
+`verify-image-pins.py` like other `:local` builds). The build needs outbound
+access to PyPI and jsDelivr. `verify` checks `http://docs/docs/` from the
+gateway container and `/docs/` on both hosts.
