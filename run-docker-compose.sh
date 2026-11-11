@@ -98,7 +98,7 @@ if [ "${WITH_MONITORING:-true}" = "true" ]; then
     urls+=(
         "http://localhost:${PROMETHEUS_PORT:-9090}/graph"
         "http://localhost:${GRAFANA_PORT:-3000}/login"
-        "http://localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/XKhgaUpik"
+        "http://admin:grafana@localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/XKhgaUpik"
     )
     names+=(
         "Prometheus"
