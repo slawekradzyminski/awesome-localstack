@@ -93,7 +93,7 @@ jobs:
 
   verifyLightweight:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v7.0.1
     - name: Run published lightweight compatibility set
@@ -127,6 +127,14 @@ jobs:
           --header 'Content-Type: application/json' \
           --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \
           | grep -F '"done":true' >/dev/null
+        # End-to-end checks of the commerce features (search, VAT, payments, event-feed
+        # refunds, webhooks, gift cards, simulated carrier) with the demo accounts.
+        scripts/smoke-features.sh http://127.0.0.1:8081 full
+        # The gateway re-resolves upstreams: recreating the backend alone must not leave
+        # it pointing at the old container address.
+        docker compose -f lightweight-docker-compose.yml up -d --force-recreate --no-deps --wait backend
+        curl --fail --silent --show-error --request POST http://127.0.0.1:8081/api/v1/users/signin \
+          --header 'Content-Type: application/json' --data '{"username":"client","password":"client"}' >/dev/null
 
   verifyMonitoringOverlay:
     runs-on: ubuntu-latest

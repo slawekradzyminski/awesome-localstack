@@ -362,6 +362,23 @@ def main() -> int:
         f"each gateway host must route warehouse paths to its own warehouse-service: {warehouse_upstreams}",
         failures,
     )
+    for name, stable, sandbox in (("backend", "http://backend:4001", "http://aitesters-backend:4001"),
+                                  ("frontend", "http://frontend:80", "http://aitesters-frontend:80")):
+        upstreams = gateway_upstreams(gateway_config, name)
+        require(
+            upstreams.get("awesome.byst.re") == stable and upstreams.get("aitesters.byst.re") == sandbox,
+            f"each gateway host must route to its own {name} through ${name}_upstream: {upstreams}",
+            failures,
+        )
+    for config in (gateway_config, ROOT / "nginx/conf.d/lightweight-app-gateway.conf"):
+        static = re.findall(r"proxy_pass http://[a-z][a-z-]*:\d+;", config.read_text())
+        require(
+            not static,
+            f"{config.name}: proxy_pass to a container name must go through a $*_upstream variable "
+            f"(re-resolved by Docker DNS when a container is recreated): {static}",
+            failures,
+        )
+
     payment_upstreams = gateway_upstreams(gateway_config, "payment")
     require(
         payment_upstreams.get("awesome.byst.re") == "http://payment-service:4004"
