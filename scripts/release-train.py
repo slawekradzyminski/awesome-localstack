@@ -582,8 +582,9 @@ def cmd_deploy(shell, args):
     if not args.yes and not shell.dry_run:
         raise SystemExit("deploy changes production: rerun with --yes after the release PR is merged.")
     branch = shell.read(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    if branch != "main":
-        raise SystemExit(f"deploy runs from main, not {branch}.")
+    # main, or a clean worktree detached at origin/main (main may be checked out elsewhere).
+    if branch not in ("main", "HEAD"):
+        raise SystemExit(f"deploy runs from main or a checkout detached at origin/main, not {branch}.")
     shell.read(["git", "fetch", "--quiet", "origin", "main"])
     if shell.read(["git", "rev-parse", "HEAD"]) != shell.read(["git", "rev-parse", "origin/main"]):
         raise SystemExit("HEAD is not origin/main: pull the merged release first.")
