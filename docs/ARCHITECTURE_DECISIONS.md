@@ -210,12 +210,11 @@ its schema only and grants `CONNECT` on the database. Services connect with
 
 ## Follow-ups
 
-- **A GET that mutates state.** warehouse-service's
-  `GET /api/v1/warehouse/shipments/{id}` cancels an `AWAITING_PICK` shipment as
-  a side effect when it finds the order cancelled on the backend (the
-  "reconcile on read" path, kept from before the feed). A safe method that
-  changes data surprises caches, retries and testers. Now that `order.cancelled`
-  reaches warehouse-service through the feed within seconds and the reconciler
-  covers the rest, this side effect is a candidate for removal in a later
-  warehouse-service release; the refused-transition path (409 "Order was
-  cancelled by the customer") can stay.
+- **A GET that mutated state — resolved in warehouse-service 1.3.1.**
+  `GET /api/v1/warehouse/shipments/{id}` used to cancel an `AWAITING_PICK`
+  shipment when it found the order cancelled on the backend ("reconcile on
+  read"). A safe method that changes data surprises caches, retries and
+  testers, so 1.3.1 makes the read side-effect free and does not call the
+  backend; `order.cancelled` arrives through the event feed within seconds and
+  the reconciler covers the rest. The refused-transition path (409 "Order was
+  cancelled by the customer" on pick/pack/ship) stays.

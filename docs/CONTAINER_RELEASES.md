@@ -132,6 +132,18 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Warehouse-service 1.3.1: read-only shipment GET — 11 November 2026
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/warehouse-service:1.3.1@sha256:b56f51fa3a80caf3cc7cc56704d540051e5550e59b8ccbf31961e1b5c6b07a29` | [PR #7](https://github.com/slawekradzyminski/warehouse-service/pull/7), `228acc0` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43052520977) |
+
+`GET /api/v1/warehouse/shipments/{id}` no longer calls the backend or cancels
+an `AWAITING_PICK` shipment; cancellations arrive through the event feed and
+the reconciler (see [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md#follow-ups)).
+The wiki gains "Useful links" for testers and pages on the LLM integration and
+streaming. No migration; plain `make ansible-deploy`.
+
 ## Event feed: backend 3.16.0, warehouse-service 1.3.0, payment-service 1.1.0 — 11 November 2026
 
 Published as native multi-arch images; verified on a native full stack (every
@@ -674,7 +686,7 @@ Commerce wave 3, released 11 November 2026:
 | Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.3.0@sha256:02ac943bf2fa6484cb2bddfc2deca4a17f9b497b61f88799a3f46809cbbe4207` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.3.1@sha256:b56f51fa3a80caf3cc7cc56704d540051e5550e59b8ccbf31961e1b5c6b07a29` |
 | Payment service | `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` |
 
 ## Backend 3.9.1 traffic preview patch
