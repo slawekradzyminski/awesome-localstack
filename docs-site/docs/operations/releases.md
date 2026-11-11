@@ -47,7 +47,3 @@ Vault keys go in before the deploy; backend migrations use
 The current pins and the release history are in
 [Container releases](../reference/CONTAINER_RELEASES.md#current-compatibility-set).
 
-!!! warning "Placeholder digest"
-    Until payment-service 1.0.0 is published, `docker-compose.server.yml`
-    carries `@sha256:PENDING_PAYMENT_SERVICE_DIGEST`. Both contract scripts and
-    the Ansible image gate fail loudly on it on purpose.

@@ -198,8 +198,8 @@ warehouse-service 1.2.0 simulates a parcel carrier (Flyway V3 adds
 - Tracking statuses: `LABEL_CREATED`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`,
   `DELIVERY_FAILED`, `DELIVERED`.
 - A scheduler (`warehouse.carrier.enabled`, default `true`;
-  `warehouse.carrier.step-interval`, default `PT2M`, environment
-  `WAREHOUSE_CARRIER_STEP_INTERVAL`) moves every simulated `SHIPPED` shipment
+  `warehouse.carrier.step-interval`, default `PT2M` (`PT30S` in the `local`
+  and `demo` profiles), environment `WAREHOUSE_CARRIER_STEP_INTERVAL`) moves every simulated `SHIPPED` shipment
   one step per interval. Deterministic failure: when
   `abs(trackingNumber.hashCode()) % 5 == 0` the first `OUT_FOR_DELIVERY` attempt
   becomes `DELIVERY_FAILED` and the next step tries again. `DELIVERED` reuses

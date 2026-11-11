@@ -132,17 +132,18 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
-## Commerce wave 3 (draft): backend 3.15.0, warehouse-service 1.2.0, payment-service 1.0.0, frontend 3.12.0 — 10 November 2026
+## Commerce wave 3: backend 3.15.0, warehouse-service 1.2.0, payment-service 1.0.0, frontend 3.12.0 — 11 November 2026
 
-Status: **draft, not released.** The LocalStack wiring is in place; the image
-references below are filled in when the source repositories publish them.
+All four images are published as native (backend, warehouse, payment) or
+nginx (frontend) multi-arch images. ai-testers-api `l20` passed 190/190 against
+the published backend 3.15.0 (11 November 2026).
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
-| `slawekradzyminski/backend:3.15.0@sha256:<pending>` | test-secure-backend (commerce wave) | pending |
-| `slawekradzyminski/warehouse-service:1.2.0@sha256:<pending>` | warehouse-service (shipment tracking) | pending |
-| `slawekradzyminski/payment-service:1.0.0@sha256:<pending>` | payment-service (first release) | pending |
-| `slawekradzyminski/frontend:3.12.0@sha256:<pending>` | vite-react-frontend (commerce wave screens) | pending |
+| `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` | [PR #93](https://github.com/slawekradzyminski/test-secure-backend/pull/93), `3fb1cc9` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/42907355443) |
+| `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` | [PR #5](https://github.com/slawekradzyminski/warehouse-service/pull/5), `60c1c8f` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/42897115628) |
+| `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` | [payment-service](https://github.com/slawekradzyminski/payment-service) `26a057a` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/42982591094) |
+| `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` | [PR #95](https://github.com/slawekradzyminski/vite-react-frontend/pull/95), `37316e5` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/42991982733) |
 | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` | unchanged | unchanged |
 
 What the wave adds:
@@ -180,17 +181,11 @@ LocalStack changes in this release:
   aitesters reset and the coordinated-upgrade stop list (see
   [ANSIBLE.md](ANSIBLE.md#payment-service-secrets-and-image-gate)).
 
-Before release, replace `PENDING_PAYMENT_SERVICE_DIGEST` in
-`docker-compose.server.yml` (both payment services), pin the same
-`tag@sha256` in `docker-compose.yml` and `lightweight-docker-compose.yml`
-(they carry the bare `1.0.0` tag), bump backend, warehouse-service and frontend
-in every profile, and fill in the table above. `scripts/verify-release-images.py`
-and `scripts/verify-image-pins.py` fail with an explicit placeholder message
-until then. Rolling back needs the 3.14.1 / 1.1.1 / 3.11.0 references below
-plus removal of the payment services; whether the backend migrations V10 to
-V15 let 3.14.1 run on the migrated schema is to be confirmed in the release
-review, so take the encrypted pre-deploy backup and use
-`make ansible-deploy-backend-upgrade` for the first rollout.
+Rollback: backend 3.14.1's Flyway does not know V10 to V15 and would refuse
+the migrated schema, so a rollback restores the encrypted pre-deploy backup
+taken by the backend upgrade (`make ansible-deploy-backend-upgrade`) together
+with the 3.14.1 / 1.1.1 / 3.11.0 references and without the payment
+services; data written after the upgrade is lost.
 
 ## Warehouse definition in Swagger UI: backend 3.14.1, warehouse-service 1.1.1 — 10 November 2026
 
@@ -588,18 +583,17 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Target set of the commerce wave 3 release (digests are recorded when the
-images are published; until then the Compose profiles keep the deployed
-backend 3.14.1, warehouse-service 1.1.1 and frontend 3.11.0 references):
+Commerce wave 3, released 11 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.15.0@sha256:<pending>` |
-| Frontend | `slawekradzyminski/frontend:3.12.0@sha256:<pending>` |
+| Backend | `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` |
+| Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.2.0@sha256:<pending>` |
-| Payment service | `slawekradzyminski/payment-service:1.0.0@sha256:<pending>` (Compose placeholder `PENDING_PAYMENT_SERVICE_DIGEST`) |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` |
+| Payment service | `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` |
+
 ## Backend 3.9.1 traffic preview patch
 
 Backend [PR #76](https://github.com/slawekradzyminski/test-secure-backend/pull/76)
