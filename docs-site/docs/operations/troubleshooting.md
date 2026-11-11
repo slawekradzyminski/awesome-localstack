@@ -66,4 +66,7 @@ docker compose logs -f consumer activemq          # full profile
 docker compose -f docker-compose.server.yml logs --tail=200 -f backend   # on the VPS
 ```
 
+Every log line of one request, across all services: take its `X-Request-Id`
+response header and follow [Tracing a request](tracing.md).
+
 More symptoms: [Student guide — how to read failures](../reference/STUDENT_GUIDE.md#how-to-read-failures).

@@ -29,6 +29,16 @@ planned phase C.
 PromQL and firing alerts: `make ansible-tunnel-prometheus`, then
 `http://localhost:9090`.
 
+## Logs and correlation ids
+
+Metrics say *that* something is wrong; logs say *what*. Every request carries
+an `X-Request-Id` and a W3C `traceparent` from the gateway onwards. The
+gateway and the edge write one JSON access-log line per request (ids, status,
+upstream, timings), and on the server the Spring services log ECS JSON
+(`LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`). There is no log store: logs stay in
+Docker's rotated container logs and are searched with `docker compose logs`.
+How to find everything about one request: [Tracing a request](tracing.md).
+
 ## Alert rules
 
 | Group | Alerts |

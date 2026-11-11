@@ -23,6 +23,9 @@ warehouse-service and payment-service also call the backend's internal API
 (order data, fulfilment, payment results) and poll its **event feed**; the
 backend never calls them. See [Service integration](#service-integration) below
 and [Service-to-service trust](service-trust.md).
+Every request carries an `X-Request-Id` and a W3C `traceparent` from the
+gateway through the services, the event feed and the outboxes; see
+[Tracing a request](../operations/tracing.md).
 Not shown: the **edge** nginx in front of the gateway on the server, **Keycloak**
 for SSO in the local profiles, the **LLM** (ollama-mock or Docker Model Runner)
 behind the backend (see [LLM integration](llm.md)), and the monitoring stack. Ports and images for every

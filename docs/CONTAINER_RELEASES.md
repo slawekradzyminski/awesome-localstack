@@ -132,6 +132,39 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0 — 11 November 2026
+
+Published and pinned by `scripts/release-train.py` (first train). The publish
+workflows skipped the duplicated verification for the first time (identical
+tree already verified on the PR): backend 16 min instead of 27, services 10
+instead of 20.
+
+- **Correlation IDs end to end.** Every Spring service validates or generates
+  `X-Request-Id` and W3C `traceparent`, logs them (MDC `requestId`, `traceId`,
+  `spanId`) and returns `X-Request-Id`; outbound calls send a child
+  `traceparent`. Feed events (backend V17), outboxes (warehouse V5, payment V4,
+  backend email/webhook rows) keep the ids, so asynchronous work logs under the
+  request that caused it. The backend logs one line per recorded domain event.
+- **Gateway** validates or generates both headers in every server block, echoes
+  `X-Request-Id` and writes a JSON access log.
+- **JSON logs in production.** `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs` for the
+  backends, warehouse and payment services; local profiles stay readable.
+  How to search: the wiki page Operations, Tracing a request
+  (`docs-site/docs/operations/tracing.md`).
+
+Upgrade order: backend first (V17 is additive), services in the same deploy;
+`make ansible-deploy-backend-upgrade`. Rollback: backend 3.16.0's Flyway does not know V17 and refuses the migrated
+schema, so a rollback restores the encrypted pre-deploy backup with the previous
+pins, as for earlier releases.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264` | [PR #96](https://github.com/slawekradzyminski/test-secure-backend/pull/96), `032913a` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43068503449) |
+| `slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033` | [PR #9](https://github.com/slawekradzyminski/warehouse-service/pull/9), `6d0479f` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43068506492) |
+| `slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31` | [PR #5](https://github.com/slawekradzyminski/payment-service/pull/5), `869e98e` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43068511976) |
+| `slawekradzyminski/frontend:3.12.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Warehouse-service 1.3.1: read-only shipment GET — 11 November 2026
 
 | Image | Source | Release workflow |
@@ -678,16 +711,16 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Commerce wave 3, released 11 November 2026:
+Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0, released 11 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` |
+| Backend | `slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264` |
 | Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.3.1@sha256:b56f51fa3a80caf3cc7cc56704d540051e5550e59b8ccbf31961e1b5c6b07a29` |
-| Payment service | `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033` |
+| Payment service | `slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31` |
 
 ## Backend 3.9.1 traffic preview patch
 
@@ -872,6 +905,46 @@ in all Compose profiles, the Jenkins Dockerfile, CI service containers, and the
 PostgreSQL restore tool. Locally built `:local` images are the only exception.
 
 ## Release sequence
+
+`scripts/release-train.py` automates the sequence below for backend
+(`test-secure-backend`), warehouse-service, payment-service and frontend
+(`vite-react-frontend`); `--with-consumer` adds `jms-email-consumer`, and
+`--only backend,payment-service` narrows the set. Every subcommand recomputes
+the release set from GitHub and `docker-compose.server.yml`, so a failed step
+can be fixed and rerun. The global `--dry-run` performs only reads (GitHub
+API, registry, files) and prints every action that would tag, write, commit,
+push, merge or deploy.
+
+```bash
+python3 scripts/release-train.py plan               # what would be released
+python3 scripts/release-train.py tag                # v<version> on green default-branch heads
+python3 scripts/release-train.py wait               # publish workflows; fails fast with the run URL
+python3 scripts/release-train.py pin                # digests -> Compose files and this document
+make sync-release-images                            # sibling development Compose files
+python3 scripts/release-train.py verify [--compat]  # Compose config + every contract script
+python3 scripts/release-train.py pr --merge         # branch, commit, push, PR, CI, squash-merge
+# then, from the main checkout (Vault links present), on merged main:
+python3 scripts/release-train.py deploy --yes
+```
+
+| Step | What it does | Refuses when |
+| --- | --- | --- |
+| `plan` | Per repository: default-branch head, version from `pom.xml` / `package.json` (through `gh api`), latest `v*` tag, currently pinned version, and the action: `tag, publish, pin`, `pin` (tag exists), `up to date`, or `skip` (SNAPSHOT, older than the latest tag or the pin). Also prints the deploy target. | — |
+| `tag` | Creates an annotated `v<version>` tag on the default-branch head of every repository whose version is untagged. | The head's CI workflow (`verify.yml` for the backend, `ci.yml` elsewhere) is not `success`; nothing is tagged then. |
+| `wait` | Polls each repository's `publish-image.yml` run for the tag (`--timeout`, `--interval`). | A job fails or the run concludes with anything but `success`: exits at once with the run URL. |
+| `pin` | Resolves the Docker Hub digest (`docker buildx imagetools inspect`), replaces the **current** pin of each image in every Compose file (other versions, e.g. rollback references in documents, are left alone), updates the image rows of [Current compatibility set](#current-compatibility-set) and inserts a release-section stub (PR, commit, run links; text marked TODO) above the newest dated section. | The publish run is not `success`. |
+| `verify` | `docker compose config --quiet` for every profile (overlays on their base), every contract script, the release-train unit tests and `verify-release-images.py --remote` (`--offline` skips it). `--compat` first checks that Docker's clock is within 5 s of the host's (JWT issued-at checks fail otherwise), then runs `verify-course-compatibility.py`. | Any check fails. |
+| `pr` | Creates `release/<image>-<version>…`, commits only the Compose files and this document, pushes, opens the PR, waits for its checks; `--merge` squash-merges. | Nothing was pinned. |
+| `deploy` | `make ansible-deploy-backend-upgrade` when the backend version differs from the previous commit's (`--since`, default `HEAD~1`: the squash-merged release), else `make ansible-deploy`. | No `--yes`; not on `main`; `HEAD` is not `origin/main`; dirty tree; the Vault links `ansible/.vault_pass` or `ansible/inventory/group_vars/production/vault.yml` missing (presence only, never read). |
+
+Fill in the release-section stub (what changes, LocalStack changes, upgrade
+order, rollback) in the release PR before merging. New Vault keys still go in
+before `deploy`, and the course suite (`l20`) runs after it. The pure parts
+(version parsing, pin replacement, release-section rendering, deploy target)
+are unit-tested in `scripts/test_release_train.py` (CI job
+`verifyReleaseTrain`).
+
+The manual sequence the script follows:
 
 1. Merge a green source change to that repository's default branch.
 2. Set the Maven or npm version intended for release and merge its verification change.
