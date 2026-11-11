@@ -68,30 +68,32 @@ flowchart TB
    `X-Webhook-Id`). Work started by a scheduler without a request (a carrier
    step, a retention job) has no request id.
 
-Until the service releases above are pinned, only the gateway part is active:
-the gateway logs and returns the ids and passes them upstream, and the server
-services already log JSON, without the id fields.
-
 ## Find everything about one request
 
 Take the id from the response header (`X-Request-Id`) or from a gateway log
 line, then search all containers of the stack.
 
-On the server (`make ansible-ssh`, then in `/opt/awesome-localstack`):
+On the server (`make ansible-ssh`) search each container's own log. This takes
+about a second; `docker compose -p awesome-server logs` reads every container
+through Compose and can take minutes on this host, so avoid it here.
 
 ```bash
+trace_logs() {  # usage: trace_logs <request id or trace id> [since, default 2h]
+  for c in $(docker ps --filter label=com.docker.compose.project=awesome-server --format '{{.Names}}'); do
+    docker logs --since "${2:-2h}" "$c" 2>&1 | grep -F "$1" | sed "s/^/${c#awesome-server-} | /"
+  done
+}
 ID=checkout-test-17
-docker compose -p awesome-server logs --no-color --since 2h | grep -F "$ID"
+trace_logs "$ID"
 ```
 
-The same as a time-ordered table (service, time, level or HTTP status,
+The same as a time-ordered table (container, time, level or HTTP status,
 message), one row per JSON line:
 
 ```bash
-docker compose -p awesome-server logs --no-color --since 2h \
-  | grep -F "$ID" \
+trace_logs "$ID" \
   | jq -rR '
-      capture("^(?<svc>[^ ]+) +[|] (?<line>.*)$") as $m
+      capture("^(?<svc>[^ ]+) [|] (?<line>.*)$") as $m
       | ($m.line | fromjson? // {message: $m.line}) as $e
       | [$m.svc,
          ($e.time // $e["@timestamp"] // ""),
@@ -101,14 +103,18 @@ docker compose -p awesome-server logs --no-color --since 2h \
   | sort -t "$(printf '\t')" -k2,2
 ```
 
+For a cancelled card-paid order this prints the edge and gateway lines, the
+backend's `Recorded order.cancelled` and `Recorded card-refund.requested`, the
+payment-service refund a few seconds later and the warehouse feed handler, all
+under the cancel request's id.
+
 To follow work beyond the request (an event handled later by another
 service), search for the **trace id** instead: it is the `trace_id` field of
 the gateway line, or the `traceId` field of a service line.
 
 ```bash
-TRACE=$(docker compose -p awesome-server logs --no-color --no-log-prefix gateway \
-  | grep -F "\"request_id\":\"$ID\"" | jq -r .trace_id | head -1)
-docker compose -p awesome-server logs --no-color --since 2h | grep -F "$TRACE"
+TRACE=$(trace_logs "$ID" | grep '^gateway-1 | ' | sed 's/^[^|]*| //' | jq -r .trace_id | head -1)
+trace_logs "$TRACE"
 ```
 
 The `aitesters.byst.re` sandbox runs in the same project: its services are the
