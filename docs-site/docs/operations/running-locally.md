@@ -42,13 +42,29 @@ Adds, on top of the URLs above:
 | --- | --- |
 | `http://localhost:8025/` | Mailpit inbox |
 | `http://localhost:8161` | ActiveMQ Artemis console |
-| `http://localhost:9090/graph` | Prometheus |
-| `http://localhost:3000/login` | Grafana (`admin` / `grafana`) |
 | `http://localhost:4002/actuator/prometheus` | Consumer metrics |
 | `localhost:5432` | PostgreSQL `testdb`, `postgres` / `postgres` |
-| `localhost:8086` | InfluxDB (k6 results) |
 
 Refresh seeded data with `docker compose down -v && docker compose up -d`.
+
+## Monitoring for k6 (opt-in, either profile)
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+`./run-docker-compose.sh` already adds the overlay to the full profile
+(`WITH_MONITORING=false` skips it).
+
+| URL | What |
+| --- | --- |
+| `http://localhost:9090/graph` | Prometheus |
+| `http://localhost:3000/login` | Grafana (`admin` / `grafana`): k6, Spring and Container Resources dashboards |
+| `localhost:8086` | InfluxDB `db0` (`k6 run --out influxdb=http://localhost:8086/db0`) |
+
+Set `GRAFANA_PORT`, `PROMETHEUS_PORT` or `INFLUXDB_PORT` when a port is taken,
+and stop with the same `-f` files and `down`.
 Use `docker compose -f docker-compose.yml -f docker-compose.model-mock.yml up -d`
 on machines without Docker Model Runner.
 

@@ -16,18 +16,19 @@ the server.
 | `make ansible-cleanup` | Checksum- and retention-guarded container and image cleanup |
 | `make ansible-reset-demo-state` | **Destructive**: delete the PostgreSQL volume and Mailpit state, redeploy |
 | `make ansible-reset-aitesters-state` | Recreate the sandbox database, backend, warehouse-service and payment-service |
-| `make ansible-ssh`, `make ansible-tunnel-grafana`, `make ansible-tunnel-mailpit` | Shell and SSH tunnels (Grafana `:3000`, Mailpit `:8025`) |
+| `make ansible-ssh`, `make ansible-tunnel-prometheus`, `make ansible-tunnel-mailpit` | Shell and SSH tunnels (Prometheus `:9090`, Mailpit `:8025`) |
 | `make ansible-edit-vault` | Edit the encrypted Vault |
 
 ## What `deploy.yml` does
 
 ```mermaid
 flowchart TB
-    A[Swap check] --> B[Encrypted backup]
-    B --> C[Silence warnings 15 min]
+    A[Swap check] --> W[Install host watchdog]
+    W --> B[Encrypted backup]
+    B --> C[Silence warnings and pause<br/>watchdog container checks 15 min]
     C --> D[app role: files, secrets, build, up]
     D --> E[verify role]
-    E --> F[Expire silences]
+    E --> F[Expire silences, resume watchdog]
     F --> G[Cleanup]
 ```
 
@@ -55,7 +56,8 @@ verification is part of the playbook, not a follow-up.
 | `app_mfa_encryption_password`, `app_mfa_encryption_salt` | TOTP secret and webhook secret encryption |
 | `app_bootstrap_admin_*` | the production admin account |
 | `artemis_username`, `artemis_password` | broker account |
-| `grafana_admin_password`, `alertmanager_telegram_bot_token`, `alertmanager_telegram_chat_id` | monitoring |
+| `alertmanager_telegram_bot_token`, `alertmanager_telegram_chat_id` | Alertmanager and the host watchdog |
+| `watchdog_healthcheck_url` | optional dead-man ping (empty disables it) |
 | `backup_encryption_passphrase`, `backup_remote_target` | backups |
 | `local_email_outbox_access_key` | sandbox outbox secondary key |
 | `production_ssh_*` | connection |
@@ -88,8 +90,10 @@ After every deploy and on `make ansible-verify`:
 - a JMS contract email travels Artemis → consumer → Mailpit;
 - direct routes (`http://warehouse-service:4003/...`, `http://payment-service:4004/...`,
   `http://docs/docs/`) answer from inside the gateway container;
-- Prometheus targets are healthy, rules and Alertmanager are loaded,
-  dashboards are provisioned, public HTTPS probes succeed;
+- Prometheus targets are healthy, rules and Alertmanager are loaded, all six
+  public HTTPS probes succeed;
+- `awesome-watchdog.timer` is active and a watchdog dry run exits `0`; its
+  output and the readable OOM sources (`awesome-watchdog diagnose`) are printed;
 - native-image heaps are bounded;
 - gateway routes answer as expected on both hosts, for example `/login` 200,
   `/v3/api-docs` 200, `/warehouse/v3/api-docs` 200, `/payment/v3/api-docs` 200,

@@ -10,9 +10,12 @@ production_ssh_host: example.host
 production_ssh_port: "22"
 production_ssh_user: root
 production_ssh_key_path: /absolute/path/to/private-key
-grafana_admin_password: change-this-to-a-strong-value
+# Telegram bot and chat shared by Alertmanager and the host watchdog.
 alertmanager_telegram_bot_token: replace-with-the-botfather-token
 alertmanager_telegram_chat_id: "123456789"
+# Optional dead-man ping for the host watchdog, for example a Healthchecks.io
+# check URL (https://hc-ping.com/<uuid>). Empty disables the ping.
+watchdog_healthcheck_url: ""
 artemis_username: awesome-broker
 artemis_password: replace-with-a-strong-broker-secret
 # Used by both the PostgreSQL container and the backend datasource. The

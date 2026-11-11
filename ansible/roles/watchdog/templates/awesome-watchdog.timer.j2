@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Awesome Server host watchdog every minute
+
+[Timer]
+OnCalendar={{ watchdog_schedule }}
+AccuracySec=5s
+Unit=awesome-watchdog.service
+
+[Install]
+WantedBy=timers.target

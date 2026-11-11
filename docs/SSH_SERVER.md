@@ -25,43 +25,44 @@ make ansible-verify
 
 For deployment, verification, SSH access, and tunnels, the source of truth is the Ansible inventory plus Vault.
 
-Grafana runtime configuration also comes from Vault-backed Ansible vars.
+The host watchdog's Telegram credentials and optional dead-man ping URL also
+come from Vault-backed Ansible vars.
 
 ## SSH tunnels for local browser access
 
-The server profile binds Grafana and Mailpit UI only to `127.0.0.1` on the VPS. They are not public on the internet.
+The server profile binds the Prometheus and Mailpit UIs only to `127.0.0.1` on the VPS. They are not public on the internet. Production has no Grafana (lean monitoring phase A).
 
 Use the Ansible-backed `make` targets to access them from your browser.
 
-### Grafana only
+### Prometheus only
 
 ```bash
-make ansible-tunnel-grafana
+make ansible-tunnel-prometheus
 ```
 
 Then open:
 
-- `http://localhost:3000`
-- direct safeguards dashboard:
-  `http://localhost:3000/d/awesome-prod-safeguards/production-availability-safeguards?orgId=1`
+- `http://localhost:9090` (PromQL, targets and firing alerts)
+- `http://localhost:9090/alerts` for the loaded rules and their state
 
-Keep that terminal open while you use Grafana.
-
-The server profile provisions:
-
-- **Production Resources** for VPS memory and cgroup pressure, provider-host
-  pressure context, disk capacity, CPU,
-  per-container memory and CPU, JVM heap, load, and Prometheus target health;
-- **Production Availability & Safeguards** for public HTTPS status and latency,
-  TLS lifetime, emergency swap use, paging, and memory PSI.
+Keep that terminal open while you use Prometheus. Useful queries:
+`probe_success{job="public_https"}`,
+`container_memory_working_set_bytes{name=~".*awesome-server-.+"}` and
+`node_memory_MemAvailable_bytes`.
 
 Alertmanager is not published on the VPS host. It receives Prometheus alerts
-through the private Docker network and sends warning, critical, and resolved
-notifications to the Telegram chat configured in Ansible Vault.
+through the private Docker network and sends sustained critical alerts to the
+Telegram chat configured in Ansible Vault. The host watchdog
+(`awesome-watchdog.timer`) reports to the same chat; inspect it with
+`systemctl list-timers awesome-watchdog.timer`, `journalctl -u awesome-watchdog`,
+`/usr/local/sbin/awesome-watchdog run --dry-run` and
+`/usr/local/sbin/awesome-watchdog diagnose`.
 
 The HTTPS checks originate from the VPS through public DNS. They cover the
 public gateway and certificate, but not a complete VPS or provider-network
-failure. That final failure mode requires a separate off-server monitor.
+failure. That failure mode needs the watchdog's dead-man ping
+(`watchdog_healthcheck_url`) and an external check, which the owner creates
+(see `docs/PRODUCTION_MONITORING_PLAN.md`).
 
 ### Phase 4/5 alert response
 
@@ -77,7 +78,8 @@ For `PublicEndpointProbeFailedCritical`:
 
 For `PublicEndpointTLSExpiringCritical`, inspect the certificate served for
 `awesome.byst.re`, repair or renew it at the public TLS edge, and confirm that
-the TLS-lifetime panel rises above 21 days.
+`(probe_ssl_earliest_cert_expiry{job="public_https"} - time()) / 86400` rises
+above 21 days.
 
 `HostSwapUsageCritical` and `HostSwapThrashing` can fire only on a future
 swap-capable host. Treat them as memory-exhaustion incidents: identify the
@@ -99,7 +101,7 @@ Then open:
 
 - `http://localhost:8025`
 
-### Grafana and Mailpit UI in one tunnel
+### Prometheus and Mailpit UI in one tunnel
 
 ```bash
 make ansible-tunnel-all
@@ -107,13 +109,13 @@ make ansible-tunnel-all
 
 Then open:
 
-- `http://localhost:3000`
+- `http://localhost:9090`
 - `http://localhost:8025`
 
 Kill helper targets:
 
 ```bash
-make ansible-tunnel-kill-grafana
+make ansible-tunnel-kill-prometheus
 make ansible-tunnel-kill-mailpit
 make ansible-tunnel-kill-all
 ```

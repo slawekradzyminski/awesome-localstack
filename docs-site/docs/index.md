@@ -60,7 +60,7 @@ monitoring sit behind the backend; see [Architecture](architecture/index.md).
 | Environment | URL | Notes |
 | --- | --- | --- |
 | Lightweight profile (local) | `http://localhost:8081/` | Everyday local stack; data resets on recreate |
-| Full profile (local) | `http://localhost:8081/` | Adds monitoring, ActiveMQ, email consumer, Mailpit, a real local LLM |
+| Full profile (local) | `http://localhost:8081/` | Adds ActiveMQ, email consumer, Mailpit, a real local LLM; monitoring is an opt-in overlay for either profile |
 | Stable public playground | `https://awesome.byst.re/` | Production; no demo users, bootstrap catalog only |
 | Disposable sandbox | `https://aitesters.byst.re/` | Separate database, reset every night |
 | This wiki | `/docs/` on every gateway above | Built from `docs-site/` in `awesome-localstack` |

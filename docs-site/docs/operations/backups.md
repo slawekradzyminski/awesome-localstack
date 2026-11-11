@@ -11,6 +11,10 @@ Every deploy also takes an encrypted backup before replacing containers, and
 `make ansible-deploy-backend-upgrade` takes a **quiesced** one with both
 backends stopped.
 
+A failed backup or restore check is reported to Telegram at once
+(`OnFailure=` on both units), and the host watchdog reports a newest archive
+older than 26 hours or a last successful restore check older than 8 days.
+
 - Encryption: AES-256-CBC, PBKDF2, 200,000 iterations, passphrase
   `backup_encryption_passphrase` from Vault (keep an offline copy). No
   plaintext dump touches the disk; each archive has a SHA-256 sidecar.

@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-deploy-backend-upgrade ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-grafana ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-grafana ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images
+.PHONY: ansible-galaxy ansible-bootstrap ansible-deploy ansible-deploy-backend-upgrade ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-prometheus ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-prometheus ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images
 
 ANSIBLE_VAULT_FILE := .vault_pass
 
@@ -40,20 +40,22 @@ ansible-reset-aitesters-state:
 ansible-edit-vault:
 	cd ansible && ansible-vault edit inventory/group_vars/production/vault.yml --vault-password-file $(ANSIBLE_VAULT_FILE)
 
-ansible-tunnel-grafana:
-	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 3000:127.0.0.1:3000 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
+# Production has no Grafana (lean monitoring); the Prometheus UI answers PromQL
+# and lists firing alerts on http://localhost:9090.
+ansible-tunnel-prometheus:
+	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 9090:127.0.0.1:9090 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
 
 ansible-tunnel-mailpit:
 	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 8025:127.0.0.1:8025 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
 
 ansible-tunnel-all:
-	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 3000:127.0.0.1:3000 -L 8025:127.0.0.1:8025 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
+	eval "$$(cd ansible && ./resolve-ssh-vars.sh)" && ssh -o StrictHostKeyChecking=accept-new -N -L 9090:127.0.0.1:9090 -L 8025:127.0.0.1:8025 -p "$$SSH_PORT" -i "$$SSH_KEY_PATH" "$$SSH_USER@$$SSH_HOST"
 
-ansible-tunnel-kill-grafana:
-	pkill -f 'ssh .*3000:127.0.0.1:3000' || true
+ansible-tunnel-kill-prometheus:
+	pkill -f 'ssh .*9090:127.0.0.1:9090' || true
 
 ansible-tunnel-kill-mailpit:
 	pkill -f 'ssh .*8025:127.0.0.1:8025' || true
 
 ansible-tunnel-kill-all:
-	pkill -f 'ssh .*3000:127.0.0.1:3000|ssh .*8025:127.0.0.1:8025' || true
+	pkill -f 'ssh .*9090:127.0.0.1:9090|ssh .*8025:127.0.0.1:8025' || true

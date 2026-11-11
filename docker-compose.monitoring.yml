@@ -1,0 +1,127 @@
+# Opt-in local monitoring for k6 performance-testing trainings: Prometheus,
+# Grafana (k6, Spring and container dashboards), InfluxDB (k6 output),
+# cAdvisor and Node Exporter. Add it after a local base profile:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+#   docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.yml up -d
+#
+# ./run-docker-compose.sh adds it to the full profile by default. Production
+# does not use this file (docker-compose.server.yml has its own alerting stack).
+# Host ports can be moved with GRAFANA_PORT, PROMETHEUS_PORT and INFLUXDB_PORT.
+services:
+  # Expose Micrometer metrics on the application services both base profiles
+  # share; consumer (full profile only) exposes them already.
+  backend:
+    environment:
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+
+  warehouse-service:
+    environment:
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+
+  payment-service:
+    environment:
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+
+  prometheus:
+    image: prom/prometheus:v3.13.2@sha256:508729e0e2d18e11fd742a5a5ca70e557b940a93948c3c95fd0123a6fd538b69
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      # Lets k6 push results with `-o experimental-prometheus-rw`.
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+      start_interval: 2s
+    networks:
+      - my-private-ntwk
+
+  grafana:
+    image: grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: grafana
+    volumes:
+      - ./grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      # dashboard.yml (the file provider) plus every dashboard JSON in the folder.
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+      start_interval: 2s
+    depends_on:
+      - prometheus
+      - influxdb
+    networks:
+      - my-private-ntwk
+
+  influxdb:
+    image: influxdb:1.12.4@sha256:7f65020ddef923f0366dfee0ce753adc0d20b97b0b110b0988c03e0426932396
+    restart: unless-stopped
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=db0
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    networks:
+      - my-private-ntwk
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5@sha256:763aecf1c32c2be8a1a75f9abfc2fc461005c9dbbaa39cb356b354aac1296dbe
+    restart: unless-stopped
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=10s
+      - --store_container_labels=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    expose:
+      - "8080"
+    networks:
+      - my-private-ntwk
+
+  node-exporter:
+    # On Docker Desktop this reports the Docker VM, which is the machine the
+    # containers under test actually share.
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/credentials/.+|var/lib/docker/.+)($|/)
+    pid: host
+    read_only: true
+    volumes:
+      # No rslave propagation: Docker Desktop's root mount is not shared, and a
+      # local test session does not need mounts created after start-up.
+      - /:/host:ro
+    expose:
+      - "9100"
+    networks:
+      - my-private-ntwk
+
+volumes:
+  influxdb-storage:

@@ -72,7 +72,6 @@ app_copy_paths:
   - security
   - postgres
   - nginx
-  - grafana
   - prometheus
   - alertmanager
   - blackbox
@@ -96,7 +95,6 @@ alertmanager_config_files:
 app_runtime_env:
   POSTGRES_PASSWORD: "{{ postgres_password | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ postgres_password | default('', true) }}"
-  GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default('', true) }}"
   ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
   ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
   SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"

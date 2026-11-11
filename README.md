@@ -156,8 +156,9 @@ docker compose -f lightweight-docker-compose.yml down
 
 ## Full Profile
 
-Use this when you want the local app plus monitoring, DB, queueing, email testing,
-consumer, and a real GPU-accelerated local model.
+Use this when you want the local app plus DB, queueing, email testing,
+consumer, and a real GPU-accelerated local model. Monitoring is an opt-in
+overlay (see [Local monitoring for k6 trainings](#local-monitoring-for-k6-trainings)).
 
 Start it with:
 
@@ -171,13 +172,14 @@ Ollama stack (`awesome-full`) from silently replacing the native runtime. The
 backend transport is fixed to the Docker Model Runner adapter, while the model
 itself remains selectable with `OLLAMA_MODEL` or the model field in the UI.
 
-For a clean, verified startup that also removes obsolete services, use:
+For a clean, verified startup that also removes obsolete services and adds the
+monitoring overlay for k6 trainings (`WITH_MONITORING=false` skips it), use:
 
 ```bash
 ./run-docker-compose.sh
 ```
 
-The full profile uses InfluxDB `1.12.4`. Before starting it against a named
+The monitoring overlay uses InfluxDB `1.12.4`. Before starting it against a named
 volume last written by the older `1.8` image, back up the `influxdb-storage`
 volume. InfluxDB 3 is a separate migration target and is not a drop-in image
 replacement for this profile.
@@ -193,8 +195,9 @@ This local full stack intentionally starts the backend with `docker,demo`, so Po
 
 `warehouse-service` and `payment-service` run against the same PostgreSQL
 database in the `warehouse` and `payment` schemas (each with its own role,
-prepared by the one-shot `postgres-roles`), and Prometheus scrapes them as
-`spring_warehouse_micrometer` and `spring_payment_micrometer`.
+prepared by the one-shot `postgres-roles`); with the monitoring overlay,
+Prometheus scrapes them as `spring_warehouse_micrometer` and
+`spring_payment_micrometer`.
 
 Main app URL:
 
@@ -207,8 +210,8 @@ Other useful full-profile URLs:
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
-- Prometheus: `http://localhost:9090/graph`
-- Grafana: `http://localhost:3000/login`
+- Prometheus (monitoring overlay): `http://localhost:9090/graph`
+- Grafana (monitoring overlay): `http://localhost:3000/login` (`admin` / `grafana`)
 - ActiveMQ console: `http://localhost:8161`
 - Mailpit UI: `http://localhost:8025/`
 - Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
@@ -309,9 +312,6 @@ flowchart LR
     M[Mailpit<br/>localhost:8025]
     A[Ollama/DMR adapter<br/>local compatibility layer]
     O[Docker Model Runner<br/>Metal on Apple Silicon]
-    P[Prometheus<br/>localhost:9090]
-    GR[Grafana<br/>localhost:3000]
-    I[InfluxDB<br/>localhost:8086]
 
     U --> G
     G --> F
@@ -372,6 +372,32 @@ Stop it with:
 ```bash
 docker compose -f docker-compose.yml down
 ```
+
+## Local monitoring for k6 trainings
+
+`docker-compose.monitoring.yml` is an opt-in overlay for either local profile.
+It adds Prometheus (`9090`), Grafana (`3000`, `admin` / `grafana`), InfluxDB
+(`8086`, database `db0` for `k6 run --out influxdb=http://localhost:8086/db0`),
+cAdvisor and Node Exporter, and provisions the **k6 Load Testing Results**,
+**Spring Boot 3.x Statistics**, **Spring Boot Http (3.x)** and
+**Container Resources** dashboards.
+
+```bash
+# Full profile (./run-docker-compose.sh already includes the overlay)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+# Lightweight profile
+docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+Stop it with the same `-f` files and `down`. Move the host ports with
+`GRAFANA_PORT`, `PROMETHEUS_PORT` and `INFLUXDB_PORT` when they are taken.
+Prometheus discovers the application services through Docker DNS, so a service
+the chosen profile does not run (the consumer in the lightweight profile) has
+no target rather than a DOWN one. It also accepts k6 remote write
+(`k6 run -o experimental-prometheus-rw`). `scripts/verify-monitoring-overlay.sh`
+starts a profile with the overlay and checks the dashboards and targets; CI
+runs it for the lightweight profile.
 
 ## Server Profile
 
@@ -447,7 +473,6 @@ flowchart LR
     P[Prometheus<br/>30 days / 5 GB]
     AM[Alertmanager<br/>private]
     T[Telegram<br/>operator alerts]
-    GR[Grafana<br/>private dashboard]
 
     U --> G
     G -->|awesome.byst.re| F
@@ -481,9 +506,9 @@ flowchart LR
     C --> P
     W --> P
     PS --> P
-    P --> GR
     P --> AM
     AM --> T
+    WD[Host watchdog<br/>systemd timer] -->|containers, OOM,<br/>disk, backups| T
 ```
 
 Production hardening in this profile:
@@ -510,9 +535,18 @@ Production hardening in this profile:
 - Blackbox Exporter checks the public login, backend OpenAPI,
   warehouse-service OpenAPI and payment-service OpenAPI routes every 30 seconds,
   including DNS, TLS, HTTP status, and latency
+- Blackbox Exporter also probes the aitesters login and OpenAPI routes
 - Alertmanager sends only sustained critical alerts (no resolved messages,
   24-hour repeat) to a Vault-configured private Telegram chat; warnings stay
-  on the dashboards
+  in the Prometheus and Alertmanager APIs
+- there is no Grafana in production (lean monitoring phase A frees about
+  450 MiB); `make ansible-tunnel-prometheus` opens the Prometheus UI instead
+- a host watchdog (systemd timer, no resident process) reports unhealthy,
+  exited, restarting or missing containers, OOM kills, disk and memory
+  exhaustion, failed or stale backups to the same Telegram chat, once per
+  problem and once per recovery, and can ping an external dead-man check
+- every long-running service except the distroless consumer has a Docker
+  healthcheck; the watchdog probes the consumer through the gateway
 - the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
   but swap remains disabled on the current MIKR.US LXC host because its
   virtualization layer rejects `swapon`
@@ -533,14 +567,14 @@ Production hardening in this profile:
   requires a verified encrypted backup, no attachments, and the same retention
   period before removal
 
-Use `make ansible-tunnel-grafana` and open `http://localhost:3000` to inspect
-the provisioned **Production Resources** and
-**Production Availability & Safeguards** dashboards.
+Use `make ansible-tunnel-prometheus` and open `http://localhost:9090` for
+PromQL queries and the firing alerts.
 
-The public probes run on the VPS, so they detect application, gateway, DNS, TLS,
-and public routing failures while the monitoring stack is alive. They cannot
-detect loss of the entire VPS. A separate off-server heartbeat monitor remains
-required for that failure mode.
+The public probes and the watchdog run on the VPS, so they cannot detect loss
+of the entire VPS. The watchdog's optional dead-man ping
+(`watchdog_healthcheck_url`, for example a Healthchecks.io check) covers that
+once the owner creates the external check; see
+[docs/PRODUCTION_MONITORING_PLAN.md](docs/PRODUCTION_MONITORING_PLAN.md#lean-monitoring-phases-a-b-and-c).
 
 Quick public verification:
 

@@ -652,7 +652,8 @@
   changed_when: false
   until:
     - public_probe_response.rc == 0
-    - ((public_probe_response.stdout | from_json).data.result | length) == 4
+    # Four awesome.byst.re routes and two aitesters.byst.re routes.
+    - ((public_probe_response.stdout | from_json).data.result | length) == 6
     - >-
       (
         (public_probe_response.stdout | from_json).data.result
@@ -766,37 +767,47 @@
       payment-service: -Xmx64m
       aitesters-payment-service: -Xmx64m
 
-- name: Verify the production resource dashboard is provisioned
+- name: Read the host watchdog timer state
   ansible.builtin.command:
     argv:
-      - docker
-      - compose
-      - -f
-      - "{{ app_compose_file }}"
-      - exec
-      - -T
-      - grafana
-      - test
-      - -r
-      - /etc/grafana/provisioning/dashboards/production_resources.json
-    chdir: "{{ app_dir }}"
+      - systemctl
+      - is-active
+      - awesome-watchdog.timer
+  register: verify_watchdog_timer
   changed_when: false
+  failed_when: verify_watchdog_timer.stdout != 'active'
+  when: watchdog_enabled | default(true) | bool
 
-- name: Verify the production safeguards dashboard is provisioned
+- name: Dry-run the host watchdog against the deployed stack
+  # Runs every check without sending, pinging or changing state; exits non-zero
+  # only when a check cannot run (for example, Docker is unreachable).
   ansible.builtin.command:
     argv:
-      - docker
-      - compose
-      - -f
-      - "{{ app_compose_file }}"
-      - exec
-      - -T
-      - grafana
-      - test
-      - -r
-      - /etc/grafana/provisioning/dashboards/production_safeguards.json
-    chdir: "{{ app_dir }}"
+      - "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+      - run
+      - --dry-run
+  register: verify_watchdog_dry_run
   changed_when: false
+  when: watchdog_enabled | default(true) | bool
+
+- name: Print the watchdog dry run
+  ansible.builtin.debug:
+    var: verify_watchdog_dry_run.stdout_lines
+  when: watchdog_enabled | default(true) | bool
+
+- name: Record which OOM sources the watchdog can read on this host
+  ansible.builtin.command:
+    argv:
+      - "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+      - diagnose
+  register: verify_watchdog_diagnose
+  changed_when: false
+  when: watchdog_enabled | default(true) | bool
+
+- name: Print the watchdog OOM-source diagnosis
+  ansible.builtin.debug:
+    var: verify_watchdog_diagnose.stdout_lines
+  when: watchdog_enabled | default(true) | bool
 
 - name: Verify local HTTP endpoints
   ansible.builtin.uri:

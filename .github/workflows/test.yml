@@ -23,6 +23,16 @@ jobs:
     - name: Verify bounded deployment alert silence
       run: python3 scripts/verify-deployment-silence.py
 
+  verifyProductionMonitoring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Verify lean production monitoring and local overlay contract
+      run: python3 scripts/verify-production-monitoring.py
+    - name: Test the host watchdog with a fake Docker CLI and Telegram endpoint
+      run: python3 scripts/verify-watchdog.py -v
+
   verifyEdgeProxy:
     runs-on: ubuntu-latest
     steps:
@@ -98,6 +108,17 @@ jobs:
           --header 'Content-Type: application/json' \
           --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \
           | grep -F '"done":true' >/dev/null
+
+  verifyMonitoringOverlay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7.0.1
+    # Grafana with every dashboard and all Prometheus targets UP on the
+    # lightweight profile (-f docker-compose.monitoring.yml); the full profile
+    # gets the overlay through run-docker-compose.sh in runDocker.
+    - name: Run the lightweight profile with the local monitoring overlay
+      run: bash ./scripts/verify-monitoring-overlay.sh lightweight-docker-compose.yml
 
   verifyDocsSite:
     runs-on: ubuntu-latest

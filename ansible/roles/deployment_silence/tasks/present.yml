@@ -1,3 +1,17 @@
+- name: Pause the host watchdog container checks for the deployment
+  # Same bound as the Alertmanager silence. The watchdog itself caps a pause at
+  # 30 minutes, so a failed deployment cannot mute it for longer. Disk, memory,
+  # OOM and backup checks keep running.
+  ansible.builtin.command:
+    argv:
+      - "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+      - maintenance
+      - start
+      - --minutes
+      - "{{ deployment_silence_duration_minutes }}"
+    removes: "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+  changed_when: true
+
 - name: Check for an existing deployed Compose file
   ansible.builtin.stat:
     path: "{{ app_dir }}/{{ app_compose_file }}"

@@ -129,8 +129,9 @@ check. Use the lightweight profile unless a scenario says otherwise.
 
 ## Non-functional
 
-- **Performance:** k6 against the full profile writes to InfluxDB and the
-  Grafana k6 dashboard; production rate limits are deliberately raised, but
+- **Performance:** k6 against a local profile started with the monitoring
+  overlay (`-f docker-compose.monitoring.yml`, or `./run-docker-compose.sh`)
+  writes to InfluxDB and the Grafana k6 dashboard; production rate limits are deliberately raised, but
   keep load tests local.
 - **Resilience:** stop one service at a time (`docker compose stop payment-service`)
   and observe which paths degrade (`502`, `503`) and which keep working.

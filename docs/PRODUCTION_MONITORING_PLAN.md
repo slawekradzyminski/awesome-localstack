@@ -12,6 +12,14 @@ This document is both the implementation plan and its rollout record.
 | Phase 4: public-path synthetic checks | Implemented and deployed |
 | Phase 4b: independent host-down heartbeat | Deferred; off-server provider required |
 | Phase 5: additional safeguards | Observability deployed; emergency swap blocked by LXC |
+| Lean phase A: Grafana removed from production | Implemented in the repository; not yet deployed |
+| Lean phase B: host watchdog and dead-man ping (replaces phase 4b) | Implemented in the repository; not yet deployed |
+| Lean phase C: Prometheus stack removed from production | Planned follow-up |
+
+The lean phases are described in
+[Lean monitoring](#lean-monitoring-phases-a-b-and-c). The phase 1-5 records
+below are historical: they mention Grafana, which lean phase A removes from
+production.
 
 Phases 1 and 2 add no alert notifications by themselves. They establish bounded
 JVMs, durable metrics, and dashboards so that phase 3 can add rules and
@@ -57,7 +65,8 @@ reached approximately 19.6%, but VPS-root cgroup PSI remained effectively zero,
 available VPS memory stayed above 42%, no local OOM occurred, and both public
 probes remained healthy. Host memory PSI and OOM rules now use cAdvisor's
 VPS-root cgroup series (`id="/"`). Provider-host PSI remains visible only as
-diagnostic context in Grafana.
+diagnostic context (Grafana until lean phase A, now PromQL through
+`make ansible-tunnel-prometheus`).
 
 The follow-up resource-protection deployment completed with 69 successful
 Ansible tasks and no failures. Every production container now has an explicit
@@ -94,6 +103,247 @@ Future audits must compare stable releases, review migration and security notes,
 validate the exact registry manifest, and deploy through the normal backup and
 verification workflow. A newer tag must not be adopted automatically without
 these compatibility checks.
+
+## Lean monitoring (phases A, B and C)
+
+The November 2026 review (owner's research note, 2026-11-11) found that the
+on-box stack used about 850-900 MiB of the 4.25 GiB VPS for four alerts the
+owner actually needs: site down, container unhealthy or OOM-killed, disk
+filling, backup failed. Grafana alone used about 450 MiB (640 MiB limit) for
+dashboards nobody opened, backups were never alerted, `aitesters.byst.re` was
+not probed and nothing off-box could report the VPS itself being down. The
+replacement runs in three phases; A and B are in the repository, C is planned.
+
+| Lean phase | Status |
+| --- | --- |
+| A: remove Grafana from production | Implemented in the repository; not yet deployed |
+| B: host watchdog, healthchecks, backup alerts, aitesters probes | Implemented in the repository; not yet deployed; 1-2 week parallel run pending |
+| C: remove Prometheus, Alertmanager, cAdvisor and exporters | Planned follow-up (prerequisites below) |
+
+### Phase A: Grafana removed
+
+- `docker-compose.server.yml` no longer runs `grafana`; the deploy's
+  `remove_orphans` removes the old container. Prometheus, Alertmanager,
+  cAdvisor, Node Exporter, Blackbox Exporter and every Telegram alert are
+  unchanged.
+- Ansible no longer copies `grafana/` (the `app` role deletes the old copy on
+  the server), `.env.runtime` no longer carries `GF_SECURITY_ADMIN_PASSWORD`,
+  the `verify` role no longer checks the two dashboards, and
+  `vault.yml.example` no longer lists `grafana_admin_password` (an existing
+  value in the real Vault is now unused and can be deleted at leisure).
+- `make ansible-tunnel-grafana` became `make ansible-tunnel-prometheus`:
+  Prometheus now publishes on the VPS loopback only (`127.0.0.1:9090`), and its
+  UI answers PromQL and lists firing alerts.
+- `grafana/server-provisioning/` and the production-only safeguards dashboard
+  are deleted; the resources dashboard became the local **Container
+  Resources** dashboard of the monitoring overlay.
+- Memory: about 450 MiB of working set and a 640 MiB limit are freed (the
+  long-running limits drop from about 5.8 GiB to about 5.2 GiB).
+- First deploy: changing `.env.runtime` recreates the services that read it
+  (backend, consumer, activemq, postgres) once, inside the usual deployment
+  silence and watchdog pause. Rollback is `git revert` and a deploy.
+
+### Phase B: host watchdog
+
+`ansible/roles/watchdog` installs `/usr/local/sbin/awesome-watchdog` (Python
+standard library only), `/etc/awesome-watchdog/config.json` (mode 0600,
+rendered from Vault), `awesome-watchdog.timer` (every minute) and the
+`awesome-watchdog-notify@.service` template. It runs early in `deploy.yml`
+(after `swap`, before `postgres_backup` and the deployment silence). It keeps
+no resident process and sends to the **same bot and chat as Alertmanager**
+(`alertmanager_telegram_bot_token`, `alertmanager_telegram_chat_id`).
+
+| Check | Source | Reported when | Confirmation |
+| --- | --- | --- | --- |
+| Container missing | `docker ps`/`inspect`, project `awesome-server`; expected set = every service of `docker-compose.server.yml` except the one-shots | no container for an expected service | 2 runs |
+| Container exited, dead, paused, restarting | `State.Status`, exit code, `OOMKilled` | not `running` | 2 runs |
+| Container unhealthy | `State.Health` (Docker healthchecks below) | `unhealthy` | 3 runs |
+| Restart loop | `RestartCount` of the same container ID | increased within 10 minutes | 1 run |
+| One-shot failed | `postgres-roles`, `aitesters-postgres-roles` | exited non-zero | 1 run |
+| Consumer health | `curl http://consumer:4002/actuator/health` from the gateway container | request fails | 2 runs |
+| OOM kill (event) | `docker events --filter event=oom` since the previous run | each event | immediate |
+| OOM kill (kernel) | `/sys/fs/cgroup/memory.events` `oom_kill` (VPS-root cgroup) and each container's cgroup `memory.events` | counter increased | immediate |
+| Disk | `statvfs /` | 85% and 90% used (one problem per threshold) | 1 run |
+| Inodes | `statvfs /` | 92% used | 1 run |
+| Memory | `MemAvailable` (LXCFS-virtualized, VPS-scoped) | below 300 MiB | 10 runs |
+| Backup stale | newest `*.sql.gz.enc` in `/var/backups/awesome-localstack/postgres/daily` | older than 26 h, or none | 1 run |
+| Restore check stale | `restore-check.ok` stamp written by a successful restore check | older than 8 days | 1 run |
+| Backup or restore check failed | `OnFailure=awesome-watchdog-notify@%n.service` on both units | unit failed (result and last log lines) | immediate |
+| Watchdog cannot check | Docker CLI or `/proc` unreadable | check error | 2 runs |
+
+Thresholds match `prometheus/rules/host.yml` for the parallel run.
+
+**De-duplication.** `/var/lib/awesome-watchdog/state.json` remembers each
+problem. A problem is sent once when it reaches its confirmation count
+(`PROBLEM:`), never repeated while it persists (`watchdog_repeat_hours: 0`;
+set N to repeat every N hours), and its recovery is sent once (`RESOLVED:`).
+A problem that disappears before confirmation is forgotten silently. Events
+(`EVENT:`) are sent once. All lines of one run go in one message. If Telegram
+delivery fails, nothing is marked as sent and the next run retries.
+
+**Deployments and resets.** The `deployment_silence` role now also runs
+`awesome-watchdog maintenance start --minutes 15` before `app` and
+`maintenance stop` after a successful `verify`. A pause suspends only the
+container and consumer checks (known container problems are frozen, not
+resolved); OOM, disk, memory and backup checks continue, and the script
+ignores any pause older than 30 minutes, so a failed deployment cannot mute it.
+The nightly aitesters reset recreates its containers in seconds, below the
+two-run confirmation.
+
+**Dead-man ping.** When `watchdog_healthcheck_url` is set (Vault), every run
+POSTs to it and a run with a check error or a failed Telegram delivery posts to
+`<url>/fail`. An external service such as Healthchecks.io then alerts from
+outside when pings stop: VPS down, network down, timer stopped or the script
+broken. Empty (the default) disables the ping.
+
+**OOM sources on the MIKR.US LXC host.** The watchdog reads all three and
+de-duplicates a container's cgroup OOM against its Docker event:
+
+1. Docker `oom` events are emitted by containerd for container cgroups and
+   need no host access; they work on any Docker host (proven locally on Docker
+   Desktop with a 12 MiB container).
+2. `/sys/fs/cgroup/memory.events` inside the LXC is the VPS's own cgroup
+   (cgroup namespace root), the same cgroup cAdvisor reports as `id="/"`; its
+   hierarchical `oom_kill` also counts kills outside containers, which Docker
+   events cannot see. The current `HostKernelOOMKill` rule already depends on
+   this cgroup, so it is expected to be readable.
+3. Per-container `memory.events` is found through `/proc/<pid>/cgroup`.
+
+Each deploy's `verify` prints `awesome-watchdog diagnose`, which states which
+sources are readable. Record the first production result here:
+
+| Source | Readable on production | Proven by the OOM test |
+| --- | --- | --- |
+| Docker `oom` events | to be recorded after the first deploy | |
+| VPS-root `memory.events` | to be recorded after the first deploy | |
+| Container `memory.events` | to be recorded after the first deploy | |
+
+**Healthchecks.** Every long-running server service now has one, except the
+consumer, which is a distroless native image with neither shell nor curl
+(the watchdog probes it instead):
+
+| Service | Probe |
+| --- | --- |
+| `backend`, `aitesters-backend` | bash `/dev/tcp` GET `/actuator/health` (same as the image's own `HEALTHCHECK`, now explicit) |
+| `frontend`, `aitesters-frontend` | `curl http://127.0.0.1/` |
+| `gateway` | `curl http://127.0.0.1/images/iphone.png` (a static file, so no upstream decides the gateway's health) |
+| `edge` | the same file through the edge with `Host: awesome.byst.re` (the edge's job is that hop) |
+| `activemq` | bash `/dev/tcp` connect to `61616` (no curl in the image), 90 s start period |
+
+`start_interval: 2s` (3 s for ActiveMQ) makes a fresh container healthy within
+seconds, so `docker compose up --wait` does not slow deploys. Dependencies:
+`edge` waits for a healthy `gateway`, `consumer` for a healthy `activemq`; the
+gateway keeps `service_started` for `aitesters-backend` (the stable site must
+not wait for the sandbox) and the backend keeps `service_started` for
+`activemq`.
+
+**Probes.** The `public_https` Blackbox job also probes
+`https://aitesters.byst.re/login` and `https://aitesters.byst.re/v3/api-docs`
+(same `public-edge` service label, so the deployment silence covers them);
+`verify` expects six probe results.
+
+**Contract and tests.** `scripts/verify-production-monitoring.py` (CI job
+`verifyProductionMonitoring`) checks the Grafana removal, the healthchecks and
+dependency conditions, the aitesters probes, the watchdog role, units and
+deploy ordering, the backup `OnFailure=` hooks and the deployment pause.
+`scripts/verify-watchdog.py` tests the script against a fake Docker CLI, fake
+cgroup and `/proc` trees and a fake Telegram and ping endpoint.
+`scripts/verify-postgres-restore.py` also requires the restore-check stamp.
+
+#### Owner's manual steps
+
+1. **Dead-man check.** Create an account and a check at Healthchecks.io (or any
+   service that alerts on missed HTTP pings): period 1 minute, grace 5 minutes,
+   with its Telegram integration pointing at the same chat. Its free tier is for
+   hobby, open-source and non-profit use; paid trainings may need a paid plan.
+   Put the ping URL into Vault as `watchdog_healthcheck_url` (`make
+   ansible-edit-vault`) and deploy. Nobody has created this account yet.
+2. **External HTTP check.** Add an off-box uptime monitor (Healthchecks.io
+   cannot do HTTP checks; UptimeRobot Free can, with e-mail alerts) for
+   `https://awesome.byst.re/login` and `https://aitesters.byst.re/login`. Until
+   phase C, Blackbox Exporter covers TLS expiry from the VPS.
+3. Optionally delete `grafana_admin_password` from the real Vault.
+
+#### Parallel-run checklist (1-2 weeks before phase C)
+
+Run each item once after the first deploy, on the VPS as root in
+`/opt/awesome-localstack`, and record the date. `W=/usr/local/sbin/awesome-watchdog`.
+For threshold items, a test copy of the configuration with its own state file
+proves the alert path without filling the disk:
+
+```bash
+python3 - <<'PY'
+import json
+config = json.load(open("/etc/awesome-watchdog/config.json"))
+config.update(state_file="/root/watchdog-test-state.json", healthcheck_url="",
+              disk_used_percent_thresholds=[1], memory_available_min_mib=10**6,
+              memory_confirm_runs=1, backup_max_age_hours=0)
+json.dump(config, open("/root/watchdog-test.json", "w"))
+PY
+chmod 600 /root/watchdog-test.json
+```
+
+| # | Alert | Trigger | Expected Telegram | Clean-up | Done |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Delivery | `$W test-message` | `TEST: watchdog Telegram delivery works` | none | |
+| 2 | Container exited / missing | `docker compose -f docker-compose.server.yml stop aitesters-frontend` | `PROBLEM: Container aitesters-frontend is exited` after about 2 min | `... start aitesters-frontend`; expect one `RESOLVED:` | |
+| 3 | Container unhealthy | `docker compose -f docker-compose.server.yml exec aitesters-frontend mv /usr/share/nginx/html/index.html /tmp/` | `PROBLEM: Container aitesters-frontend is unhealthy` after about 4-5 min | `... exec aitesters-frontend mv /tmp/index.html /usr/share/nginx/html/`; one `RESOLVED:` | |
+| 4 | Restart loop | `docker compose -f docker-compose.server.yml exec aitesters-frontend nginx -s quit` | `PROBLEM: Container aitesters-frontend restarted in the last 10 minutes` | resolves by itself after 10 min | |
+| 5 | OOM kill | `docker run --rm -m 16m --memory-swap 16m --entrypoint sh <postgres_restore_image> -c 'x=a; while :; do x=$x$x; done'` | `EVENT: OOM kill in container ...` and, if the VPS-root cgroup is readable, `EVENT: Kernel OOM killer ran ...`; Alertmanager's `ContainerOOMEvent` too | none (container is removed); record the result in the OOM-source table | |
+| 6 | Disk, memory, backup stale | `AWESOME_WATCHDOG_CONFIG=/root/watchdog-test.json $W run` | `PROBLEM: Disk / is ...`, `Available memory ...`, `Newest PostgreSQL backup is ...` | `rm /root/watchdog-test.json /root/watchdog-test-state.json` | |
+| 7 | Backup unit failure | `systemd-run --unit=watchdog-onfailure-test -p OnFailure=awesome-watchdog-notify@%n.service /bin/false` | `FAILED: systemd unit watchdog-onfailure-test.service failed` | `systemctl reset-failed watchdog-onfailure-test.service` | |
+| 8 | Dead-man | after manual step 1: `systemctl stop awesome-watchdog.timer` | Healthchecks.io alert after period + grace | `systemctl start awesome-watchdog.timer` | |
+| 9 | Deploy stays quiet | a normal `make ansible-deploy` | no watchdog container messages; `verify` prints the dry run and `diagnose` | none | |
+| 10 | aitesters probes | `make ansible-tunnel-prometheus`, query `probe_success{job="public_https"}` | six series, all `1` | none | |
+
+During the parallel run, compare every Alertmanager Telegram message with the
+watchdog's. Phase C may start only when the watchdog reported everything
+Alertmanager did that the owner cares about.
+
+### Phase C (planned follow-up): remove the Prometheus stack
+
+Not part of this change. It frees roughly another 400-450 MiB (Prometheus
+about 170 MiB, cAdvisor about 190 MiB, Alertmanager, Node Exporter and
+Blackbox Exporter about 40-90 MiB together) and the scrape load on the single
+shared vCPU.
+
+Prerequisites:
+
+- the parallel-run checklist above is complete, with no incident that only
+  Alertmanager reported;
+- the OOM-source table is filled in from production (`diagnose` plus test 5),
+  so it is known whether kernel OOM kills outside containers are still seen
+  without cAdvisor;
+- the dead-man check (manual step 1) exists and test 8 passed;
+- an external HTTP and TLS-expiry check replaces Blackbox Exporter (manual
+  step 2, or a daily `openssl s_client` expiry check added to the watchdog);
+- the owner accepts losing metric history, JVM heap and PSI signals, latency
+  and the unseen warning tier (optionally keep an hourly `docker stats` and
+  `df` line in a rotated log for capacity questions).
+
+Planned work:
+
+1. Remove `prometheus`, `alertmanager`, `cadvisor`, `node-exporter`,
+   `blackbox-exporter` and the `prometheus-data` and `alertmanager-data`
+   volumes from `docker-compose.server.yml`; delete
+   `prometheus/prometheus.server.yml`, `prometheus/rules/`, `alertmanager/` and
+   `blackbox/` (keep `prometheus/prometheus.yml` for the local overlay).
+2. Replace the Alertmanager silence in `deployment_silence` with the watchdog
+   pause alone, and rewrite `scripts/verify-deployment-silence.py` and the
+   silence markers in `scripts/verify-backend-upgrade.py` to assert the same
+   wrap-and-expire contract.
+3. In `verify`, drop the monitoring endpoint, target, Alertmanager, rule,
+   Blackbox and probe tasks; keep the watchdog timer, dry run and `diagnose`,
+   and add a direct `curl` of the public URLs.
+4. In `app`, drop the Prometheus and Alertmanager checksum, restart and
+   secret-file tasks, keep the Telegram credential assert, and drop
+   `prometheus_server_config_files` and `alertmanager_config_files` from
+   `group_vars`.
+5. Let the `cleanup` role remove the retired images and volumes; then update
+   this plan, `README.md`, `docs/ANSIBLE.md`, `docs/SSH_SERVER.md`,
+   `docs/SSH_TUNNELLING.md`, `docs/PROFILE_URLS.md`,
+   `docs/PRODUCTION_BACKUPS.md` and the `docs-site` operations and
+   architecture pages.
 
 ## Goal
 
@@ -224,7 +474,7 @@ training stack and an external uptime monitor already covers public
 availability:
 
 - only `severity="critical"` alerts reach Telegram; warnings go to the
-  `dashboard-only` receiver and stay visible in Prometheus, Grafana and the
+  `dashboard-only` receiver and stay visible in Prometheus and the
   Alertmanager API;
 - resolved notifications are not sent, and a still-firing critical repeats at
   most once every 24 hours;
@@ -426,11 +676,12 @@ must be reviewed after controlled load tests or material traffic growth:
 | `aitesters-postgres` | Not applicable (disk-backed sandbox database, `shared_buffers=32MB`) | 160 MiB |
 | `activemq` | `-Xms256M -Xmx512M` | 768 MiB |
 | `ollama-mock` | `-Xms64m -Xmx256m` | 512 MiB |
-| `grafana` | Not applicable | 640 MiB |
 | `prometheus` | Not applicable | 512 MiB |
 | `postgres` | Not applicable | 512 MiB |
 | `gateway`, `edge` | Not applicable | 128 MiB each |
 | frontends, `mailpit` | Not applicable | 64 MiB each |
+
+Grafana (640 MiB) left production in lean phase A.
 
 The ActiveMQ image previously started with `-Xms512M -Xmx2G`; its explicit
 Compose `JAVA_ARGS` now preserves the image's operational JVM properties while
@@ -495,7 +746,9 @@ The on-VPS Blackbox Exporter monitors:
 - `https://awesome.byst.re/login`;
 - `https://awesome.byst.re/v3/api-docs`;
 - `https://awesome.byst.re/warehouse/v3/api-docs`;
-- `https://awesome.byst.re/payment/v3/api-docs`.
+- `https://awesome.byst.re/payment/v3/api-docs`;
+- `https://aitesters.byst.re/login` and `https://aitesters.byst.re/v3/api-docs`
+  (added in lean phase B).
 
 payment-service is also scraped as `spring_payment_micrometer` and has its own
 `CriticalContainerMissing` rule; the deployment silence covers its scrape
@@ -526,8 +779,10 @@ The deployed on-VPS probes cover:
 - the edge proxy; and
 - the application routes.
 
-The future off-server heartbeat is what will additionally cover complete VPS,
-hosting-network, Prometheus, Alertmanager, and outbound Telegram failure.
+The off-server heartbeat is the host watchdog's dead-man ping (lean phase B,
+`watchdog_healthcheck_url`); once the owner creates the external check it
+additionally covers complete VPS, hosting-network, watchdog and outbound
+Telegram failure.
 
 ## Repository implementation outline
 

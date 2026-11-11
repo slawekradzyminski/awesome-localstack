@@ -1,0 +1,10 @@
+[Unit]
+Description=Telegram notification for the failed unit %i
+# Referenced as OnFailure=awesome-watchdog-notify@%n.service by the backup units.
+
+[Service]
+Type=oneshot
+ExecStart={{ watchdog_script_path }} notify-unit-failure %i
+TimeoutStartSec=60s
+NoNewPrivileges=true
+PrivateTmp=true

@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Host, container, and JVM resource overview for the production VPS.",
+  "description": "Docker host and per-container CPU and memory from Node Exporter and cAdvisor (local monitoring overlay, docker-compose.monitoring.yml). Useful next to the k6 dashboard during load tests.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -215,7 +215,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
           "legendFormat": "busy",
           "range": true,
           "refId": "A"
@@ -470,7 +470,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(container_pressure_memory_waiting_seconds_total{job=\"cadvisor\", id=\"/\"}[5m])",
+          "expr": "100 * rate(container_pressure_memory_waiting_seconds_total{job=\"cadvisor\", id=\"/\"}[1m])",
           "legendFormat": "VPS: some tasks waiting",
           "range": true,
           "refId": "A"
@@ -478,7 +478,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(container_pressure_memory_stalled_seconds_total{job=\"cadvisor\", id=\"/\"}[5m])",
+          "expr": "100 * rate(container_pressure_memory_stalled_seconds_total{job=\"cadvisor\", id=\"/\"}[1m])",
           "legendFormat": "VPS: all tasks stalled",
           "range": true,
           "refId": "B"
@@ -486,7 +486,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total[5m])",
+          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total[1m])",
           "legendFormat": "provider host: some tasks waiting",
           "range": true,
           "refId": "C"
@@ -494,13 +494,13 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total[5m])",
+          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total[1m])",
           "legendFormat": "provider host: all tasks stalled",
           "range": true,
           "refId": "D"
         }
       ],
-      "title": "Memory pressure (VPS cgroup vs provider host PSI)",
+      "title": "Memory pressure (root cgroup vs kernel PSI)",
       "type": "timeseries"
     },
     {
@@ -576,7 +576,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "container_memory_working_set_bytes{name=~\".*awesome-server-.+\"}",
+          "expr": "container_memory_working_set_bytes{name=~\".+\"}",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
@@ -658,7 +658,7 @@
         {
           "datasource": "Prometheus",
           "editorMode": "code",
-          "expr": "100 * sum by (name) (rate(container_cpu_usage_seconds_total{name=~\".*awesome-server-.+\"}[5m]))",
+          "expr": "100 * sum by (name) (rate(container_cpu_usage_seconds_total{name=~\".+\"}[1m]))",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
@@ -874,8 +874,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Production Resources",
-  "uid": "awesome-prod-resources",
+  "title": "Container Resources",
+  "uid": "awesome-container-resources",
   "version": 1,
   "weekStart": ""
 }

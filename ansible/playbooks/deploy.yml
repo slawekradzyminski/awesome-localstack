@@ -5,6 +5,9 @@
 
   roles:
     - swap
+    # Installed first so the backup units' OnFailure= notifier exists and the
+    # deployment silence below can pause its container checks.
+    - watchdog
     - postgres_backup
     - role: deployment_silence
       deployment_silence_state: present

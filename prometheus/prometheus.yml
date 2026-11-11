@@ -1,24 +1,70 @@
+# Local monitoring overlay (docker-compose.monitoring.yml). Production uses
+# prometheus.server.yml instead.
+#
+# Application targets use Docker DNS discovery: a service that the chosen base
+# profile does not run (consumer in the lightweight profile) simply has no
+# target instead of a permanently DOWN one. The relabelling keeps the familiar
+# `service:port` instance names for the Grafana dashboards.
 global:
   scrape_interval: 10s
 
 scrape_configs:
-  - job_name: 'spring_backend_micrometer'
-    metrics_path: '/actuator/prometheus'
+  - job_name: spring_backend_micrometer
+    metrics_path: /actuator/prometheus
     scrape_interval: 5s
-    static_configs:
-      - targets: ['backend:4001']
-  - job_name: 'spring_consumer_micrometer'
-    metrics_path: '/actuator/prometheus'
+    dns_sd_configs:
+      - names: [backend]
+        type: A
+        port: 4001
+        refresh_interval: 15s
+    relabel_configs:
+      - target_label: instance
+        replacement: backend:4001
+
+  - job_name: spring_consumer_micrometer
+    metrics_path: /actuator/prometheus
     scrape_interval: 5s
-    static_configs:
-      - targets: ['consumer:4002']
-  - job_name: 'spring_warehouse_micrometer'
-    metrics_path: '/actuator/prometheus'
+    dns_sd_configs:
+      - names: [consumer]
+        type: A
+        port: 4002
+        refresh_interval: 15s
+    relabel_configs:
+      - target_label: instance
+        replacement: consumer:4002
+
+  - job_name: spring_warehouse_micrometer
+    metrics_path: /actuator/prometheus
     scrape_interval: 5s
-    static_configs:
-      - targets: ['warehouse-service:4003']
-  - job_name: 'spring_payment_micrometer'
-    metrics_path: '/actuator/prometheus'
+    dns_sd_configs:
+      - names: [warehouse-service]
+        type: A
+        port: 4003
+        refresh_interval: 15s
+    relabel_configs:
+      - target_label: instance
+        replacement: warehouse-service:4003
+
+  - job_name: spring_payment_micrometer
+    metrics_path: /actuator/prometheus
     scrape_interval: 5s
+    dns_sd_configs:
+      - names: [payment-service]
+        type: A
+        port: 4004
+        refresh_interval: 15s
+    relabel_configs:
+      - target_label: instance
+        replacement: payment-service:4004
+
+  - job_name: cadvisor
     static_configs:
-      - targets: ['payment-service:4004']
+      - targets: [cadvisor:8080]
+
+  - job_name: node
+    static_configs:
+      - targets: [node-exporter:9100]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]

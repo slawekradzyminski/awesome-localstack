@@ -363,8 +363,14 @@
     mode: "u=rwX,go=rX"
     recurse: true
   loop:
-    - grafana
     - prometheus
+
+- name: Remove the retired production Grafana assets
+  # Grafana left the server profile (lean monitoring phase A); the dashboards
+  # stay in the repository for the local monitoring overlay.
+  ansible.builtin.file:
+    path: "{{ app_dir }}/grafana"
+    state: absent
 
 - name: Ensure Alertmanager configuration assets are readable
   ansible.builtin.file:

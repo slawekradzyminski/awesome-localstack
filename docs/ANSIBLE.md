@@ -93,7 +93,7 @@ make ansible-reset-demo-state
 Start SSH tunnels:
 
 ```bash
-make ansible-tunnel-grafana
+make ansible-tunnel-prometheus
 make ansible-tunnel-mailpit
 make ansible-tunnel-all
 ```
@@ -101,7 +101,7 @@ make ansible-tunnel-all
 Kill SSH tunnels:
 
 ```bash
-make ansible-tunnel-kill-grafana
+make ansible-tunnel-kill-prometheus
 make ansible-tunnel-kill-mailpit
 make ansible-tunnel-kill-all
 ```
@@ -125,24 +125,31 @@ ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password
 
 `deploy.yml` is the normal operational entrypoint.
 
-It performs seven steps in order:
+It performs eight steps in order:
 
 1. Runs the guarded `swap` role. It can converge a 1 GiB emergency swap file
    and low swappiness on capable hosts; it reports a tracked reason and makes no
    swap changes on the current MIKR.US LXC host.
-2. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
-3. Creates 15-minute Alertmanager silences for the warning-level
+2. Runs the `watchdog` role: installs the host watchdog script, its
+   configuration, the one-minute `awesome-watchdog.timer` and the
+   `awesome-watchdog-notify@.service` template the backup units use as
+   `OnFailure=` (see [the lean monitoring plan](PRODUCTION_MONITORING_PLAN.md#lean-monitoring-phases-a-b-and-c)).
+3. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
+4. Pauses the watchdog's container checks for 15 minutes and creates 15-minute
+   Alertmanager silences for the warning-level
    `PublicEndpointProbeFailed` alert and the backend, consumer,
    warehouse-service and payment-service `PrometheusTargetDown` warnings when the existing monitoring stack is
-   reachable. The five-minute critical alerts remain active.
-4. Runs the `app` role to reconcile the existing PostgreSQL role with the
+   reachable. The five-minute critical alerts and the watchdog's OOM, disk,
+   memory and backup checks remain active.
+5. Runs the `app` role to reconcile the existing PostgreSQL role with the
    Vault-managed password, render the protected runtime environment, and
    converge files and Docker Compose state in `/opt/awesome-localstack`.
-5. Runs the `verify` role to make sure the deployed stack is actually
+6. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
-6. Expires the warning silences immediately after verification succeeds. If a
-   deploy fails first, the silences expire automatically after 15 minutes.
-7. Runs the guarded `cleanup` role only after verification succeeds.
+7. Expires the warning silences and resumes the watchdog immediately after
+   verification succeeds. If a deploy fails first, both expire automatically
+   after 15 minutes.
+8. Runs the guarded `cleanup` role only after verification succeeds.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
@@ -195,7 +202,8 @@ The role checks:
 - private Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and
   Alertmanager endpoints are reachable
 - all expected Prometheus scrape jobs are healthy
-- both public Blackbox probes currently succeed
+- all six public Blackbox probes (four `awesome.byst.re`, two
+  `aitesters.byst.re` routes) currently succeed
 - the emergency swap file and swappiness when `swap_enabled` is true
 - every GraalVM native service runs with its expected `-Xmx` argument:
   `backend` `-Xmx384m`, `aitesters-backend` `-Xmx256m`, and `-Xmx64m` for
@@ -208,8 +216,9 @@ The role checks:
   `/warehouse/v3/api-docs` and `/payment/v3/api-docs` through the gateway (both
   hosts), and `/api/v1/tracking/<unknown>` answering `404` from
   warehouse-service
-- the `Production Resources` and `Production Availability & Safeguards`
-  Grafana dashboards are mounted
+- `awesome-watchdog.timer` is active and `awesome-watchdog run --dry-run`
+  exits 0; the dry run and `awesome-watchdog diagnose` (readable OOM sources)
+  are printed
 - bootstrap admin sign-in succeeds
 - authenticated `GET /api/v1/products` returns a non-empty catalog
 
@@ -225,9 +234,13 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 - `docker`: Docker apt repository, engine, Compose plugin, daemon state
 - `swap`: guarded emergency-swap convergence; disabled on the current LXC host
   because the provider rejects `swapon`
-- `postgres_backup`: encrypted backups, restore checks, and the pre-deploy backup
+- `watchdog`: host watchdog (containers, OOM, disk, memory, backups) with
+  Telegram delivery and an optional dead-man ping
+- `postgres_backup`: encrypted backups, restore checks, and the pre-deploy
+  backup; both units notify Telegram through the watchdog on failure
 - `deployment_silence`: bounded suppression of planned warning-level public
-  endpoint and backend/consumer scrape alerts; critical alerts are never silenced
+  endpoint and backend/consumer scrape alerts plus the bounded watchdog pause;
+  critical alerts are never silenced
 - `app`: file sync, runtime env rendering, Compose convergence
 - `verify`: operational checks after deploy
 - `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume
@@ -266,9 +279,9 @@ The local production Vault file stores values such as:
 - `production_ssh_port`
 - `production_ssh_user`
 - `production_ssh_key_path`
-- `grafana_admin_password`
-- `alertmanager_telegram_bot_token`
-- `alertmanager_telegram_chat_id`
+- `alertmanager_telegram_bot_token` (also used by the host watchdog)
+- `alertmanager_telegram_chat_id` (also used by the host watchdog)
+- `watchdog_healthcheck_url` (optional dead-man ping URL; empty disables it)
 - `artemis_username`
 - `artemis_password`
 - `postgres_password`
@@ -414,8 +427,11 @@ the `-Xmx64m` heap of both payment-services.
 
 The VPS has about 4.25 GiB of RAM and no swap. Container limits are safety
 ceilings and are deliberately overcommitted: the long-running services' limits
-add up to about 5.8 GiB, while the last measured host had 2.8 GiB available
-(9 November 2026, after the native-image migration).
+added up to about 5.8 GiB, while the last measured host had 2.8 GiB available
+(9 November 2026, after the native-image migration). Lean monitoring phase A
+removes Grafana (640 MiB limit, about 450 MiB working set), bringing the limits
+to about 5.2 GiB; the host watchdog is a one-minute systemd timer with no
+resident memory.
 
 This release adds two more 160 MiB containers, `payment-service` and
 `aitesters-payment-service` (GraalVM native images with `-Xmx64m`, like the

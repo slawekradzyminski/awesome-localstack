@@ -26,3 +26,12 @@
       Expired the planned deployment warning silences after successful
       verification; normal warning notifications are active again.
   when: deployment_silence_ids is defined
+
+- name: Resume the host watchdog container checks after successful verification
+  ansible.builtin.command:
+    argv:
+      - "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+      - maintenance
+      - stop
+    removes: "{{ watchdog_script_path | default('/usr/local/sbin/awesome-watchdog') }}"
+  changed_when: true
