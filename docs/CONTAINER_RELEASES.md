@@ -134,15 +134,15 @@ are under `~/.config/awesome-localstack-security/`.
 
 ## Event feed: backend 3.16.0, warehouse-service 1.3.0, payment-service 1.1.0 — 11 November 2026
 
-**Draft.** The images are not published yet; the digests below are
-placeholders and the Compose files still pin the previous release. Fill in the
-digests, sources and runs when the images are published and pinned.
+Published as native multi-arch images; verified on a native full stack (every
+refund and cancellation path through the feed) and ai-testers-api `l20`
+190/190 against backend 3.16.0.
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
-| `slawekradzyminski/backend:3.16.0@sha256:<pending>` | `<pending>` | `<pending>` |
-| `slawekradzyminski/warehouse-service:1.3.0@sha256:<pending>` | `<pending>` | `<pending>` |
-| `slawekradzyminski/payment-service:1.1.0@sha256:<pending>` | `<pending>` | `<pending>` |
+| `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` | [PR #94](https://github.com/slawekradzyminski/test-secure-backend/pull/94), `7b88df6` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43036812385) |
+| `slawekradzyminski/warehouse-service:1.3.0@sha256:02ac943bf2fa6484cb2bddfc2deca4a17f9b497b61f88799a3f46809cbbe4207` | [PR #6](https://github.com/slawekradzyminski/warehouse-service/pull/6), `393b627` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43036827402) |
+| `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` | [PR #3](https://github.com/slawekradzyminski/payment-service/pull/3), `5b7e009` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43036843487) |
 | `slawekradzyminski/frontend:3.12.0` | unchanged | unchanged |
 | `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
 
@@ -670,12 +670,12 @@ Commerce wave 3, released 11 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` |
+| Backend | `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` |
 | Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` |
-| Payment service | `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.3.0@sha256:02ac943bf2fa6484cb2bddfc2deca4a17f9b497b61f88799a3f46809cbbe4207` |
+| Payment service | `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` |
 
 ## Backend 3.9.1 traffic preview patch
 
