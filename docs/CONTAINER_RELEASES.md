@@ -132,6 +132,89 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Event feed: backend 3.16.0, warehouse-service 1.3.0, payment-service 1.1.0 — 11 November 2026
+
+Published as native multi-arch images; verified on a native full stack (every
+refund and cancellation path through the feed) and ai-testers-api `l20`
+190/190 against backend 3.16.0.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` | [PR #94](https://github.com/slawekradzyminski/test-secure-backend/pull/94), `7b88df6` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43036812385) |
+| `slawekradzyminski/warehouse-service:1.3.0@sha256:02ac943bf2fa6484cb2bddfc2deca4a17f9b497b61f88799a3f46809cbbe4207` | [PR #6](https://github.com/slawekradzyminski/warehouse-service/pull/6), `393b627` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43036827402) |
+| `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` | [PR #3](https://github.com/slawekradzyminski/payment-service/pull/3), `5b7e009` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43036843487) |
+| `slawekradzyminski/frontend:3.12.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
+What changes:
+
+- **Backend 3.16.0.** Every domain event is written to `domain_events` in the
+  same transaction as the state change (Flyway V16) and served by
+  `GET /internal/v1/events?after&limit&types` to the warehouse and payment
+  service tokens, with a 3-second settle delay (`EVENTS_SETTLE_DELAY`, `PT3S`)
+  and 30-day retention (`EVENTS_RETENTION`, `P30D`). Card refunds (the card
+  leg of a booked refund, and the refund of a cancelled card-paid order) are
+  published as the internal `card-refund.requested` event, which user webhooks
+  never receive. The backend no longer calls payment-service: the refund
+  outbox, its HTTP client and `PAYMENT_BASE_URL` are gone. Contract:
+  [EVENT_FEED.md](EVENT_FEED.md).
+- **payment-service 1.1.0.** Polls the feed for `card-refund.requested`
+  (`PAYMENT_EVENTS_ENABLED`, `PAYMENT_EVENTS_POLL_INTERVAL`, default `PT5S`;
+  Flyway V3 `event_cursors`, `processed_events`). The inbound
+  `POST /internal/v1/payments/refunds` endpoint is removed. Another user's
+  payment or order payments now answer 404 like a missing one. Contract:
+  [PAYMENT_SERVICE_CONTRACT.md](PAYMENT_SERVICE_CONTRACT.md).
+- **warehouse-service 1.3.0.** Polls the feed for `order.cancelled`
+  (`WAREHOUSE_EVENTS_ENABLED`, `WAREHOUSE_EVENTS_POLL_INTERVAL`, default
+  `PT5S`; Flyway V4) and cancels the open shipment within seconds; the
+  reconciler stays as a safety net with a default interval of `PT10M`. Needs
+  backend 3.16.0. Contract: the event feed addendum in
+  [WAREHOUSE_SERVICE_CONTRACT.md](WAREHOUSE_SERVICE_CONTRACT.md).
+- **Decisions.** [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md) records
+  why the integration is a pull feed rather than an ActiveMQ topic, and three
+  related decisions.
+
+LocalStack changes in this release:
+
+- `PAYMENT_BASE_URL` is removed from `backend` in every profile and from
+  `aitesters-backend`; `scripts/verify-release-images.py` now fails when a
+  backend sets it;
+- the new variables keep their defaults, so no other Compose, gateway, Vault
+  or Ansible change is needed (the feed is internal and `/internal/` stays 404
+  through the gateway);
+- the wiki shows the feed in the architecture, payments, refunds and
+  fulfilment pages, and publishes [EVENT_FEED.md](EVENT_FEED.md) and the ADRs.
+
+Upgrade order:
+
+1. **Backend first.** Backend 3.16.0 serves the feed before anything reads it.
+   The old consumers keep working against it: warehouse-service 1.2.0 still
+   reconciles cancellations by polling orders, and nothing calls the removed
+   refund endpoint.
+2. **payment-service 1.1.0 in the same deploy.** The backend no longer sends
+   refunds, so with payment-service 1.0.0 card refunds would only accumulate in
+   the feed. They are not lost (1.1.0 starts from sequence 0 and processes
+   everything within the 30-day retention, idempotently per `requestId`), but
+   customers would see no card refund until 1.1.0 runs. Ship both together.
+3. **warehouse-service 1.3.0** in the same deploy, or later (before it, the
+   minute reconciler covers cancellations). Against an older backend 1.3.0
+   logs a 404 on every poll.
+
+All three are pinned in one change and deployed with
+`make ansible-deploy-backend-upgrade` (Flyway V16 runs on the backend),
+followed by the course suite (`l20`) and a check that a cancelled card-paid
+order ends `REFUNDED` and a cancelled `AWAITING_PICK` order's shipment ends
+`CANCELLED` within about ten seconds.
+
+Rollback: V16 moves the undelivered rows of `payment_refund_outbox` into the
+feed and `card_refund_requests` and then **drops** `payment_refund_outbox`, so
+backend 3.15.0 cannot run on the migrated schema (its Flyway also does not know
+V16). As before, a rollback restores the encrypted pre-deploy backup taken by
+`make ansible-deploy-backend-upgrade` together with the 3.15.0 / 1.2.0 / 1.0.0
+references and `PAYMENT_BASE_URL` on both backends; data written after the
+upgrade is lost. The payment (V3) and warehouse (V4) migrations only add
+tables and are rolled back by the same restore.
+
 ## Commerce wave 3: backend 3.15.0, warehouse-service 1.2.0, payment-service 1.0.0, frontend 3.12.0 — 11 November 2026
 
 All four images are published as native (backend, warehouse, payment) or
@@ -587,12 +670,12 @@ Commerce wave 3, released 11 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.15.0@sha256:c2f38b95515a7578d3cc1eff72a2d6c3112263cd223c2704c266e7cb7ff4d24b` |
+| Backend | `slawekradzyminski/backend:3.16.0@sha256:ca833405acf852bcdd2014721649cd6432bda6d74f9da98b2e3cd20c370288e7` |
 | Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.2.0@sha256:b6849b65e8d17b36c031e7d67fb585a2f057c1d33ad5db80fec2fb03263c97d7` |
-| Payment service | `slawekradzyminski/payment-service:1.0.0@sha256:e8b7d82af4f64c94e23e6c1e87d118b645a306e2acc9bed979f8d71f6923aaed` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.3.0@sha256:02ac943bf2fa6484cb2bddfc2deca4a17f9b497b61f88799a3f46809cbbe4207` |
+| Payment service | `slawekradzyminski/payment-service:1.1.0@sha256:ade0902dd2ceddd6c3ac9c64f321de0f1bacbcd8ff71dbc31dc7b4e538e8dbf9` |
 
 ## Backend 3.9.1 traffic preview patch
 

@@ -29,8 +29,9 @@ flowchart TB
 ```
 
 Multi-repository releases publish in dependency order — backend first (both
-services call its internal API), then warehouse-service and payment-service,
-then the frontend — and pin everything in one `awesome-localstack` change. New
+services call its internal API and poll its event feed; the backend calls
+neither), then warehouse-service and payment-service, then the frontend — and
+pin everything in one `awesome-localstack` change. New
 Vault keys go in before the deploy; backend migrations use
 `make ansible-deploy-backend-upgrade`, followed by the course suite (`l20`).
 
@@ -39,7 +40,7 @@ Vault keys go in before the deploy; backend migrations use
 | Script | Guarantees |
 | --- | --- |
 | `scripts/verify-image-pins.py` | Every remotely pulled image in every profile, CI workflow, the root `Dockerfile`, `docs-site/Dockerfile` and the restore tooling is pinned by digest; locally built `:local` images are exempt |
-| `scripts/verify-release-images.py` | The six first-party images form one compatibility set across profiles; the sandbox reuses the same images; env-file isolation; gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
+| `scripts/verify-release-images.py` | The six first-party images form one compatibility set across profiles; the sandbox reuses the same images; env-file isolation; no backend sets `PAYMENT_BASE_URL` (removed in backend 3.16.0); gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
 | `scripts/verify-java-security.py` | The frozen Java certificate blocklist is mounted in every JVM container |
 | `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties |
 | `scripts/verify-edge-proxy.sh` | The edge only trusts forwarded headers from the provider range |

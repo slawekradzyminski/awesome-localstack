@@ -11,14 +11,15 @@ it. The backend side of the result notification is also summarised in
 
 | Item | Value |
 | --- | --- |
-| Repository | `payment-service` (sibling repository; first release 1.0.0 pending publication) |
+| Repository | `payment-service` ([slawekradzyminski/payment-service](https://github.com/slawekradzyminski/payment-service)) |
 | Image | `slawekradzyminski/payment-service`, GraalVM native image, `-Xmx64m` in a 160 MiB container |
 | Port | 4004 (internal only, behind the gateway) |
-| Database | PostgreSQL schema `payment` of the backend database, owned by the `payment` role (`currentSchema=payment`); Flyway V1 baseline |
+| Database | PostgreSQL schema `payment` of the backend database, owned by the `payment` role (`currentSchema=payment`); Flyway V1 baseline, V2 order payment locks, V3 event feed cursor (`event_cursors`, `processed_events`, 1.1.0) |
 | Profiles | `docker,demo` in the lightweight and full profiles, `docker` on the server (like warehouse-service) |
 | Authentication | Verifies the backend's RS256 access tokens with the backend JWKS (`/internal/v1/jwks.json`), exactly like warehouse-service; it holds no signing key |
 | Environment | `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD` (role `payment`), `BACKEND_BASE_URL`, `PAYMENT_SERVICE_TOKEN`, `PAYMENT_WEBHOOK_SECRET` |
-| Optional tuning | `PAYMENT_SETTLEMENT_DELAY` (default `PT10S`) for the delayed test cards |
+| Optional tuning | `PAYMENT_SETTLEMENT_DELAY` (default `PT10S`) for the delayed test cards; `PAYMENT_EVENTS_ENABLED` (default `true`) and `PAYMENT_EVENTS_POLL_INTERVAL` (default `PT5S`) for the event feed poller (1.1.0) |
+| Requires | backend 3.16.0 or later from payment-service 1.1.0 (event feed); 1.0.0 works with backend 3.15.0 |
 | Metrics | `/actuator/prometheus`, scraped as `spring_payment_micrometer` |
 
 Only the card brand and the last four digits are stored. Card numbers and CVCs
@@ -28,6 +29,13 @@ are never logged.
 
 All endpoints need a backend access token. Customers see only payments of
 their own orders; `ROLE_ADMIN` sees all.
+
+From 1.1.0 another user's payment or order payments are answered **404**
+exactly like a missing one (`GET /api/v1/payments/{id}`,
+`POST /api/v1/payments/{id}/3ds`, `GET /api/v1/orders/{orderId}/payments`), so
+the existence of other users' orders and payments is not revealed, as the
+backend does for orders. Only paying another user's order
+(`POST /api/v1/payments`) stays 403.
 
 | Method and path | Result |
 | --- | --- |
@@ -50,8 +58,8 @@ their own orders; `ROLE_ADMIN` sees all.
   payment of it is `REQUIRES_ACTION` or `PROCESSING`).
 
 `POST /api/v1/payments/{id}/3ds` with `{code}`: `123456` captures the payment,
-any other code fails it with `THREE_DS_FAILED`; 409 unless the payment is
-`REQUIRES_ACTION`.
+any other code fails it with `THREE_DS_FAILED`; 404 for a missing or another
+user's payment; 409 unless the payment is `REQUIRES_ACTION`.
 
 ```text
 PaymentDto { id (UUID), orderId, status, amount, currency, cardBrand, cardLast4,
@@ -85,10 +93,14 @@ Any other Luhn-valid number succeeds; a Luhn-invalid number is 400.
 
 ## Internal API
 
-Neither direction is routed by the gateway (`/internal/` is 404 on every
-host). Both directions carry `X-Service-Token: ${PAYMENT_SERVICE_TOKEN}`; the
-backend accepts the payment token only on the payment endpoints, and the
-warehouse token only on the warehouse endpoints.
+Calls go one way only, from payment-service to the backend; the backend never
+calls payment-service (from backend 3.16.0 and payment-service 1.1.0).
+`/internal/` is not routed by the gateway (404 on every host). Every request
+carries `X-Service-Token: ${PAYMENT_SERVICE_TOKEN}`; the backend accepts the
+payment token on `GET /internal/v1/orders/{id}`,
+`POST /internal/v1/orders/{orderId}/payment`, `GET /internal/v1/jwks.json` and
+`GET /internal/v1/events`, and the warehouse token only on the warehouse
+endpoints (plus the shared order, JWKS and event feed reads).
 
 ### payment-service to backend
 
@@ -119,15 +131,46 @@ same 200).
 - `FAILED`: the order stays `PENDING`; the backend publishes `payment.failed`
   and emails `PAYMENT_FAILED`.
 
-### backend to payment-service
+payment-service also reads:
 
-`POST /internal/v1/payments/refunds` with `{requestId (UUID), orderId, amount,
-reason}` returns 200 `{refundId, paymentId, amount, status}`; 404 when the
-order has no captured payment (the backend marks the refund done, nothing goes
-back to a card) and 409 when the amount exceeds what is refundable. The backend
-sends it from its own retrying outbox after a refund is booked. A refund goes
-to the card first, up to the captured amount; the remainder goes back to the
-gift card, then to loyalty points.
+- `GET /internal/v1/jwks.json`: access-token verification keys;
+- `GET /internal/v1/events?after={cursor}&limit=100&types=card-refund.requested`:
+  the backend's domain event feed (see [EVENT_FEED.md](EVENT_FEED.md)).
+
+### Card refunds from the event feed
+
+The backend publishes `card-refund.requested` with data
+`{requestId, orderId, amount, reason}` in the same transaction that books a
+refund with a card leg (card first, up to the captured amount minus card
+refunds already requested; the remainder goes back to the gift card, then to
+loyalty points) or cancels an order with a captured card payment
+(`requestId = UUID.nameUUIDFromBytes("cancel:" + orderId)`, reason
+`Order cancelled`).
+
+payment-service's `EventFeedPoller` reads the feed every
+`PAYMENT_EVENTS_POLL_INTERVAL` (default `PT5S`) from its cursor
+(`event_cursors`, consumer `payment-service`), up to 20 pages of 100 per poll.
+Each event is handled in one local transaction that books the refund, records
+the event id in `processed_events` and advances the cursor:
+
+| Situation | Result |
+| --- | --- |
+| Event id already processed | Skipped |
+| `requestId` already refunded (another event) | Nothing booked (idempotent per `requestId`) |
+| No captured card payment for the order | Nothing booked, logged |
+| Amount above what is still refundable | Nothing booked, logged as a warning |
+| Malformed payload or another non-transient failure | Logged with the event id, recorded as processed, cursor advances |
+| Backend unavailable or transient database error | Poll stops without moving the cursor; the next poll retries |
+
+A refund leaves the payment `PARTIALLY_REFUNDED` or `REFUNDED`. The backend
+does not learn the outcome; testers read it from
+`GET /api/v1/orders/{orderId}/payments`. A refund appears there about 5–8
+seconds after the cancellation or refund booking (3 s settle delay plus up to
+one poll interval).
+
+**Removed in 1.1.0:** the inbound `POST /internal/v1/payments/refunds`
+endpoint and its service-token filter; payment-service has no internal API.
+The backend's `PAYMENT_BASE_URL` and its refund outbox were removed in 3.16.0.
 
 ## Gateway
 
@@ -158,10 +201,11 @@ The backend's Swagger UI lists `/payment/v3/api-docs` as "Payment service".
   `postgres/service-role.sh` for `warehouse` and `payment`: each role owns only
   its schema, cannot create objects in `public`, cannot read the backend's
   tables and has no access to the other service's schema.
-- **Backend settings.** Both backends get `PAYMENT_SERVICE_TOKEN`,
-  `PAYMENT_WEBHOOK_SECRET` and `PAYMENT_BASE_URL`
-  (`http://payment-service:4004`, `http://aitesters-payment-service:4004` for
-  the sandbox).
+- **Backend settings.** Both backends get `PAYMENT_SERVICE_TOKEN` and
+  `PAYMENT_WEBHOOK_SECRET`. They no longer get `PAYMENT_BASE_URL` (removed in
+  backend 3.16.0); `scripts/verify-release-images.py` fails if a Compose file
+  sets it again. Each payment-service reaches its own backend through
+  `BACKEND_BASE_URL` (`http://backend:4001`, `http://aitesters-backend:4001`).
 - **Secrets.** Ansible renders `.env.payment` and `.env.aitesters-payment`
   (token, webhook secret, role password) from Vault; see
   [ANSIBLE.md](ANSIBLE.md#payment-service-secrets-and-image-gate).

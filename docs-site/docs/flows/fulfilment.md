@@ -14,7 +14,7 @@ Endpoints under `/api/v1/warehouse` require `ROLE_WAREHOUSE` or `ROLE_ADMIN`
 | `GET /api/v1/warehouse/queue` | `PAID` orders without a shipment, oldest first |
 | `POST /api/v1/warehouse/shipments` `{orderId}` | Create a shipment (`AWAITING_PICK`); the order must be `PAID` and unreleased (`409` otherwise or when one exists) |
 | `GET /api/v1/warehouse/shipments?status=` | List |
-| `GET /api/v1/warehouse/shipments/{id}` | One shipment (also reconciles a customer cancellation) |
+| `GET /api/v1/warehouse/shipments/{id}` | One shipment; also cancels an `AWAITING_PICK` shipment whose order was cancelled (a side effect of a GET, kept from before the event feed and [marked for removal](../reference/ARCHITECTURE_DECISIONS.md#follow-ups)) |
 | `GET /api/v1/warehouse/shipments/{id}/pick-list` | Items to pick |
 | `POST /api/v1/warehouse/shipments/{id}/pick` | `AWAITING_PICK → PICKED` |
 | `POST /api/v1/warehouse/shipments/{id}/pack` `{weightKg}` | `PICKED → PACKED`; weight 0.01–30.00 kg |
@@ -59,6 +59,42 @@ sequenceDiagram
     W->>B: DELIVERED
 ```
 
+## Customer cancellation reaches the warehouse
+
+The backend never calls warehouse-service. When a customer or admin cancels an
+order that is already released (`AWAITING_PICK`), the backend records
+`order.cancelled` in its [event feed](../reference/EVENT_FEED.md) in the
+cancelling transaction, and warehouse-service picks it up on its next poll.
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant B as Backend
+    participant F as Event feed
+    participant W as warehouse-service
+    actor O as Operator
+    C->>B: Cancel order 42
+    Note over B: fulfilmentState CANCELLED
+    B->>F: order.cancelled (same transaction)
+    B-->>C: 200 CANCELLED
+    Note over F: Settle delay 3 s
+    W->>F: Poll order.cancelled (every 5 s)
+    F-->>W: order.cancelled, order 42
+    Note over W: Shipment CANCELLED, lastActor system
+    O->>W: Pick shipment
+    W-->>O: 409
+```
+
+| Shipment state when the event arrives | Result |
+| --- | --- |
+| `AWAITING_PICK`, `PICKED` | `CANCELLED`, `lastActor = "system"`; no call back to the backend |
+| `PACKED`, `SHIPPED` | Left alone and logged (the backend refuses those cancellations) |
+| Finished, already cancelled, or no shipment | Ignored |
+
+The shipment is cancelled about **5–8 seconds** after the order. An operator
+who acts inside that window gets `409 Order was cancelled by the customer` and
+the shipment is cancelled on the spot.
+
 ## Two state machines, kept in step
 
 ```mermaid
@@ -99,11 +135,14 @@ Backend `fulfilmentState`:
   order again and keeps the shipment if the release reached the backend; an
   order already `AWAITING_PICK` without a shipment can be released again (it
   is adopted).
-- **Reconciler (every minute).** Cancels `AWAITING_PICK` shipments whose order
-  the customer cancelled (`lastActor = "system"`), and adopts orders the
-  backend reports as `AWAITING_PICK` without a shipment if they are older than
-  two minutes. Reading a shipment or a refused transition reconciles
-  immediately and answers `409 Order was cancelled by the customer`.
+- **Event feed (every 5 s).** `order.cancelled` events cancel the shipment
+  as shown above. The poller keeps its cursor in `event_cursors` and the ids it
+  handled in `processed_events`, so a repeated event changes nothing.
+- **Reconciler (every 10 minutes, safety net).** Cancels `AWAITING_PICK`
+  shipments whose order is cancelled but whose event was missed, and adopts
+  orders the backend reports as `AWAITING_PICK` without a shipment if they are
+  older than two minutes. Reading a shipment or a refused transition
+  reconciles immediately and answers `409 Order was cancelled by the customer`.
 - **Notifications** use a transactional outbox with retries; the backend sends
   one email per `requestId`.
 

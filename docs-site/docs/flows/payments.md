@@ -7,14 +7,17 @@ owns the order status. Public order bodies never contain card data.
 ## Endpoints
 
 All public endpoints need an access token with `ROLE_CLIENT` or `ROLE_ADMIN`.
-Clients see only their own orders and payments.
+Clients see only their own orders and payments: another user's payment or
+order payments answer `404`, exactly like a missing one (payment-service
+1.1.0), so their existence is not revealed. Only paying another user's order
+is `403`.
 
 | Method and path | Result |
 | --- | --- |
 | `POST /api/v1/payments` + `Idempotency-Key` | `{orderId, card:{number, expiryMonth, expiryYear, cvc, holderName}}` → `201 PaymentDto`; replay `200` + `Idempotent-Replayed: true`; `400` validation, Luhn, expired card or bad key; `403` not your order; `404` order; `409` not payable or key reused with another body; `503` backend down |
-| `POST /api/v1/payments/{id}/3ds` `{code}` | `123456` captures, anything else fails with `THREE_DS_FAILED`; `409` when not `REQUIRES_ACTION` |
-| `GET /api/v1/payments/{id}` | `200` / `403` / `404` |
-| `GET /api/v1/orders/{orderId}/payments` | Payments of the order, newest first |
+| `POST /api/v1/payments/{id}/3ds` `{code}` | `123456` captures, anything else fails with `THREE_DS_FAILED`; `404` missing or another user's payment; `409` when not `REQUIRES_ACTION` |
+| `GET /api/v1/payments/{id}` | `200` / `404` (missing, or another user's payment) |
+| `GET /api/v1/orders/{orderId}/payments` | Payments of the order, newest first; `404` when the order is missing or another user's |
 | `GET /api/v1/admin/payments?status&page&size` | Admin, newest first, size 1–100 |
 
 `PaymentDto`: `id` (UUID), `orderId`, `status`, `amount`, `currency` (USD),
@@ -163,27 +166,52 @@ sequenceDiagram
 
 ## Refunds to the card
 
-Refunds are initiated by the backend, never by the customer directly:
+Refunds are initiated by the backend, never by the customer directly, and the
+backend never calls payment-service: it publishes a `card-refund.requested`
+event in the same transaction, and payment-service pulls it from the
+[event feed](../reference/EVENT_FEED.md).
 
 - **Return refunds** — when warehouse-service books a refund, the backend
-  splits it **card first** (see [Returns and refunds](returns-refunds.md#refund-split)).
+  splits it **card first** (see [Returns and refunds](returns-refunds.md#refund-split))
+  and requests the card part.
 - **Cancellation of a paid order** — cancelling an order with a captured
-  payment queues a refund of the captured amount minus earlier card refunds
+  payment requests a refund of the captured amount minus earlier card refunds
   (`requestId = UUID.nameUUIDFromBytes("cancel:" + orderId)`, reason
   `Order cancelled`).
 
-The backend delivers both from `payment_refund_outbox` to
-`POST /internal/v1/payments/refunds` `{requestId, orderId, amount, reason}`:
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant B as Backend
+    participant F as Event feed
+    participant P as payment-service
+    C->>B: Cancel order 42
+    B->>F: card-refund.requested (same transaction)
+    B-->>C: 200 CANCELLED
+    Note over F: Settle delay 3 s
+    P->>F: Poll after cursor (every 5 s)
+    F-->>P: card-refund.requested
+    Note over P: Refund booked, payment REFUNDED
+    C->>P: GET order payments
+    P-->>C: refundedAmount 120.00
+```
 
-| payment-service answer | Outbox row |
+Event data is `{requestId, orderId, amount, reason}`. payment-service handles
+each event once (event ids are recorded in `processed_events`):
+
+| Situation | Result |
 | --- | --- |
-| `200 {refundId, paymentId, amount, status}` | `SENT` |
-| `404` — no captured payment | `SKIPPED` |
-| `409` exceeds refundable, `400`, `422` | `FAILED`, not retried |
-| `5xx`, timeout, connection error | retried 30 s → 30 min, `FAILED` after 10 attempts |
+| Captured payment with enough left to refund | Refund booked; payment `PARTIALLY_REFUNDED` or `REFUNDED` |
+| Same `requestId` already refunded | Nothing booked (idempotent) |
+| No captured payment for the order (admin-paid or never paid) | Nothing booked, logged |
+| Amount above what is still refundable | Nothing booked, logged as a warning |
+| Malformed event | Logged and skipped; the feed moves on |
+| Backend unavailable | Poll stops; the next poll retries from the same cursor |
 
-payment-service moves the payment to `PARTIALLY_REFUNDED` or `REFUNDED` and is
-idempotent per `requestId`.
+Expect the refund about **5–8 seconds** after the cancellation or refund
+booking (3 s settle delay plus up to one 5 s poll). The backend's order JSON
+does not show the card refund; check it with
+`GET /api/v1/orders/{orderId}/payments`.
 
 ## Configuration
 
@@ -194,6 +222,7 @@ idempotent per `requestId`.
 | `PAYMENT_SETTLEMENT_INTERVAL` | `PT2S` | Settlement job period |
 | `PAYMENT_NOTIFICATIONS_RETRY_INTERVAL` | `PT30S` | Result outbox retry period |
 | `PAYMENT_SERVICE_TOKEN`, `PAYMENT_WEBHOOK_SECRET` | required in `docker` | Shared with the backend |
-| `PAYMENT_REFUNDS_DELIVERY_INTERVAL` (backend) | `PT15S` | Refund outbox period |
+| `PAYMENT_EVENTS_ENABLED` | `true` | Poll the backend's event feed for card refunds |
+| `PAYMENT_EVENTS_POLL_INTERVAL` | `PT5S` | Event feed poll period |
 
 Contract: [Payment service contract](../reference/PAYMENT_SERVICE_CONTRACT.md).

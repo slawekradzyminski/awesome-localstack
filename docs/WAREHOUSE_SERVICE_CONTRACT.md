@@ -18,6 +18,7 @@ already specified in `test-secure-backend/docs/COMMERCE_AND_FULFILMENT.md`
 | Database | Postgres schema `warehouse` in the existing database (`spring.flyway.schemas=warehouse`, `currentSchema=warehouse`); H2 only in the JVM unit tests |
 | Profiles | `local` (Postgres `localhost:5432/testdb`, backend at `http://localhost:4001`, demo suppliers), `docker` (Postgres, backend at `http://backend:4001`), `demo` (seeds demo suppliers) |
 | Deployed in | lightweight, full and server Compose profiles |
+| Requires | backend 3.16.0 or later from warehouse-service 1.3.0 (event feed; see the addendum below) |
 
 Native-image rules: no runtime classpath scanning tricks, no CGLIB-only
 features, no reflection without hints, no Testcontainers in the default test
@@ -80,6 +81,7 @@ traffic capture and the public OpenAPI document. When
 | `POST /internal/v1/inventory/receipts` | Add stock for a purchase receipt or a resellable return | `{movementIds: [..]}`; idempotent per `requestId` |
 | `POST /internal/v1/notifications` | Email a customer; the backend renders the text | 202; a repeated `requestId` sends nothing |
 | `GET /internal/v1/jwks.json` | Access-token verification keys | JSON Web Key Set |
+| `GET /internal/v1/events?after=&limit=&types=order.cancelled` | Domain event feed (backend 3.16.0; also accepts the payment token) | `{events, nextCursor, hasMore}`; see [EVENT_FEED.md](EVENT_FEED.md) |
 
 ```text
 InternalOrderDto { id, username, status, fulfilmentState, subtotalAmount,
@@ -133,7 +135,8 @@ admin status endpoint returns 409 while the state is `AWAITING_PICK` through
 | Receive return | `POST inventory/receipts` (`RETURN_RESTOCKED`, `requestId` = deterministic UUID from the return id) for resellable lines |
 | Refund return | `POST orders/{id}/refunds` (`requestId` = deterministic UUID from the return id), then mark the return `REFUNDED` |
 | Approve / reject / refund | Outbox notification (`RETURN_UPDATED`) |
-| Reconcile (every minute) | `GET orders?ids=` for `AWAITING_PICK` shipments, cancelling those whose order is `CANCELLED`; `GET orders?status=PAID&fulfilment=AWAITING_PICK`, adopting orders older than two minutes that have no shipment |
+| `order.cancelled` from the event feed (every 5 s) | `GET events?after={cursor}&types=order.cancelled`; cancels the local `AWAITING_PICK` or `PICKED` shipment without calling the backend (the order is already cancelled there) |
+| Reconcile (every 10 minutes from 1.3.0, a safety net behind the feed) | `GET orders?ids=` for `AWAITING_PICK` shipments, cancelling those whose order is `CANCELLED`; `GET orders?status=PAID&fulfilment=AWAITING_PICK`, adopting orders older than two minutes that have no shipment |
 | Receive purchase order | `POST inventory/receipts` (`PURCHASE_RECEIVED`, the receipt's `requestId`) |
 | Reorder suggestions | `GET products` (all) plus local open purchase-order lines |
 | Queue | `GET orders?status=PAID&fulfilment=NONE` |
@@ -227,3 +230,72 @@ that `/api/v1/tracking/<unknown>` answers 404 through the gateway (the backend
 would answer 401 without a token). The default two-minute step interval is
 used in every profile; trainers use the `carrier/advance` endpoint to skip
 ahead.
+
+## Addendum: event feed (warehouse-service 1.3.0, backend 3.16.0)
+
+The backend never calls warehouse-service. Customer and admin cancellations
+reach it through the backend's durable event feed
+([EVENT_FEED.md](EVENT_FEED.md)) within seconds instead of the next reconciler
+run. warehouse-service 1.3.0 **requires backend 3.16.0**: against an older
+backend the feed request answers 404, which is logged on every poll, and
+cancellations fall back to the reconciler.
+
+### Feed request and response
+
+`EventFeedPoller` runs every `warehouse.events.poll-interval` (default `PT5S`)
+and follows `hasMore` for up to ten pages per run:
+
+```text
+GET /internal/v1/events?after={cursor}&limit=100&types=order.cancelled
+X-Service-Token: <WAREHOUSE_SERVICE_TOKEN>
+
+200 { events: [ { sequence, id, type, occurredAt, orderId, username, data } ],
+      nextCursor, hasMore }
+```
+
+Events are ordered by `sequence`; only events recorded at least three seconds
+ago are served (settle delay) and events are kept for 30 days. After a page the
+cursor moves to `nextCursor`, past events of other types.
+
+### `order.cancelled` handling
+
+| Shipment state | Result |
+| --- | --- |
+| `AWAITING_PICK` or `PICKED` | `CANCELLED`, `lastActor = "system"`, `cancelledAt` set; no backend call |
+| `PACKED`, `SHIPPED` | Left alone and logged (the backend refuses those cancellations, so this means an inconsistency) |
+| `DELIVERED`, `CANCELLED`, or no shipment | Ignored; a warehouse cancellation echoed by the feed is a no-op |
+
+Each event is handled in its own transaction that locks the consumer's row in
+`event_cursors`, skips event ids already in `processed_events`, applies the
+change, records the event id and advances the cursor. Backend unavailable or a
+4xx from the feed ends the run without moving the cursor. An event whose
+handling fails (for example one without an `orderId`) is logged with its id and
+recorded as processed, so it never blocks the feed.
+
+### Tables (Flyway V4, schema `warehouse`)
+
+| Table | Columns |
+| --- | --- |
+| `event_cursors` | `consumer` (PK), `last_sequence`, `updated_at` |
+| `processed_events` | `event_id` (PK, the feed event `id`), `processed_at` |
+
+### Configuration
+
+| Environment variable | Property | Default |
+| --- | --- | --- |
+| `WAREHOUSE_EVENTS_ENABLED` | `warehouse.events.enabled` | `true` |
+| `WAREHOUSE_EVENTS_POLL_INTERVAL` | `warehouse.events.poll-interval` | `PT5S` |
+| `WAREHOUSE_RECONCILE_ENABLED` | `warehouse.reconcile.enabled` | `true` |
+| `WAREHOUSE_RECONCILE_INTERVAL` | `warehouse.reconcile.interval` | `PT10M` (was every minute before 1.3.0) |
+
+The Compose files keep the defaults and set none of these variables.
+
+### Reconciler and reconcile-on-read
+
+`ShipmentReconciler` stays as a safety net (feed outage longer than the 30-day
+retention, a backend older than 3.16.0, a missed adoption) and now runs every
+ten minutes. Reading a shipment (`GET /api/v1/warehouse/shipments/{id}`) or a
+refused transition still reconciles it immediately, and the transition answers
+409 "Order was cancelled by the customer". The read path changes state from a
+GET; it is recorded as a removal candidate in
+[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md#follow-ups).

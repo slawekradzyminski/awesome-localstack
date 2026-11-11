@@ -327,10 +327,8 @@ def main() -> int:
             failures,
         )
         require(
-            environment.get("BACKEND_BASE_URL") == f"http://{backend}:4001"
-            and server_services[backend].get("environment", {}).get("PAYMENT_BASE_URL")
-            == f"http://{payment}:4004",
-            f"{payment} and {backend} must call each other, never the other site",
+            environment.get("BACKEND_BASE_URL") == f"http://{backend}:4001",
+            f"{payment} must call its own site's {backend}, never the other site",
             failures,
         )
         require(
@@ -383,6 +381,21 @@ def main() -> int:
             require(
                 text.count(location) == blocks,
                 f"{config.name} must declare `{location}` in each of its {blocks} server blocks",
+                failures,
+            )
+
+    # Since backend 3.16.0 the backend never calls payment-service: card refunds
+    # travel through the event feed that payment-service polls.
+    for profile_name, services, backends in (
+            ("docker-compose.server.yml", server_services, ("backend", "aitesters-backend")),
+            ("docker-compose.yml", compose_services("docker-compose.yml"), ("backend",)),
+            ("lightweight-docker-compose.yml", compose_services("lightweight-docker-compose.yml"),
+             ("backend",))):
+        for backend in backends:
+            require(
+                "PAYMENT_BASE_URL" not in services.get(backend, {}).get("environment", {}),
+                f"{profile_name} {backend} must not set PAYMENT_BASE_URL (removed in backend 3.16.0; "
+                "payment-service reads card refunds from the event feed)",
                 failures,
             )
 

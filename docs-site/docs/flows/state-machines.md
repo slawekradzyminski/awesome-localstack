@@ -112,4 +112,3 @@ See [Purchasing and suppliers](purchasing.md).
 | Gift card (effective) | `ACTIVE`, `REDEEMED` (balance 0), `EXPIRED`, `DISABLED` |
 | Webhook delivery | `PENDING` → `DELIVERED` or `FAILED` |
 | Webhook subscription | active ↔ disabled (20 consecutive failures, or `PUT active:false`) |
-| Refund outbox row (backend) | queued → `SENT`, `SKIPPED` or `FAILED` |

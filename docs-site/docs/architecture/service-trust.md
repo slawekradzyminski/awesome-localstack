@@ -6,11 +6,13 @@ user JWTs.
 
 ```mermaid
 flowchart LR
-    W[warehouse-service] -- "X-Service-Token: WAREHOUSE_SERVICE_TOKEN" --> I["backend /internal/v1"]
-    P[payment-service] -- "X-Service-Token: PAYMENT_SERVICE_TOKEN<br/>X-Payment-Signature (HMAC)" --> I
-    B[backend] -- "X-Service-Token: PAYMENT_SERVICE_TOKEN" --> PR["payment-service /internal/v1/payments/refunds"]
-    B -- "X-Webhook-Signature (HMAC, per subscription)" --> U[customer webhook URL]
+    W[warehouse-service] -- "X-Service-Token: WAREHOUSE_SERVICE_TOKEN<br/>(calls and event feed polls)" --> I["backend /internal/v1"]
+    P[payment-service] -- "X-Service-Token: PAYMENT_SERVICE_TOKEN<br/>(calls and event feed polls)<br/>X-Payment-Signature (HMAC) on results" --> I
+    B[backend] -- "X-Webhook-Signature (HMAC, per subscription)" --> U[customer webhook URL]
 ```
+
+The backend calls neither service (since backend 3.16.0): both poll its event
+feed instead. payment-service has no internal API of its own any more.
 
 ## Internal API (`/internal/v1` on the backend)
 
@@ -31,7 +33,7 @@ values from Ansible Vault.
 
 | Endpoint | Accepted callers |
 | --- | --- |
-| `GET /internal/v1/orders/{id}`, `GET /internal/v1/jwks.json` | warehouse, payment |
+| `GET /internal/v1/orders/{id}`, `GET /internal/v1/jwks.json`, `GET /internal/v1/events` | warehouse, payment |
 | `POST /internal/v1/orders/{id}/payment` | payment only |
 | everything else (`orders` queue, `fulfilment`, `refunds`, `warehouse-cancel`, `products`, `inventory/receipts`, `notifications`) | warehouse only |
 
@@ -71,7 +73,8 @@ The same scheme (`t=…,v1=…`, HMAC-SHA256 of `t.body`) signs
 | Checkout `POST /api/v1/orders` | optional `Idempotency-Key` header, per user, 24 h | same address → original order, `201`, `Idempotent-Replayed: true`; different address → `409` |
 | Payment `POST /api/v1/payments` | required `Idempotency-Key`, per caller | same body → original payment in its current state, `200`, `Idempotent-Replayed: true`; other body → `409` |
 | Payment result → backend | `requestId` | same order, payment and status → first answer, no side effects; anything else → `409` |
-| Refund → payment-service | `requestId` | first answer returned again |
+| Card refund event → payment-service | event `id` (in `processed_events`), then the refund `requestId` | a seen event is skipped; a seen `requestId` books nothing |
+| `order.cancelled` event → warehouse-service | event `id` (in `processed_events`) | skipped; cancelling a cancelled shipment is a no-op |
 | Return refund → backend | `requestId = UUID.nameUUIDFromBytes("refund-" + returnId)` | same order and amount → order unchanged; else `409` |
 | Stock receipts → backend | receipt `requestId` | same type and lines → original movement ids; else `409` |
 | Notifications → backend | `requestId` | accepted again, no second email |
@@ -90,9 +93,26 @@ delays the message instead of losing it.
 | --- | --- | --- | --- |
 | `notification_outbox` | warehouse-service | backend `POST /internal/v1/notifications` | every 30 s, exponential backoff, up to 10 attempts, while the backend answers `503`; other rejections are final |
 | `payment_outbox` | payment-service | backend payment result | 30 s doubling to 30 min, at most 10 attempts, on `5xx` or connection errors; `409` to a capture voids the payment; `401`/`422` are final |
-| `payment_refund_outbox` | backend | payment-service refunds | 30 s doubling to 30 min, `FAILED` after 10 attempts; `404` → `SKIPPED`; `400`/`409`/`422` → `FAILED` |
 | `email_event` + `EmailRetryJob` | backend | ActiveMQ queue `email` | every minute, backoff 1, 2, 4, 8 minutes, five attempts in total |
 | `webhook_deliveries` + `WebhookRetryJob` | backend | customer URLs | 1, 2, 4… minutes, 8 attempts, auto-disable after 20 consecutive failures |
+
+The outboxes share a convention (backoff, row state, metrics) but no code; see
+[ADR 3](../reference/ARCHITECTURE_DECISIONS.md#adr-3-outbox-and-feed-consumer-implementations-stay-per-service).
+
+## Event feed
+
+Events the services must react to travel the other way: the backend writes
+every domain event to `domain_events` in the same transaction as the change,
+and the services **pull** them.
+
+| Feed | Writer | Readers | Delivery |
+| --- | --- | --- | --- |
+| `domain_events`, `GET /internal/v1/events` | backend | payment-service (`card-refund.requested`), warehouse-service (`order.cancelled`) | each consumer polls every 5 s from its own cursor; events are served after a 3 s settle delay and kept for 30 days; at-least-once, deduplicated by event `id` |
+
+Up to backend 3.15.0 card refunds went the other way, from a backend
+`payment_refund_outbox` to `POST /internal/v1/payments/refunds` on
+payment-service. Backend 3.16.0 replaced that with the feed. Details:
+[Event feed](../reference/EVENT_FEED.md).
 
 ## Write ordering in warehouse-service
 
@@ -100,6 +120,7 @@ warehouse-service follows **validate locally → call the backend → persist**,
 so a failed backend call leaves no orphaned local state. Creating a shipment is
 the one place where the local row is written first and removed again if the
 backend refuses; a lost response is recovered because the backend accepts a
-repeated `AWAITING_PICK`. A reconciler runs every minute to catch customer
-cancellations and orders released without a shipment. See
+repeated `AWAITING_PICK`. Customer cancellations arrive through the event
+feed within seconds; a reconciler runs every ten minutes as a safety net and
+adopts orders released without a shipment. See
 [Warehouse fulfilment](../flows/fulfilment.md#consistency-with-the-backend).

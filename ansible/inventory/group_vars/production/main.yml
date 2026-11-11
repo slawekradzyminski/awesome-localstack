@@ -132,7 +132,8 @@ aitesters_warehouse_runtime_env:
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
 
 # payment-service receives only the payment service token (shared with the
-# backend, which uses it for refund calls), the webhook secret that signs its
+# backend, which accepts it on the payment, order, JWKS and event feed internal
+# endpoints; the backend never calls payment-service), the webhook secret that signs its
 # result notifications to the backend, and the password of its own `payment`
 # database role, which owns only the `payment` schema of the backend database.
 # Like warehouse-service it verifies access tokens with the backend's JWKS.

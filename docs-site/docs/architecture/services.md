@@ -11,8 +11,8 @@
 | `edge` | `nginx:1.31.3-trixie` | host network `:80` (server only) | Receives traffic from the hosting provider's HTTPS proxy, trusts `X-Forwarded-For` only from that provider's range, forwards to the gateway |
 | `frontend` | `slawekradzyminski/frontend` | internal `80` | React single-page app (shop, admin, warehouse, LLM, traffic monitor) served by nginx |
 | `backend` | `slawekradzyminski/backend` | internal `4001`; gRPC `9091` on host loopback when enabled | Spring Boot (GraalVM native). Users and JWT issuance, products, inventory, cart, coupons, gift cards, loyalty, VAT, currencies, orders, reviews, wishlist, emails, webhooks, LLM proxy, GraphQL, gRPC, traffic monitor |
-| `warehouse-service` | `slawekradzyminski/warehouse-service` | internal `4003` | Shipments (pick, pack, ship, deliver), simulated carrier tracking, returns (RMA), suppliers, purchase orders, reorder suggestions |
-| `payment-service` | `slawekradzyminski/payment-service` | internal `4004` | Fake card provider: test cards, 3-D Secure, asynchronous settlement, signed result notifications, card refunds |
+| `warehouse-service` | `slawekradzyminski/warehouse-service` | internal `4003` | Shipments (pick, pack, ship, deliver), simulated carrier tracking, returns (RMA), suppliers, purchase orders, reorder suggestions; cancels shipments from the backend's event feed |
+| `payment-service` | `slawekradzyminski/payment-service` | internal `4004` | Fake card provider: test cards, 3-D Secure, asynchronous settlement, signed result notifications, card refunds read from the backend's event feed |
 | `docs` | built locally from `docs-site/` | internal `80` | This wiki, served at `/docs/` through the gateway |
 | `consumer` | `slawekradzyminski/consumer` | host `4002` (full), internal (server) | JMS email consumer: reads the `email` queue and delivers the already rendered email over SMTP |
 

@@ -113,8 +113,7 @@ flowchart LR
     G -->|warehouse + tracking paths| W
     G -->|payment paths| PS
     W -->|/internal/v1| B
-    PS -->|/internal/v1| B
-    B -->|refunds| PS
+    PS -->|/internal/v1 + event feed| B
     B --> O
 ```
 

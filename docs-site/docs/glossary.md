@@ -46,11 +46,17 @@
 
 **Domain event**
 :   A backend `CommerceEvent` (`order.created`, `order.paid`, …) published inside
-    the transaction and handled after commit.
+    the transaction, recorded in the event feed in that transaction and handled
+    by other listeners after commit.
 
 **Edge**
 :   The host-network nginx on the VPS that receives traffic from the
     provider's HTTPS proxy and forwards it to the gateway.
+
+**Event feed**
+:   `GET /internal/v1/events`: the backend's durable list of domain events,
+    which warehouse-service and payment-service poll from their own cursor.
+    See [Event feed](reference/EVENT_FEED.md).
 
 **Facet**
 :   A count or range returned next to search results (categories, price range,
@@ -125,8 +131,9 @@
 :   The private-key format `JWT_SIGNING_KEY` must use (base64 DER).
 
 **Reconciler**
-:   warehouse-service job (every minute) that aligns shipments with backend
-    cancellations and adopts orphaned releases.
+:   warehouse-service safety-net job (every 10 minutes since 1.3.0) that aligns
+    shipments with backend cancellations the event feed missed and adopts
+    orphaned releases.
 
 **`requestId`**
 :   Idempotency id of a service-to-service write; repeats return the first result.
@@ -139,6 +146,10 @@
 
 **Settlement delay**
 :   Time after which `PROCESSING` test payments settle (10 s by default).
+
+**Settle delay (event feed)**
+:   The feed serves only events recorded at least 3 s ago, so a transaction
+    that committed late with a lower sequence is not skipped.
 
 **SSRF**
 :   Server-side request forgery; webhook URLs are checked so they cannot reach

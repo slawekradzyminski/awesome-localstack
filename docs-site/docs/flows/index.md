@@ -103,8 +103,11 @@ above also triggers the customer's [webhooks](webhooks.md).
 ## Domain events
 
 The backend publishes a domain event inside the transaction that changes an
-order; listeners run **after commit**. Emails, loyalty points, card refunds
-and user webhooks all hang off these events.
+order. In the same transaction every event is appended to the **event feed**
+(`domain_events`), which warehouse-service and payment-service poll; other
+listeners run **after commit**. Emails, loyalty points, user webhooks, card
+refunds (payment-service) and shipment cancellations (warehouse-service) all
+hang off these events. See [Event feed](../reference/EVENT_FEED.md).
 
 | Event | Wire name | Published when |
 | --- | --- | --- |
@@ -115,8 +118,10 @@ and user webhooks all hang off these events.
 | `ORDER_DELIVERED` | `shipment.delivered` | Admin status change to `DELIVERED` or fulfilment reaching `DELIVERED` |
 | `REFUND_BOOKED` | `refund.booked` | A refund is booked for a return |
 | `PAYMENT_FAILED` | `payment.failed` | payment-service reports a failed payment for a `PENDING` order |
+| `CARD_REFUND_REQUESTED` | `card-refund.requested` | A booked refund has a card leg, or a card-paid order is cancelled. **Internal**: read by payment-service from the feed, never sent to user webhooks |
 
-Every event's `data` contains `orderId`, `status` and `totalAmount`; refunds
-add `amount` and `requestId`, payments add `paymentId` (and `failureCode` on
+Every event's `data` contains `orderId`, `status` and `totalAmount` (except
+`card-refund.requested`, whose data is exactly `requestId`, `orderId`,
+`amount` and `reason`); refunds add `amount` and `requestId`, payments add `paymentId` (and `failureCode` on
 failure). Repeating the current status, replays and rejected changes publish
 nothing.

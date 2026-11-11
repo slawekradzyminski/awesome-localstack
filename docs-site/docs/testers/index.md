@@ -80,6 +80,8 @@ check. Use the lightweight profile unless a scenario says otherwise.
 | Pay someone else's order | `403` |
 | `…3220`, wrong 3-D Secure code, then pay again | first `FAILED THREE_DS_FAILED`, new attempt allowed |
 | `…3220`, cancel the order, then answer `123456` | payment ends `VOIDED`, `ORDER_NOT_PAYABLE` |
+| Pay with `4242…`, cancel the order, wait about 10 s | payment `REFUNDED` (card refund from the event feed) |
+| Read another user's payment or order payments | `404`, same as a missing one |
 | `…0077`: poll until settled | `PROCESSING` → `CAPTURED` after ~10 s; order `PAID` |
 | `…0119` | `PROCESSING` → `FAILED PROVIDER_TIMEOUT`; order stays `PENDING`; `PAYMENT_FAILED` email |
 | `…0259` | one `PAYMENT_RECEIVED` email, one `order.paid` webhook, points earned once |
@@ -93,7 +95,8 @@ check. Use the lightweight profile unless a scenario says otherwise.
 | Pack with `weightKg` 0.00 / 0.01 / 30.00 / 30.01 | `400` / ok / ok / `400` |
 | Ship `DHL` with 9 or 11 digits; `UPS` with lower-case letters | `400` |
 | Skip a step (ship an `AWAITING_PICK` shipment) | `409` |
-| Customer cancels while `AWAITING_PICK`, then the warehouse picks | `409 Order was cancelled by the customer` |
+| Customer cancels while `AWAITING_PICK`, then the warehouse picks at once | `409 Order was cancelled by the customer` |
+| Customer cancels while `AWAITING_PICK`, then waits about 10 s | shipment `CANCELLED` with `lastActor` `system` (event feed), no warehouse action needed |
 | Customer cancels after `PICKED` | `409 Order is already being packed...` |
 | Ship without `trackingNumber`, call `carrier/advance` repeatedly | walks every scan to `DELIVERED`, emails at out-for-delivery |
 | Find a tracking number with `abs(hashCode) % 5 == 0` | `DELIVERY_FAILED` then second attempt |

@@ -31,6 +31,9 @@ profiles use a fixed local default.
 Signed-in users subscribe their own URLs to commerce events (`order.created`,
 `order.paid`, `order.cancelled`, `shipment.shipped`, `shipment.delivered`,
 `refund.booked`, `payment.failed`, plus `webhook.ping` from the test call).
+The internal `card-refund.requested` event (backend 3.16.0) is read only by
+payment-service from the [event feed](EVENT_FEED.md) and is never offered to
+user webhooks.
 Deliveries carry `X-Webhook-Signature: t=<epochSeconds>,v1=<hex HMAC-SHA256>`
 with a per-subscription secret, are retried with doubling backoff, and are
 listed per subscription.

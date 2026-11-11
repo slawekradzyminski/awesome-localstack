@@ -54,15 +54,19 @@ sequenceDiagram
     actor A as Admin
     participant W as warehouse-service
     participant B as Backend
+    participant F as Event feed
     participant P as payment-service
     A->>W: Receive return 7
     W->>B: Restock items
     A->>W: Refund return 7
     W->>B: Book refund 45.00
     Note over B: Split, card first
+    B->>F: card-refund.requested (same transaction)
     B-->>W: 200
-    B->>P: Card refund
-    P-->>B: Refund status
+    W-->>A: Return REFUNDED
+    P->>F: Poll (every 5 s)
+    F-->>P: card-refund.requested
+    Note over P: Card refund booked
 ```
 
 Step by step:
@@ -76,16 +80,19 @@ Step by step:
 3. **Split** — in the same transaction the backend publishes `REFUND_BOOKED`
    (webhook `refund.booked`), splits the amount card first, restores the gift
    card or points part, and revokes earned points pro rata.
-4. **Card** — the card part is delivered from `payment_refund_outbox` to
-   `POST /internal/v1/payments/refunds`; payment-service answers with the new
-   payment status.
+4. **Card** — in the same transaction the backend publishes the card part as
+   a `card-refund.requested` event (internal, never sent to user webhooks).
+   payment-service pulls it from the [event feed](../reference/EVENT_FEED.md)
+   about 5–8 seconds later and moves the payment to `PARTIALLY_REFUNDED` or
+   `REFUNDED`. The backend never calls payment-service and does not wait for
+   the result.
 
 ## Refund split
 
 `CardFirstRefundSplitter` divides each booked refund:
 
-1. **Card** — up to the captured amount minus card refunds already sent or
-   queued. Orders without a captured payment (paid by an admin, or fully by
+1. **Card** — up to the captured amount minus card refunds already
+   requested (`card_refund_requests`). Orders without a captured payment (paid by an admin, or fully by
    tenders) get no card leg.
 2. **Gift card** (`GiftCardRefundLegHandler`) — up to what the order paid with
    its gift card; the balance is restored (`RESTORED` ledger row).
@@ -107,7 +114,8 @@ Each leg is idempotent per refund `requestId`. Independently, points the order
 
 Cancelling an order (customer, admin or warehouse) restores the gift card and
 points in full, revokes earned points and — when a card payment was captured —
-queues a card refund of the captured amount minus earlier card refunds, with
+requests a card refund of the captured amount minus earlier card refunds, with
 `requestId = UUID.nameUUIDFromBytes("cancel:" + orderId)` and reason
-`Order cancelled`. See [Card payments](payments.md#refunds-to-the-card) for how
-the refund outbox reacts to each answer.
+`Order cancelled`, as a `card-refund.requested` event in the cancelling
+transaction. See [Card payments](payments.md#refunds-to-the-card) for how
+payment-service handles each event.
