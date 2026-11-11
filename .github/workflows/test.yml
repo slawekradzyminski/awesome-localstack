@@ -130,11 +130,17 @@ jobs:
         # End-to-end checks of the commerce features (search, VAT, payments, event-feed
         # refunds, webhooks, gift cards, simulated carrier) with the demo accounts.
         scripts/smoke-features.sh http://127.0.0.1:8081 full
-        # The gateway re-resolves upstreams: recreating the backend alone must not leave
-        # it pointing at the old container address.
+        # The gateway re-resolves upstreams (Docker DNS, cached up to 10 s): after
+        # recreating the backend alone it must reach the new container without a restart.
         docker compose -f lightweight-docker-compose.yml up -d --force-recreate --no-deps --wait backend
-        curl --fail --silent --show-error --request POST http://127.0.0.1:8081/api/v1/users/signin \
-          --header 'Content-Type: application/json' --data '{"username":"client","password":"client"}' >/dev/null
+        for attempt in $(seq 1 15); do
+          if curl --fail --silent --request POST http://127.0.0.1:8081/api/v1/users/signin \
+            --header 'Content-Type: application/json' --data '{"username":"client","password":"client"}' >/dev/null; then
+            echo "gateway reached the recreated backend after $attempt attempt(s)"; break
+          fi
+          [ "$attempt" -lt 15 ] || { echo "gateway still fails 30 s after the backend was recreated" >&2; exit 1; }
+          sleep 2
+        done
 
   verifyMonitoringOverlay:
     runs-on: ubuntu-latest
