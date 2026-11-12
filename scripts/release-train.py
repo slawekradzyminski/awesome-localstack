@@ -7,7 +7,8 @@
     pin     resolve digests, update every Compose file and docs/CONTAINER_RELEASES.md
     verify  Compose configuration and every contract script (--compat: course suite)
     pr      branch, commit, push, open the LocalStack PR, wait for CI (--merge)
-    deploy  make ansible-deploy[-backend-upgrade] from a clean, merged main (--yes)
+    preflight  local pre-deploy checks: server Compose config and the strict docs image build
+    deploy  preflight, then make ansible-deploy[-backend-upgrade] from a clean, merged main (--yes)
 
 Every subcommand recomputes the release set from GitHub and the Compose files,
 so the steps can be rerun or resumed. --dry-run prints every action that would
@@ -53,6 +54,12 @@ CONTRACT_SCRIPTS = (
     ["python3", "-m", "unittest", "discover", "-s", "scripts", "-p", "test_release_train.py"],
 )
 MAX_CLOCK_DRIFT_SECONDS = 5
+# The server builds the docs image during the deploy (docker compose build docs:
+# context docs-site/, the repository's docs/ as the `repo-docs` context). Its
+# `mkdocs build --strict` runs here first, so a broken docs tree fails on the
+# laptop instead of on the server.
+DOCS_BUILD_CONTEXT = "docs-site"
+DOCS_REPO_CONTEXT = "docs"
 
 
 @dataclass(frozen=True)
@@ -245,6 +252,11 @@ class Shell:
             return self.read(args, cwd)
         subprocess.run(args, cwd=cwd, check=True)
         return ""
+
+    def run(self, args: list[str], cwd: Path = ROOT) -> int:
+        """A local check with streamed output; runs in --dry-run too (it changes nothing)."""
+        print(f"+ {shlex.join(args)}", flush=True)
+        return subprocess.run(args, cwd=cwd).returncode
 
     def write(self, path: Path, text: str) -> None:
         if self.dry_run:
@@ -583,6 +595,25 @@ def cmd_pr(shell, args):
         shell.act(["gh", "pr", "merge", url, "--squash", "--delete-branch"])
 
 
+def preflight_commands() -> list[list[str]]:
+    """What the deploy would otherwise discover on the server, after it started changing it."""
+    return [
+        ["docker", "compose", "-f", SERVER_COMPOSE, "config", "--quiet"],
+        ["docker", "build", "--build-context", f"repo-docs={DOCS_REPO_CONTEXT}", DOCS_BUILD_CONTEXT],
+    ]
+
+
+def run_preflight(shell) -> None:
+    for step in preflight_commands():
+        if shell.run(step) != 0:
+            raise SystemExit(f"preflight failed: {shlex.join(step)}\nNothing was deployed; fix it and rerun.")
+    print("preflight: OK")
+
+
+def cmd_preflight(shell, args):
+    run_preflight(shell)
+
+
 def cmd_deploy(shell, args):
     if not args.yes and not shell.dry_run:
         raise SystemExit("deploy changes production: rerun with --yes after the release PR is merged.")
@@ -602,7 +633,9 @@ def cmd_deploy(shell, args):
     old = current_pin(shell.read(["git", "show", f"{args.since}:{SERVER_COMPOSE}"]), "backend")
     target = choose_deploy_target(old and old[0], new and new[0])
     print(f"backend {old[0] if old else '-'} -> {new[0]}: make {target}")
-    shell.act(["make", target])
+    run_preflight(shell)
+    # The make target would run the same preflight again.
+    shell.act(["make", target, "SKIP_DEPLOY_PREFLIGHT=1"])
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -624,6 +657,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--course-ref", default="origin/master", help="course revision (default origin/master)")
     pr = sub.add_parser("pr")
     pr.add_argument("--merge", action="store_true", help="squash-merge once CI is green")
+    sub.add_parser("preflight")
     deploy = sub.add_parser("deploy")
     deploy.add_argument("--yes", action="store_true", help="really deploy to production")
     deploy.add_argument("--since", default="HEAD~1", help="ref holding the previously deployed pins")
@@ -634,7 +668,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     shell = Shell(args.dry_run)
     {"plan": cmd_plan, "tag": cmd_tag, "wait": cmd_wait, "pin": cmd_pin, "verify": cmd_verify,
-     "pr": cmd_pr, "deploy": cmd_deploy}[args.command](shell, args)
+     "pr": cmd_pr, "preflight": cmd_preflight, "deploy": cmd_deploy}[args.command](shell, args)
     return 0
 
 

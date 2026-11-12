@@ -1,0 +1,5 @@
+# Paths inside the app_copy_paths directories that the roles render on the
+# server and the repository does not track. The asset mirror never deletes
+# them (or anything below them).
+app_copy_prune_excludes:
+  - alertmanager/secrets

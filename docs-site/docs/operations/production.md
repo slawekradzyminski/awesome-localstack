@@ -10,8 +10,9 @@ the server.
 
 | Command | Effect |
 | --- | --- |
+| `make deploy-preflight` | Local checks the deploy targets run first: server Compose config and the strict docs image build |
 | `make ansible-deploy` | Converge the stack and run verification |
-| `make ansible-deploy-backend-upgrade` | Pull the reviewed backend, stop both backends, quiesced encrypted backup, then deploy (for migrations or ciphertext changes) |
+| `make ansible-deploy-backend-upgrade` | Prepare the release, then stop both backends, quiesced encrypted backup, deploy (for migrations or ciphertext changes) |
 | `make ansible-verify` | Only the health checks |
 | `make ansible-cleanup` | Checksum- and retention-guarded container and image cleanup |
 | `make ansible-reset-demo-state` | **Destructive**: delete the PostgreSQL volume and Mailpit state, redeploy |
@@ -23,20 +24,32 @@ the server.
 
 ```mermaid
 flowchart TB
-    A[Swap check] --> W[Install host watchdog]
+    P[Laptop preflight: compose config,<br/>strict docs build] --> A[Swap check]
+    A --> W[Install host watchdog]
     W --> B[Encrypted backup]
-    B --> C[Silence warnings and pause<br/>watchdog container checks 15 min]
-    C --> D[app role: files, secrets, build, up]
+    B --> R[app prepare: gates, asset mirror, env files,<br/>compose config, pulls, docs image]
+    R --> C[Silence warnings and pause<br/>watchdog container checks 15 min]
+    C --> Q{backend upgrade?}
+    Q -- yes --> S[Stop both backends and their services,<br/>quiesced backup]
+    Q -- no --> D
+    S --> D[app converge: docker compose up,<br/>recreate gateway and edge]
     D --> E[verify role]
     E --> F[Expire silences, resume watchdog]
     F --> G[Cleanup]
+    S -. failure before up .-> X[Restart the stopped containers,<br/>fail with runbook]
 ```
 
-The `app` role, in order: validates the Vault keys and the image gates; copies
-the Compose file and the `nginx`, `prometheus`, `alertmanager`, `postgres`,
-`docs` and `docs-site` directories; renders `.env.runtime`, `.env.warehouse`,
-`.env.payment` and the `.env.aitesters*` files from Vault; builds the docs
-image; runs `docker compose up`; and recreates `gateway` and `edge`.
+Everything that can fail for a reason unrelated to the database migration
+runs **before** any service is stopped. The `app` role's `prepare.yml`
+validates the Vault keys and the image gates; copies the Compose file;
+mirrors the `nginx`, `prometheus`, `alertmanager`, `postgres`, `docs`,
+`docs-site` and other asset directories (files deleted in the repository are
+deleted on the server, except the rendered `alertmanager/secrets`); renders
+`.env.runtime`, `.env.warehouse`, `.env.payment` and the `.env.aitesters*`
+files from Vault; runs `docker compose config --quiet`; pulls missing images;
+and builds the docs image with `mkdocs build --strict`. Only then does the
+optional quiesce stop the backends, and `converge.yml` runs
+`docker compose up` and recreates `gateway` and `edge`.
 
 A deploy that leaves the gateway returning `502` is a **failed** deploy:
 verification is part of the playbook, not a follow-up.
@@ -102,6 +115,24 @@ After every deploy and on `make ansible-verify`:
 - the bootstrap admin can sign in and the catalog is present; the sandbox
   admin can sign in, traffic diagnostics and the outbox access key work;
 - GraphQL and native gRPC surfaces respond.
+
+## Recovering from a failed deploy
+
+The play ends with a message naming the failed task and the state it left:
+
+- **Preflight or before the quiesce**: nothing was stopped; the previous
+  release still serves traffic. Fix and rerun the same make target.
+- **After the quiesce, before `docker compose up`** (for example the quiesced
+  backup): the rescue restarts the exact containers it stopped and waits until
+  they are healthy. No migration ran. Fix and rerun.
+- **From `docker compose up` on**: migrations may have run, so the old
+  backends are not restarted. Fix and rerun (the play is idempotent), or roll
+  back by re-pinning the previous release and restoring the quiesced backup
+  ([Backups](backups.md)).
+
+Silences and the watchdog pause expire after 15 minutes. Never delete files by
+hand on the server: the asset mirror prunes what the repository removed.
+Details: [Ansible — Recovering from a failed deploy](../reference/ANSIBLE.md#recovering-from-a-failed-deploy).
 
 More: [Ansible](../reference/ANSIBLE.md), [SSH server](../reference/SSH_SERVER.md),
 [SSH tunnelling](../reference/SSH_TUNNELLING.md),

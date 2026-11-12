@@ -18,10 +18,10 @@
       - "{{ backend_upgrade_image }}"
   changed_when: false
 
-# The deployed Compose file is the previous release, so a service introduced by
-# this release (for example warehouse-service on its first rollout) is not
-# defined there yet and must not be named in the stop command.
-- name: Read the services defined by the currently deployed Compose file
+# deploy.yml runs this role after app/prepare.yml, so the deployed Compose file
+# is already the new release; a service it no longer defines must not be named
+# in the stop command.
+- name: Read the services defined by the deployed Compose file
   ansible.builtin.command:
     argv:
       - docker
@@ -34,13 +34,11 @@
   register: backend_upgrade_deployed_services
   changed_when: false
 
-- name: Stop both old backend instances and their warehouse- and payment-services before applying incompatible migrations
-  ansible.builtin.command:
-    argv: >-
-      {{ ['docker', 'compose', '-f', app_compose_file, 'stop', '--timeout', '60']
-         + (backend_upgrade_stop_services
-            | intersect(backend_upgrade_deployed_services.stdout_lines)) }}
-    chdir: "{{ app_dir }}"
+- name: Select the old backend instances and their warehouse- and payment-services
+  ansible.builtin.set_fact:
+    backend_upgrade_quiesced_services: >-
+      {{ backend_upgrade_stop_services
+         | intersect(backend_upgrade_deployed_services.stdout_lines) }}
   vars:
     backend_upgrade_stop_services:
       - backend
@@ -49,6 +47,36 @@
       - aitesters-warehouse-service
       - payment-service
       - aitesters-payment-service
+
+# An empty service list would make `docker compose stop` stop the whole stack.
+- name: Refuse to quiesce without a backend service
+  ansible.builtin.assert:
+    that:
+      - "'backend' in backend_upgrade_quiesced_services"
+    fail_msg: The deployed Compose file defines no backend service; nothing was stopped.
+    quiet: true
+
+# The exact containers of the previous release, so a failure before the new
+# release starts can bring them back unchanged (recover.yml).
+- name: Record the running containers the quiesce stops
+  ansible.builtin.command:
+    argv: >-
+      {{ ['docker', 'compose', '-f', app_compose_file, 'ps', '--quiet']
+         + backend_upgrade_quiesced_services }}
+    chdir: "{{ app_dir }}"
+  register: backend_upgrade_running_containers
+  changed_when: false
+
+- name: Remember the containers to restart if the deploy fails before the new release starts
+  ansible.builtin.set_fact:
+    backend_upgrade_stopped_containers: "{{ backend_upgrade_running_containers.stdout_lines }}"
+
+- name: Stop both old backend instances and their warehouse- and payment-services before applying incompatible migrations
+  ansible.builtin.command:
+    argv: >-
+      {{ ['docker', 'compose', '-f', app_compose_file, 'stop', '--timeout', '60']
+         + backend_upgrade_quiesced_services }}
+    chdir: "{{ app_dir }}"
 
 - name: Create encrypted PostgreSQL backup after backend writes have stopped
   ansible.builtin.command:

@@ -1,0 +1,98 @@
+# Mirrors every app_copy_paths directory from the repository checkout to
+# app_dir: copies the files, then deletes the deployed files and directories
+# the checkout no longer has (a docs page deleted in the repository would
+# otherwise stay on the server and break `mkdocs build --strict`).
+#
+# Pruning is limited to paths inside the app_copy_paths directories. Runtime
+# state in app_dir itself (the Compose file, the rendered .env files) is never
+# listed, and app_copy_prune_excludes protects what the roles render into the
+# copied directories (alertmanager/secrets). Built-in modules only: no rsync.
+- name: Copy deployment asset directories
+  ansible.builtin.copy:
+    src: "{{ repo_root }}/{{ item }}"
+    dest: "{{ app_dir }}/"
+    owner: root
+    group: root
+    mode: preserve
+  loop: "{{ app_copy_paths }}"
+  register: app_copy_results
+
+- name: List the deployment asset files of the repository checkout
+  ansible.builtin.find:
+    paths: "{{ app_copy_paths | map('regex_replace', '^', repo_root ~ '/') | list }}"
+    file_type: any
+    recurse: true
+    hidden: true
+    # The copy above follows local symlinks, so the listing does too.
+    follow: true
+  delegate_to: localhost
+  become: false
+  register: app_copy_source_entries
+
+- name: List the deployed asset files
+  ansible.builtin.find:
+    paths: "{{ app_copy_paths | map('regex_replace', '^', app_dir ~ '/') | list }}"
+    file_type: any
+    recurse: true
+    hidden: true
+  register: app_copy_deployed_entries
+
+- name: Select the deployed asset files the repository no longer has
+  ansible.builtin.set_fact:
+    app_copy_stale_entries: >-
+      {{
+        app_copy_deployed_entries.files
+        | map(attribute='path')
+        | map('relpath', app_dir)
+        | difference(
+            app_copy_source_entries.files
+            | map(attribute='path')
+            | map('relpath', repo_root)
+          )
+        | reject('match', '^(' ~ (app_copy_prune_excludes | map('regex_escape') | join('|')) ~ ')(/|$)')
+        | sort
+      }}
+
+# A missing or empty source listing would turn the prune into a wipe of the
+# deployed directory: refuse unless every copied directory listed files, and
+# never touch a path outside the copied directories.
+- name: Refuse to prune from an incomplete repository listing
+  ansible.builtin.assert:
+    that:
+      - >-
+        app_copy_source_entries.files
+        | map(attribute='path')
+        | map('relpath', repo_root)
+        | map('regex_replace', '/.*$', '')
+        | unique
+        | sort
+        == app_copy_paths | sort
+      - >-
+        app_copy_stale_entries
+        | map('regex_replace', '/.*$', '')
+        | difference(app_copy_paths)
+        | length == 0
+      - app_copy_stale_entries | select('search', '(^|/)\.\.(/|$)') | list | length == 0
+    fail_msg: >-
+      The repository listing of {{ app_copy_paths | join(', ') }} is incomplete
+      or a stale path escapes those directories; nothing was pruned.
+    quiet: true
+
+- name: Remove deployed asset files that the repository no longer has
+  ansible.builtin.file:
+    path: "{{ app_dir }}/{{ item }}"
+    state: absent
+  loop: "{{ app_copy_stale_entries }}"
+  register: app_copy_prune_results
+
+- name: Record which asset directories lost files
+  ansible.builtin.set_fact:
+    app_copy_pruned_dirs: >-
+      {{
+        app_copy_prune_results.results | default([])
+        | selectattr('changed')
+        | map(attribute='item')
+        | map('regex_replace', '/.*$', '')
+        | unique
+        | list
+      }}

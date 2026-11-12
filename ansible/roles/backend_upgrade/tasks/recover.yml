@@ -1,0 +1,25 @@
+# Rescue path of deploy.yml. Runs when the quiesce stopped the previous
+# backends and the play failed before converge.yml started the new release:
+# no migration ran (the database is exactly the quiesced backup), so starting
+# the same stopped containers restores the previous release unchanged.
+- name: Restart the previous release's stopped backend containers
+  ansible.builtin.command:
+    argv: "{{ ['docker', 'start'] + backend_upgrade_stopped_containers }}"
+  register: backend_upgrade_recovery_start
+  changed_when: true
+  failed_when: false
+
+- name: Wait for the restarted backend containers to become healthy  # noqa: jinja[invalid] (Go template, !unsafe)
+  ansible.builtin.command:
+    argv: "{{ ['docker', 'inspect', '--format', backend_upgrade_health_format] + backend_upgrade_stopped_containers }}"
+  register: backend_upgrade_recovery_health
+  until: >-
+    backend_upgrade_recovery_health.rc == 0
+    and (backend_upgrade_recovery_health.stdout_lines
+         | reject('search', ' running healthy$') | list | length == 0)
+  retries: 24
+  delay: 5
+  changed_when: false
+  failed_when: false
+  vars:
+    backend_upgrade_health_format: !unsafe '{{.Name}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}'

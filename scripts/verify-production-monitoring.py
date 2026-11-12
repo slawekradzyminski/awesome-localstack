@@ -58,7 +58,8 @@ def phase_a(server: dict) -> None:
     )
     for relative in ("ansible/inventory/group_vars/production/main.yml",
                      "ansible/inventory/group_vars/production/vault.yml.example",
-                     "ansible/roles/app/tasks/main.yml", "ansible/roles/verify/tasks/main.yml",
+                     "ansible/roles/app/tasks/prepare.yml", "ansible/roles/app/tasks/converge.yml",
+                     "ansible/roles/app/tasks/assets.yml", "ansible/roles/verify/tasks/main.yml",
                      "Makefile"):
         text = read(relative)
         for marker in ("GF_SECURITY_ADMIN_PASSWORD", "grafana_admin_password", "ansible-tunnel-grafana",
@@ -105,8 +106,8 @@ def phase_b_compose(server: dict) -> None:
 
 def phase_b_watchdog(server: dict) -> None:
     playbook = read("ansible/playbooks/deploy.yml")
-    markers = ["    - swap", "    - watchdog", "    - postgres_backup",
-               "deployment_silence_state: present", "    - app", "    - verify",
+    markers = ["        name: swap", "        name: watchdog", "        name: postgres_backup",
+               "deployment_silence_state: present", "            tasks_from: converge", "        name: verify",
                "deployment_silence_state: absent"]
     positions = [playbook.find(marker) for marker in markers]
     require(all(position >= 0 for position in positions) and positions == sorted(positions),
