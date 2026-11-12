@@ -132,6 +132,25 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: frontend 3.13.1 — 12 November 2026
+
+- **frontend 3.13.1**:
+  - **Cart price notice:** a cart line whose product price changed since it was added shows "Price changed: now $X. Your cart keeps $Y until you update this item." It uses the backend 3.18.0 fields `priceChanged`, `unitPrice` and `currentPrice`, and is a `role="status"` note. REST cart only; the GraphQL cart has no such fields.
+  - **API types:** the OpenAPI snapshots and generated types follow the 3.18 release set.
+  - **Development pins:** the frontend repository's Compose file pins backend 3.18.0 and ollama-mock 1.0.12, and no longer sets `APP_SSO_ENABLED`.
+
+LocalStack changes: image pin only. Upgrade: `scripts/release-train.py deploy --yes` (a plain deploy; it is the
+first production run of the hardened play: asset mirror, image builds before any stop, rescue). Rollback:
+re-pin frontend 3.13.0.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/frontend:3.13.1@sha256:9151c313ac6ebe91a59fa100fd76348f05f64e4266f9bf2dc412ff1d46d58931` | [PR #101](https://github.com/slawekradzyminski/vite-react-frontend/pull/101), `a9c3cbd` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43283256605) |
+| `slawekradzyminski/backend:3.18.0` | unchanged | unchanged |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.18.0, frontend 3.13.0, ollama-mock 1.0.12 — 12 November 2026
 
 This release fixes the defects course groups reported on the playwright-2026 branches (hyr, obi, pio, war):
@@ -833,12 +852,12 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.18.0, frontend 3.13.0, ollama-mock 1.0.12, released 12 November 2026:
+Release train: frontend 3.13.1, released 12 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.18.0@sha256:7b5ffeade75935ec76053d88136e6dd769d534b983cbdc35dfde19991e4c32c3` |
-| Frontend | `slawekradzyminski/frontend:3.13.0@sha256:f84ee35b8e124335f0d3f8014cabcc9432afb9e50fe2d886df23c78a7a92a843` |
+| Frontend | `slawekradzyminski/frontend:3.13.1@sha256:9151c313ac6ebe91a59fa100fd76348f05f64e4266f9bf2dc412ff1d46d58931` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
