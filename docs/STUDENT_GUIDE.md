@@ -136,9 +136,7 @@ Application password login (also for `POST /api/v1/users/signin`):
 - `warehouse` / `warehouse` (warehouse role)
 
 SSO and the mocked Google/GitHub social login were removed from the stack on
-2026-11-12, together with Keycloak. If your frontend image still shows a
-**Sign in with SSO**, Google or GitHub button, ignore it and sign in with a
-password.
+2026-11-12, together with Keycloak; sign in with a password.
 
 For everyday work, prefer `8081`.
 

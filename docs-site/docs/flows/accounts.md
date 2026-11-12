@@ -15,7 +15,6 @@ model (RS256 access token, rotating refresh token) is explained in
 | `POST /api/v1/users/logout` | Bearer | revokes the refresh token |
 | `POST /api/v1/users/password/forgot` `{identifier}` | none | always `202` (username or email; no account enumeration) |
 | `POST /api/v1/users/password/reset` `{token, newPassword, confirmPassword}` | none | `200`; `400` mismatch, invalid, expired or used token |
-| `POST /api/v1/users/sso/exchange` `{idToken}` | none | `404`: SSO is disabled in every profile since it was [removed](../architecture/auth.md#single-sign-on-removed) |
 | `GET /api/v1/users/me` | Bearer | current user |
 | `GET /api/v1/users/me/email-events` | Bearer | the caller's latest email statuses (`QUEUED`, `SENT_TO_SMTP_SINK`, `FAILED`) |
 | `GET /api/v1/users/2fa/status` | Bearer | enabled flag and remaining recovery codes |

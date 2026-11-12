@@ -14,7 +14,6 @@
 | Images missing in the shop | Wrong origin; images come from the gateway | Open `http://localhost:8081/images/iphone.png` |
 | Swagger "Try it out" calls the wrong host | `servers[0].url` in `/v3/api-docs` | Use the gateway URL, not the service port |
 | nginx changes not applied | The gateway still runs the old config | `docker compose ... up -d --force-recreate gateway` |
-| "Sign in with SSO", Google or GitHub button does nothing | SSO and Keycloak were removed; frontend images up to 3.12.x still show the buttons on `localhost:8081` | Sign in with a password; see [Authentication](../architecture/auth.md#single-sign-on-removed) |
 | No email arrives (full profile) | ActiveMQ or consumer down; the backend retries for ~15 minutes | Mailpit `:8025`, `GET /api/v1/users/me/email-events`, consumer logs |
 
 ## TOTP codes rejected locally (Docker VM clock drift)

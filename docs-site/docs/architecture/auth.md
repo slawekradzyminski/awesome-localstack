@@ -90,15 +90,13 @@ The flow is described in [Accounts and MFA](../flows/accounts.md#mfa).
 
 SSO and the mocked Google/GitHub social login were removed from the training
 stack on 2026-11-12, together with Keycloak (port `8082`), its realms and its
-training users. Every profile now runs the backend with `APP_SSO_ENABLED=false`,
-so `POST /api/v1/users/sso/exchange` answers `404` until the backend drops the
-endpoint. Sign in with an application password (demo users or your own
-sign-up) instead.
-
-Frontend images up to 3.12.x still decide at build time whether to show the
-**Sign in with SSO**, Google and GitHub buttons, and show them when the page is
-opened on `http://localhost:8081`. The buttons do nothing useful without
-Keycloak; a later frontend release removes them.
+training users. Backend 3.18.0 dropped the code as well:
+`POST /api/v1/users/sso/exchange` no longer exists (`401` without a token, `404` with
+one, like any unknown path), and frontend 3.13.0 has no SSO or social login
+buttons. Sign in with an application password (demo users or your own sign-up).
+The `auth_provider` and `provider_subject` columns stay in `app_user` so a rollback
+to a 3.17.x image still starts; accounts created through SSO recover access with
+**Forgot password**.
 
 ## Rate limiting
 

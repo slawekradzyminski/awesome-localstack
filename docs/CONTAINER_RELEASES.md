@@ -132,6 +132,67 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.18.0, frontend 3.13.0, ollama-mock 1.0.12 — 12 November 2026
+
+This release fixes the defects course groups reported on the playwright-2026 branches (hyr, obi, pio, war):
+186 reports, 82 unique defects after triage, 48 reproducible. The course bugs documented in
+ai-testers-api (l15–l20 `bug-reports/`) are deliberately unchanged, and so is every behaviour an l20
+test asserts. SSO and Keycloak are removed for good.
+
+- **backend 3.18.0**:
+  - **Validation:**
+    - Max-length errors no longer say "minimum".
+    - Empty email, whitespace-only and invisible values, and blank product fields on update are rejected (an empty category still means "unchanged").
+    - Lengths are limited to fit the database columns (category, image URL, address).
+    - Image URLs must be real http(s) URLs.
+    - Wrongly typed JSON values are rejected instead of coerced.
+    - A field that breaks several rules gets one deterministic message.
+  - **Errors:** malformed bodies, bad enums and UUIDs return the normal error format without Java class names (the `?status=` body that l20 asserts is kept). Another user's email on profile edit returns 400, and constraint violations return 409 instead of 500.
+  - **Identity:**
+    - Usernames are case-insensitive and unique, from `[A-Za-z0-9._-]{4,255}`; emails are lower-cased and unique (migration V18 skips an index and logs a warning instead of failing if old data collides).
+    - The new `GET /api/v1/admin/users/identity-issues` lists accounts that break the rules.
+    - Passwords are limited to 72 UTF-8 bytes, the BCrypt limit.
+    - `PUT /users/{username}` answers 403 for other users' names, so it no longer tells clients which usernames exist.
+    - Deleting a user no longer deadlocks with payment results: locks are taken in one order, with one retry.
+  - **Orders:** status only moves forward (steps can be skipped; CANCELLED and DELIVERED are final). Responses carry the stored `updatedAt`.
+  - **Cart prices:** a cart line whose product price changed is flagged with `priceChanged`/`currentPrice`. Checkout still charges the price from when the item was added, because l20 asserts that snapshot.
+  - **Other fixes:**
+    - Search ignores Polish and Latin accents again.
+    - GraphQL money has two decimals; zero stays "0" for l20.
+    - Resetting a system prompt returns the effective prompt.
+    - QR text is UTF-8, and text that is too long returns 400.
+    - Tool chat sends `done=true` only on the last event.
+    - The native image has `SharedArenaSupport`, so concurrent LLM chats no longer return 500.
+  - **OpenAPI:** documents `application/json` and `UserResponseDto`.
+  - **SSO removed:** the `POST /api/v1/users/sso/exchange` endpoint and the OIDC code are gone. The `app_user.auth_provider`/`provider_subject` columns stay so a rollback to 3.17.x still starts, and SSO-created accounts recover through **Forgot password**.
+- **frontend 3.13.0**:
+  - **Accessibility:** keyboard access to inventory rows, a label for the order-status select, contrast fixes, an inert collapsed LLM panel, and labelled chat roles.
+  - **Forms and checkout:** the register page's "Sign in" no longer submits the signup form. The admin product form shows field errors and a success message. Coupon dates are sent in UTC.
+  - **Layout:** responsive admin tables, cart and catalog filters; long category names no longer break the layout; the header fits at 320 px.
+  - **Robustness:**
+    - A failed cart read shows a warning instead of an empty cart.
+    - Huge order ids no longer hang.
+    - The shop API selector waits for pending cart writes.
+    - One `/users/me` request per sign-in.
+    - Toasts survive navigation.
+  - **QR and chat:** QR shows a byte counter and the server's message. Chat input stays locked until the stream ends, and a failed chat can be retried.
+  - **SSO removed:** the SSO code and buttons are gone.
+- **ollama-mock 1.0.12**: chat answers the latest user prompt instead of the first one, and non-streaming chat replies return `done: true`.
+
+LocalStack changes: image pins, the ollama-mock pin in `scripts/verify-ollama-config.sh`, `APP_SSO_ENABLED`
+dropped from every Compose file, SSO notes in the docs updated. Upgrade: `make ansible-deploy-backend-upgrade`
+(migration V18). Rollback: re-pin backend 3.17.2, frontend 3.12.2 and ollama-mock 1.0.11; V18 only adds
+indexes, so 3.17.2 runs on the migrated schema.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.18.0@sha256:7b5ffeade75935ec76053d88136e6dd769d534b983cbdc35dfde19991e4c32c3` | [PR #101](https://github.com/slawekradzyminski/test-secure-backend/pull/101), `ba06bdc` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43270504640) |
+| `slawekradzyminski/frontend:3.13.0@sha256:f84ee35b8e124335f0d3f8014cabcc9432afb9e50fe2d886df23c78a7a92a843` | [PR #100](https://github.com/slawekradzyminski/vite-react-frontend/pull/100), `48849c2` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43270510480) |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f` | [PR #32](https://github.com/slawekradzyminski/ollama-mock/pull/32) | tag `v1.0.12` |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.17.2, frontend 3.12.2 — 12 November 2026
 
 Second patch release from the reference Playwright suite (`awesome-localstack-e2e-tests`).
@@ -772,14 +833,14 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.17.2, frontend 3.12.2, released 12 November 2026:
+Release train: backend 3.18.0, frontend 3.13.0, ollama-mock 1.0.12, released 12 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.17.2@sha256:f2293ebf37902d95f53ae9d3e875dab6941c69e0ef26a124ee1ba98150d352d4` |
-| Frontend | `slawekradzyminski/frontend:3.12.2@sha256:ea48bab9beddd1e31910f119c5b4730e0e7d5d49de0ca5ff8bf8495dc45b41a1` |
+| Backend | `slawekradzyminski/backend:3.18.0@sha256:7b5ffeade75935ec76053d88136e6dd769d534b983cbdc35dfde19991e4c32c3` |
+| Frontend | `slawekradzyminski/frontend:3.13.0@sha256:f84ee35b8e124335f0d3f8014cabcc9432afb9e50fe2d886df23c78a7a92a843` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
 | Payment service | `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` |
 
