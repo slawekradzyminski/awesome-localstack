@@ -1,4 +1,4 @@
-# Accounts, MFA and SSO
+# Accounts and MFA
 
 All account endpoints live in the backend under `/api/v1/users`. The token
 model (RS256 access token, rotating refresh token) is explained in
@@ -15,11 +15,11 @@ model (RS256 access token, rotating refresh token) is explained in
 | `POST /api/v1/users/logout` | Bearer | revokes the refresh token |
 | `POST /api/v1/users/password/forgot` `{identifier}` | none | always `202` (username or email; no account enumeration) |
 | `POST /api/v1/users/password/reset` `{token, newPassword, confirmPassword}` | none | `200`; `400` mismatch, invalid, expired or used token |
-| `POST /api/v1/users/sso/exchange` `{idToken}` | none | `200` with tokens; `401 Invalid SSO token`; `404` when SSO is disabled; `409` email already used by another provider |
+| `POST /api/v1/users/sso/exchange` `{idToken}` | none | `404`: SSO is disabled in every profile since it was [removed](../architecture/auth.md#single-sign-on-removed) |
 | `GET /api/v1/users/me` | Bearer | current user |
 | `GET /api/v1/users/me/email-events` | Bearer | the caller's latest email statuses (`QUEUED`, `SENT_TO_SMTP_SINK`, `FAILED`) |
 | `GET /api/v1/users/2fa/status` | Bearer | enabled flag and remaining recovery codes |
-| `POST /api/v1/users/2fa/setup` | Bearer | `{secret, otpAuthUri, qrCodeDataUri, expiresAt}`; `409` already enabled or SSO account |
+| `POST /api/v1/users/2fa/setup` | Bearer | `{secret, otpAuthUri, qrCodeDataUri, expiresAt}`; `409` already enabled |
 | `POST /api/v1/users/2fa/confirm` `{code}` | Bearer | enables MFA, returns `recoveryCodes` once |
 | `POST /api/v1/users/2fa/recovery-codes` `{password, code}` | Bearer | replaces all recovery codes |
 | `POST /api/v1/users/2fa/disable` `{password, code}` | Bearer | removes MFA (TOTP or recovery code), revokes all refresh tokens |
@@ -113,32 +113,6 @@ sequenceDiagram
 
 - The link base is `PASSWORD_RESET_FRONTEND_BASE_URL` (`http://localhost:8081/reset`
   locally, `https://awesome.byst.re/reset` in production).
-- SSO-only accounts get no reset email (the response is still `202`).
 - In the lightweight profile (`local`) the response also contains the raw
   `token` (`expose-token-in-response: true`) and the email is visible in the
   local outbox `GET /api/v1/local/email/outbox`; other profiles never expose it.
-
-## SSO (local profiles)
-
-```mermaid
-sequenceDiagram
-    actor U as User
-    participant F as Frontend
-    participant K as Keycloak
-    participant B as Backend
-    U->>F: Sign in with SSO
-    F->>K: Redirect (PKCE)
-    U->>K: Log in
-    K-->>F: Code
-    F->>K: Code for ID token
-    K-->>F: ID token
-    F->>B: Exchange ID token
-    B-->>F: App tokens
-```
-
-Keycloak users: `sso-e2e-client` / `SsoClient123!`, `sso-admin` /
-`SsoAdmin123!`; mock social providers `google-user` / `GoogleUser123!` and
-`github-user` / `GitHubUser123!` through the `google-mock` and `github-mock`
-realms. Keycloak admin console: `http://localhost:8082/admin/` (`admin` /
-`admin`). See [SSO flow](../reference/SSO_FLOW.md) and
-[Social login](../reference/SOCIAL_LOGIN.md).

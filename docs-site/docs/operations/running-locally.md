@@ -11,8 +11,8 @@ docker compose -f lightweight-docker-compose.yml up -d
 docker compose -f lightweight-docker-compose.yml ps -a
 ```
 
-Long-running containers should be `Up`; the one-shots `postgres-roles` and
-`keycloak-init` show `Exited (0)`. Stop with
+Long-running containers should be `Up`; the one-shot `postgres-roles` shows
+`Exited (0)`. Stop with
 `docker compose -f lightweight-docker-compose.yml down`. Data lives in tmpfs
 and is gone after the stack is recreated.
 
@@ -27,7 +27,6 @@ and is gone after the stack is recreated.
 | `http://localhost:8081/api/v1/graphiql` | GraphiQL |
 | `http://localhost:8081/api/v1/tracking/{number}` | Public parcel tracking |
 | `http://localhost:8081/api/v1/local/email/outbox` | Emails (local outbox, Bearer token required) |
-| `http://localhost:8082/admin/` | Keycloak admin (`admin` / `admin`) |
 | `http://localhost:11434/api/generate` | LLM mock |
 
 ## Full
@@ -77,10 +76,6 @@ on machines without Docker Model Runner.
 | `client2` | `client2` | client | lightweight, full |
 | `client3` | `client3` | client | lightweight, full |
 | `warehouse` | `warehouse` | warehouse | lightweight, full |
-| `sso-e2e-client` | `SsoClient123!` | client via Keycloak SSO | lightweight, full |
-| `sso-admin` | `SsoAdmin123!` | admin via Keycloak SSO | lightweight, full |
-| `google-user` | `GoogleUser123!` | mock Google social login | lightweight, full |
-| `github-user` | `GitHubUser123!` | mock GitHub social login | lightweight, full |
 
 Production has **no demo users**; sign up your own account. The sandbox
 `aitesters.byst.re` is reseeded every night.

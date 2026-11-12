@@ -16,7 +16,7 @@ The fixture contains 35 certificates and produces 86 unique fingerprints.
 Old vendor files from the production JVM services contain 38 fingerprints;
 all are retained. The unmitigated host JVM failed the fixture (16 certificates
 unblocked). After replacement, it rejects all 35. Disposables using the existing
-Temurin 25 and Red Hat Keycloak 21 images also reject all 35 with this file.
+Temurin 25 image also reject all 35 with this file.
 
 ## Runtime configuration
 
@@ -26,8 +26,7 @@ intentional: a future blocklist update changes Compose's service configuration,
 which recreates the JVM and remounts the new inode. A restart alone can retain an
 old file bind mount, and an already running JVM can cache its old blocklist.
 Ansible copies `security/` before Compose convergence. JVMs do not share a writable
-security file. Keycloak uses the stable `/usr/lib/jvm/jre-21` symlink, verified in
-its pinned image. The optional Jenkins build copies the same blocklist into its
+security file. The optional Jenkins build copies the same blocklist into its
 base JVM before running its plugin installer.
 
 `blocked.certs` is the identical build-time artifact for standalone Dockerfiles;
@@ -35,7 +34,7 @@ the versioned copy is the immutable Compose source. The backend, consumer,
 warehouse-service and payment-service run as GraalVM native images: their builder stage installs
 this artifact before compilation and the runtime image has no JDK, so they need
 no mount (`scripts/verify-java-security.py` rejects one). The remaining JVMs in
-Compose (ActiveMQ, the Ollama mock, Keycloak and the optional Jenkins) keep the
+Compose (ActiveMQ, the Ollama mock and the optional Jenkins) keep the
 read-only mount.
 
 ## Verification and renewal

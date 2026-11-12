@@ -24,8 +24,6 @@
 | `postgres-roles` | `postgres:16.14-bookworm` | — | all | One-shot: creates or updates the `warehouse` and `payment` roles before those services start (`postgres/service-roles.sh`) |
 | `activemq` | `apache/artemis:2.55.0` | host `61616`, `8161`, `5672` (full), internal (server) | full, server | Message broker for outgoing emails (queue `email`) |
 | `mailpit` | `axllent/mailpit:v1.30.0` | host `8025` UI, `1025` SMTP (full); `127.0.0.1:8025` (server) | full, server | Fake SMTP inbox |
-| `keycloak` | `quay.io/keycloak/keycloak:26.7.0` | host `8082` | lightweight, full | OIDC identity provider for the SSO and social-login exercises |
-| `keycloak-init` | `curlimages/curl` | — | lightweight, full | One-shot: sets the mock social-login users' passwords |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | host `11434` (lightweight), internal (server) | lightweight, server, model-mock override | Deterministic Ollama-compatible LLM mock |
 | `ollama-dmr-adapter` | built locally | internal `11434` | full | Adapter in front of Docker Model Runner (the real local model) |
 | `prometheus` | `prom/prometheus:v3.13.2` | host `9090` (monitoring overlay), `127.0.0.1:9090` (server) | monitoring overlay, server | Metrics; production keeps 30 days / 5 GB |

@@ -1,7 +1,7 @@
 # Authentication
 
-The **backend is the only issuer** of application tokens. Password login, MFA
-and SSO all end with the same pair: a short-lived access token (JWT) and a
+The **backend is the only issuer** of application tokens. Password login and
+MFA both end with the same pair: a short-lived access token (JWT) and a
 long-lived refresh token. Every public API — backend, warehouse-service and
 payment-service — accepts only the access token, in
 `Authorization: Bearer <token>`.
@@ -10,7 +10,7 @@ payment-service — accepts only the access token, in
 
 | Role | Who | Typical access |
 | --- | --- | --- |
-| `ROLE_CLIENT` | Every user created by sign-up or SSO | Shopping, own orders, payments, returns, loyalty, webhooks |
+| `ROLE_CLIENT` | Every user created by sign-up | Shopping, own orders, payments, returns, loyalty, webhooks |
 | `ROLE_WAREHOUSE` | Demo user `warehouse` | `/api/v1/warehouse/**` (queue, shipments, carrier advance) |
 | `ROLE_ADMIN` | Demo `admin` locally, the bootstrap admin in production | Everything, including admin catalogue, coupons, gift cards, VAT, currencies, returns, purchasing, payments, users |
 
@@ -58,7 +58,7 @@ sequenceDiagram
 
 ## Refresh tokens
 
-- Returned as `refreshToken` by sign-in, MFA completion and SSO exchange.
+- Returned as `refreshToken` by sign-in and MFA completion.
   Valid for 7 days (`604800000` ms).
 - `POST /api/v1/users/refresh` **rotates** the token: the old one is marked
   consumed and a new one from the same *family* is issued with a new access
@@ -84,21 +84,21 @@ with Microsoft Authenticator, Google Authenticator and similar apps.
 | Secret storage | AES-256-GCM with `APP_MFA_ENCRYPTION_PASSWORD` / `APP_MFA_ENCRYPTION_SALT` |
 | Recovery codes | shown once at confirmation; verifier part hashed with the password encoder |
 
-SSO accounts cannot enrol: their identity provider owns the second factor.
-The flow is described in [Accounts, MFA and SSO](../flows/accounts.md#mfa).
+The flow is described in [Accounts and MFA](../flows/accounts.md#mfa).
 
-## Single sign-on (local profiles)
+## Single sign-on (removed)
 
-Keycloak (realm `awesome-testing`, client `awesome-testing-frontend`) is the
-identity provider in the lightweight and full profiles. The frontend runs the
-OIDC Authorization Code flow with PKCE, then exchanges the **ID token** at
-`POST /api/v1/users/sso/exchange`. The backend validates it against the
-realm's JWKS, issuer and audience, creates or reuses a local user, and returns
-the normal application token pair. Raw Keycloak tokens are never accepted by
-the APIs. Production runs without Keycloak (`APP_SSO_ENABLED=false`).
+SSO and the mocked Google/GitHub social login were removed from the training
+stack on 2026-11-12, together with Keycloak (port `8082`), its realms and its
+training users. Every profile now runs the backend with `APP_SSO_ENABLED=false`,
+so `POST /api/v1/users/sso/exchange` answers `404` until the backend drops the
+endpoint. Sign in with an application password (demo users or your own
+sign-up) instead.
 
-Details: [SSO flow](../reference/SSO_FLOW.md),
-[Social login](../reference/SOCIAL_LOGIN.md).
+Frontend images up to 3.12.x still decide at build time whether to show the
+**Sign in with SSO**, Google and GitHub buttons, and show them when the page is
+opened on `http://localhost:8081`. The buttons do nothing useful without
+Keycloak; a later frontend release removes them.
 
 ## Rate limiting
 

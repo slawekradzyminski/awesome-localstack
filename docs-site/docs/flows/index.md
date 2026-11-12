@@ -5,7 +5,7 @@ diagram of who calls whom. Paths are gateway paths.
 
 | Flow | Owner service | Page |
 | --- | --- | --- |
-| Sign-up, sign-in, refresh, MFA, password reset, SSO | backend | [Accounts, MFA and SSO](accounts.md) |
+| Sign-up, sign-in, refresh, MFA, password reset | backend | [Accounts and MFA](accounts.md) |
 | Catalog, product search, facets, reviews, wishlist | backend | [Catalog and search](catalog-search.md) |
 | Cart, coupons, gift cards, loyalty points | backend | [Cart, coupons, gift cards, loyalty](cart.md) |
 | Checkout, VAT, tenders, `amountDue`, idempotency | backend | [Checkout, VAT and tenders](checkout.md) |
