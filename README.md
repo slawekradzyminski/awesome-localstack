@@ -618,6 +618,8 @@ Across the main profiles, the gateway serves:
   `/warehouse/v3/api-docs` and payment-service OpenAPI under
   `/payment/v3/api-docs`
 - `/internal/` always returns `404`
+- any other `/api` path outside the routed `/api/v1/...` APIs (for example
+  `/api/v2/users`) returns `404` JSON `{"message":"Not found"}` instead of the SPA
 - the documentation wiki under `/docs/` (MkDocs site built from `docs-site/`,
   served by the `docs` container; see `docs-site/docs/operations/docs-site.md`)
 - public health status at `/actuator/health`; other actuator routes are blocked by the gateway

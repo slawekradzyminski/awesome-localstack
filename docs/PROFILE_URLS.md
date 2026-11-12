@@ -381,6 +381,7 @@ profiles) handles:
 - [payment-service routes](#payment-service-routes) -> payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> backend
+- any other `/api` path (`= /api`, `/api/`) -> `404` JSON `{"message":"Not found"}`
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
@@ -398,6 +399,7 @@ For `awesome.byst.re`:
 - [payment-service routes](#payment-service-routes) -> payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> backend
+- any other `/api` path (`= /api`, `/api/`) -> `404` JSON `{"message":"Not found"}`
 - `/swagger-ui/` -> backend
 - `/v3/api-docs` -> backend
 - `/actuator/` -> backend
@@ -412,6 +414,7 @@ For `aitesters.byst.re`:
 - [payment-service routes](#payment-service-routes) -> aitesters-payment-service
 - `/internal/` -> `404`
 - `/api/v1/` -> aitesters-backend
+- any other `/api` path (`= /api`, `/api/`) -> `404` JSON `{"message":"Not found"}`
 - `/swagger-ui/` -> aitesters-backend
 - `/v3/api-docs` -> aitesters-backend
 - `/actuator/` -> aitesters-backend
