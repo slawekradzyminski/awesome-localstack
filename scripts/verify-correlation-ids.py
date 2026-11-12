@@ -316,6 +316,26 @@ def routing_test() -> list[str]:
         check(result.status == 404 and len(result.request_ids) == 1 and HEX32.match(result.request_ids[0]),
               f"/internal/ 404 lacks X-Request-Id: {result.status} {result.request_ids}")
 
+        # 4b. Unknown API paths answer 404 JSON from the gateway itself instead of
+        # falling through to the SPA, on every server block (X-25).
+        for port, host in ((app, awesome), (app, sandbox), (light, {}), (edge, awesome)):
+            for path in ("/api", "/api/", "/api/v2/users", "/api/nope/deeper?x=1"):
+                label = f"port {port} {host.get('Host', 'localhost')}{path}"
+                request = urllib.request.Request(f"http://127.0.0.1:{port}{path}", headers=host)
+                try:
+                    with urllib.request.urlopen(request, timeout=5) as response:
+                        status, headers, body = response.status, response.headers, response.read().decode()
+                except urllib.error.HTTPError as error:
+                    status, headers, body = error.code, error.headers, error.read().decode()
+                check(status == 404, f"{label}: status {status}, expected 404")
+                check(headers.get("Content-Type", "").startswith("application/json"),
+                      f"{label}: Content-Type {headers.get('Content-Type')!r}")
+                check(body == '{"message":"Not found"}', f"{label}: body {body!r}")
+                check(len(headers.get_all("X-Request-Id") or []) == 1, f"{label}: X-Request-Id missing")
+        for port, host in ((app, awesome), (light, {})):
+            result = fetch(port, "/apiary", host)
+            check(result.body.get("upstream") == "main:80", f"/apiary did not reach the SPA: {result.body}")
+
         # 5. JSON access log line for a known request.
         fetch(app, "/api/v1/products", {**awesome, "X-Request-Id": "log-probe-1", "traceparent": valid_tp})
         time.sleep(0.5)

@@ -104,7 +104,8 @@ When `SECURITY_RATE_LIMIT_ENABLED=true` (production), the backend limits
 sign-up, sign-in (per IP, per username and per IP+username), MFA, password
 forgot/reset, refresh, email, QR, LLM, gift-card lookups and webhook test or
 redeliver calls with token buckets per policy. Production raises the
-capacities so parallel course suites can run; the values are in
+IP-keyed capacities so parallel course suites can run; the per-account MFA and
+password-forgot-per-identifier limits stay at 20 per window. The values are in
 [Profile URLs](../reference/PROFILE_URLS.md).
 
 ## Request logging hygiene

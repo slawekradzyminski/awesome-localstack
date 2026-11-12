@@ -51,6 +51,15 @@ check "valid X-Request-Id is echoed" "$code" "nf-corr-$RUN"
 code=$(curl -s -o /dev/null -D - "$B/v3/api-docs" -H 'X-Request-Id: bad id!<x>' | tr -d '\r' | awk -F': ' 'tolower($1)=="x-request-id"{print $2}')
 [ -n "$code" ] && [ "$code" != 'bad id!<x>' ] && ok "invalid X-Request-Id is replaced ($code)" || bad "invalid id replaced" "$code"
 
+section "Gateway: unknown API paths"
+for p in /api /api/ /api/v2/users /api/nope/deeper; do
+  api GET "$p" ""
+  check "$p -> 404" "$CODE" 404
+  check "$p answers the JSON error shape" "$(echo "$BODY" | jq -r .message 2>/dev/null)" "Not found"
+done
+spa=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/no-such-page")
+case "$spa" in "200 text/html"*) ok "non-API unknown path still reaches the SPA ($spa)";; *) bad "SPA fallback" "$spa";; esac
+
 section "Product search"
 api GET "/api/v1/products/search?q=phone&sort=price_desc&size=5" "$T"
 check "search returns 200" "$CODE" 200

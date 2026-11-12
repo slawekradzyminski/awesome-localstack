@@ -38,12 +38,13 @@ the generic `/api/v1/` route to the backend.
 | `^~ /payment/v3/api-docs` | prefix, stops search | payment-service `/v3/api-docs` | Rewritten |
 | `/internal/` | prefix | — | Always `404`: the service-to-service API is never public |
 | `/api/v1/` | prefix | backend | Everything else under the API, including GraphQL (`/api/v1/graphql`) and GraphiQL |
+| `= /api`, `/api/` | exact + prefix | — | Any other `/api` path (e.g. `/api/v2/users`): `404` JSON `{"message":"Not found"}`, never the SPA |
 | `/swagger-ui/`, `/v3/api-docs` | prefix | backend | Swagger UI and the backend OpenAPI document |
 | `/actuator/` | prefix | backend (local) | Server: only `= /actuator/health` is proxied, the rest is `404` |
 | `/images/`, `/branding/` | prefix | gateway filesystem | Product images and logos served by nginx itself |
 | `/mailpit/...`, `/mailhog/...` | exact + prefix | — | Server only: always `404` so the inbox never leaks |
 | `= /docs`, `/docs/` | exact + prefix | docs | This wiki; `/docs` redirects to `/docs/` |
-| `/` | prefix | frontend | The SPA; unknown paths are handled by the client-side router |
+| `/` | prefix | frontend | The SPA; unknown non-API paths are handled by the client-side router |
 
 On the server, the `aitesters.byst.re` block routes the same paths to the
 `aitesters-*` services. Both hosts serve the same `docs` container.
