@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264
+    image: slawekradzyminski/backend:3.17.1@sha256:d954473d10971a32acc9d08b07179c6d35b80af2bbba46a0895a6a08f95b5383
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -89,7 +89,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033
+    image: slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5
     restart: unless-stopped
     hostname: warehouse-service
     logging: *default-logging
@@ -137,7 +137,7 @@ services:
   aitesters-warehouse-service:
     # The sandbox's own warehouse-service, paired with aitesters-backend and sharing
     # its database (schema warehouse), like warehouse-service on the stable site.
-    image: slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033
+    image: slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5
     restart: unless-stopped
     hostname: aitesters-warehouse-service
     logging: *default-logging
@@ -184,7 +184,7 @@ services:
       - my-private-ntwk
 
   payment-service:
-    image: slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31
+    image: slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91
     restart: unless-stopped
     hostname: payment-service
     logging: *default-logging
@@ -232,7 +232,7 @@ services:
   aitesters-payment-service:
     # The sandbox's own payment-service, paired with aitesters-backend and sharing
     # its database (schema payment), like payment-service on the stable site.
-    image: slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31
+    image: slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91
     restart: unless-stopped
     hostname: aitesters-payment-service
     logging: *default-logging
@@ -366,7 +366,7 @@ services:
     networks:
       - my-private-ntwk
   frontend:
-    image: slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e
+    image: slawekradzyminski/frontend:3.12.1@sha256:bd79762533ad9b50881e39466d228edb20129540aad198bc7159b4504002e3dd
     restart: unless-stopped
     logging: *default-logging
     expose:
@@ -383,7 +383,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264
+    image: slawekradzyminski/backend:3.17.1@sha256:d954473d10971a32acc9d08b07179c6d35b80af2bbba46a0895a6a08f95b5383
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -461,7 +461,7 @@ services:
       - my-private-ntwk
 
   aitesters-frontend:
-    image: slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e
+    image: slawekradzyminski/frontend:3.12.1@sha256:bd79762533ad9b50881e39466d228edb20129540aad198bc7159b4504002e3dd
     restart: unless-stopped
     logging: *default-logging
     expose:

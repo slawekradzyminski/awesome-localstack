@@ -132,6 +132,42 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.17.1, warehouse-service 1.4.1, payment-service 1.2.1, frontend 3.12.1 — 12 November 2026
+
+Patch release of the bugs the new reference Playwright suite
+(`awesome-localstack-e2e-tests`) found on its first full run. Each bug has a report in that
+repository's `bugs/` folder, and the tests that caught them now run as regression tests.
+
+- **payment-service 1.2.1**:
+  - **Connection-pool deadlock fixed.** With a pool of three connections, three concurrent first payments each held one connection and waited for a second (lock row in `REQUIRES_NEW`, result dispatch after commit on the request thread), so every caller got a 500 after 30 s. The lock row is now inserted in the same transaction, results are delivered from a single dispatcher thread, and the backend is asked for the order before the transaction starts.
+  - **Signing-key race fixed.** Concurrent first requests no longer get 401 while the signing keys are fetched.
+  - **Timestamps.** Payment timestamps are now microseconds, so the 201 equals what is stored.
+- **warehouse-service 1.4.1**:
+  - **Same pool deadlock fixed** for notifications (after-commit dispatch, `synchronized` around HTTP) and return locks.
+  - **Same signing-key race fixed.**
+  - Shipped/delivered notifications are now sent just after the response instead of before it.
+- **backend 3.17.1**:
+  - **Retention job.** The event-feed retention job now actually deletes old events; a transactional self-call made every scheduled run fail.
+  - **User deletion.** Deleting a user no longer fails when an email event for them is recorded at the same moment (row locks).
+  - **Gift card errors.** An unknown gift card `status` filter gets a 400 `{message}`; the orders filter keeps the body l20 asserts.
+  - **Disable response.** Disabling a gift card returns the stored `updatedAt`.
+  - **Validation messages.** A blank gift card code, review title or review text gets one deterministic message.
+- **frontend 3.12.1**:
+  - **Admin lists.** They show a row saved while their first load is in flight; refetch after a write cancels the in-flight request.
+  - **Gift card expiry.** It is sent as a UTC instant and shown in the browser's time zone.
+
+LocalStack changes: image pins only. Upgrade order: the regular backend-upgrade deploy
+(`make ansible-deploy-backend-upgrade`); no migrations. Rollback: re-pin the 11 November
+train (backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0, frontend 3.12.0).
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.17.1@sha256:d954473d10971a32acc9d08b07179c6d35b80af2bbba46a0895a6a08f95b5383` | [PR #97](https://github.com/slawekradzyminski/test-secure-backend/pull/97), `e691a8e` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43201139933) |
+| `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` | [PR #10](https://github.com/slawekradzyminski/warehouse-service/pull/10), `a6fea78` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43201142574) |
+| `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` | [PR #6](https://github.com/slawekradzyminski/payment-service/pull/6), `a4948b6` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43201148518) |
+| `slawekradzyminski/frontend:3.12.1@sha256:bd79762533ad9b50881e39466d228edb20129540aad198bc7159b4504002e3dd` | [PR #97](https://github.com/slawekradzyminski/vite-react-frontend/pull/97), `fa254c5` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43201151527) |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0 — 11 November 2026
 
 Published and pinned by `scripts/release-train.py` (first train). The publish
@@ -711,16 +747,16 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.17.0, warehouse-service 1.4.0, payment-service 1.2.0, released 11 November 2026:
+Release train: backend 3.17.1, warehouse-service 1.4.1, payment-service 1.2.1, frontend 3.12.1, released 12 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.17.0@sha256:84331dca415fece98042dacec043939492b9bdb4cbcd709c8c179e7130f34264` |
-| Frontend | `slawekradzyminski/frontend:3.12.0@sha256:96565e441275fe1f35e02f3848d6c28a12277b2551bfd08a20d1da258b7ccd9e` |
+| Backend | `slawekradzyminski/backend:3.17.1@sha256:d954473d10971a32acc9d08b07179c6d35b80af2bbba46a0895a6a08f95b5383` |
+| Frontend | `slawekradzyminski/frontend:3.12.1@sha256:bd79762533ad9b50881e39466d228edb20129540aad198bc7159b4504002e3dd` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.4.0@sha256:3796cd9bdc460d2f7d7f943a0b77f95a0f2ee2d24c5dee6f1ecd2f606feb4033` |
-| Payment service | `slawekradzyminski/payment-service:1.2.0@sha256:b03efeb080df617b8981602d71a2c8f38961fab55be973bfc19c52b29e187c31` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
+| Payment service | `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` |
 
 ## Backend 3.9.1 traffic preview patch
 
