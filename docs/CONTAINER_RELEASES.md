@@ -132,6 +132,31 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.17.2, frontend 3.12.2 — 12 November 2026
+
+Second patch release from the reference Playwright suite (`awesome-localstack-e2e-tests`).
+
+- **frontend 3.12.2**: after an order was placed, a customer on a slow device could land on the
+  empty cart instead of the payment page (BUG-CHECKOUT-01). React Router navigates inside
+  `startTransition`, so the refetched empty cart won and `CheckoutPage` redirected to `/cart`.
+  Checkout now reports the placed order first, navigates with `replace`, then refreshes the cart, and
+  shows "Order placed. Opening payment…" instead of redirecting. The OpenAPI snapshots and the
+  development pins in the frontend repository were refreshed to the release train.
+- **backend 3.17.2**: the OpenAPI document again states the real minimum lengths of
+  `ReviewRequestDto` (title 3, body 10). 3.17.1 documented 1 after the deterministic blank-review
+  messages were introduced. There is no behaviour change.
+
+LocalStack changes: image pins only. Upgrade: `make ansible-deploy-backend-upgrade`; no migrations.
+Rollback: re-pin backend 3.17.1 and frontend 3.12.1.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.17.2@sha256:f2293ebf37902d95f53ae9d3e875dab6941c69e0ef26a124ee1ba98150d352d4` | [PR #98](https://github.com/slawekradzyminski/test-secure-backend/pull/98), `02baa5b` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43218041456) |
+| `slawekradzyminski/frontend:3.12.2@sha256:ea48bab9beddd1e31910f119c5b4730e0e7d5d49de0ca5ff8bf8495dc45b41a1` | [PR #98](https://github.com/slawekradzyminski/vite-react-frontend/pull/98), `7aa3d44` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43218045140) |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.17.1, warehouse-service 1.4.1, payment-service 1.2.1, frontend 3.12.1 — 12 November 2026
 
 Patch release of the bugs the new reference Playwright suite
@@ -747,12 +772,12 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.17.1, warehouse-service 1.4.1, payment-service 1.2.1, frontend 3.12.1, released 12 November 2026:
+Release train: backend 3.17.2, frontend 3.12.2, released 12 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.17.1@sha256:d954473d10971a32acc9d08b07179c6d35b80af2bbba46a0895a6a08f95b5383` |
-| Frontend | `slawekradzyminski/frontend:3.12.1@sha256:bd79762533ad9b50881e39466d228edb20129540aad198bc7159b4504002e3dd` |
+| Backend | `slawekradzyminski/backend:3.17.2@sha256:f2293ebf37902d95f53ae9d3e875dab6941c69e0ef26a124ee1ba98150d352d4` |
+| Frontend | `slawekradzyminski/frontend:3.12.2@sha256:ea48bab9beddd1e31910f119c5b4730e0e7d5d49de0ca5ff8bf8495dc45b41a1` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
