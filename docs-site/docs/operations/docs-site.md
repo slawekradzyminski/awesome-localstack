@@ -39,8 +39,8 @@ being published to a registry:
   too.
 - The deploy targets first build the image on the laptop
   (`make deploy-preflight`), so a strict-mode failure never reaches the server.
-- Ansible mirrors `docs/` and `docs-site/` to the server (pages deleted in the
-  repository are deleted there too) and runs `docker compose build docs` before
+- Ansible mirrors `docs/` and `docs-site/` to the server (pages the repository
+  tracked and deleted are deleted there too) and runs `docker compose build docs` before
   any service is stopped, then `docker compose up`; the `verify` role then
   checks that the running container uses the freshly built image ID and that
   `/docs/` returns `200` directly and through both public hosts.

@@ -152,7 +152,7 @@ It performs these steps in order:
 4. **Prepares the release while the previous release still serves traffic**
    (`app` role, `prepare.yml`): validates the Vault keys and image gates,
    copies the Compose file, mirrors the asset directories (copy, then prune
-   files the repository no longer has; see
+   files the repository tracked and has since deleted; see
    [Asset directory mirror](#asset-directory-mirror)), renders the runtime
    `.env*` files and Alertmanager secrets, validates the result with
    `docker compose config --quiet`, pulls every missing image and builds the
@@ -206,8 +206,9 @@ The play ends with a message naming the failed task and what it did:
 Silences and the watchdog pause expire after 15 minutes on their own; after
 that a still-broken stack alerts normally. Check the state with
 `make ansible-verify` or `docker compose -f docker-compose.server.yml ps` over
-`make ansible-ssh`. Do not delete files by hand in `/opt/awesome-localstack`:
-the asset mirror removes files the repository no longer has on the next run.
+`make ansible-ssh`. Do not delete deployed files by hand in
+`/opt/awesome-localstack`: the next run removes files the repository tracked
+and deleted, and keeps (and lists) files git never tracked there.
 
 ## Patterns Used
 
@@ -215,20 +216,33 @@ the asset mirror removes files the repository no longer has on the next run.
 
 The `app_copy_paths` directories (`security`, `postgres`, `nginx`,
 `prometheus`, `alertmanager`, `blackbox`, `images`, `branding`, `docs`,
-`docs-site`) are mirrors of the checkout (`roles/app/tasks/assets.yml`):
-`ansible.builtin.copy` uploads them (root-owned, modes preserved), then
-`find` lists the checkout and the server copies and `file: state=absent`
-removes every deployed path the checkout no longer has. Built-in modules only;
-no rsync.
+`docs-site`) mirror the checkout (`roles/app/tasks/assets.yml`):
+`ansible.builtin.copy` uploads them (root-owned, modes preserved), then the
+prune deletes only what Ansible could have put there. A deployed path is
+deleted when it is
+
+1. absent from the checkout, **and**
+2. tracked in this repository's git history under the same path
+   (`git log --all --no-renames --name-only -- <dirs>` on the laptop), **and**
+3. not under `app_copy_prune_excludes` (role default: `alertmanager/secrets`,
+   the rendered Telegram credentials).
+
+A directory is deleted only when it held tracked files and nothing untracked
+remains below it. Everything else the checkout lacks, such as manual backups
+like `nginx/conf.d/edge-gateway.conf.before-*`, is **kept** and listed in the
+play output as `untracked files on the server (kept): …`; delete those by hand
+if they are no longer wanted. A shallow or incomplete local history only makes
+the prune keep more.
 
 Pruning never leaves those directories: the Compose file, the rendered `.env*`
-files, backups and Docker volumes are outside them and are never listed.
-Inside them, `app_copy_prune_excludes` (role default: `alertmanager/secrets`,
-the rendered Telegram credentials) is never deleted. A role that renders a new
-file into a copied directory must add its path there. The prune refuses to
-run when the checkout listing misses one of the directories (a wipe instead of
-a mirror). `scripts/verify-asset-mirror.py` (CI job `verifyAnsible`) runs the
-real tasks against fixtures.
+files, backups and Docker volumes are outside them and are never listed. The
+prune refuses to run when the checkout listing misses one of the directories
+(a wipe instead of a mirror). The decision is
+`roles/app/filter_plugins/asset_mirror.py`; built-in modules do the rest, with
+no rsync on the server. `scripts/verify-asset-mirror.py` (CI job
+`verifyAnsible`) runs the real tasks against a fixture git repository: a
+tracked and deleted file is removed, an unknown manual file and the secrets
+are kept.
 
 ### Convergent deploys
 

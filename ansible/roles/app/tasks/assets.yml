@@ -1,12 +1,16 @@
 # Mirrors every app_copy_paths directory from the repository checkout to
-# app_dir: copies the files, then deletes the deployed files and directories
-# the checkout no longer has (a docs page deleted in the repository would
-# otherwise stay on the server and break `mkdocs build --strict`).
+# app_dir: copies the files, then deletes the deployed files the checkout no
+# longer has (a docs page deleted in the repository would otherwise stay on the
+# server and break `mkdocs build --strict`).
 #
-# Pruning is limited to paths inside the app_copy_paths directories. Runtime
-# state in app_dir itself (the Compose file, the rendered .env files) is never
-# listed, and app_copy_prune_excludes protects what the roles render into the
-# copied directories (alertmanager/secrets). Built-in modules only: no rsync.
+# Only what Ansible could have put there is deleted: a deployed path must be
+# absent from the checkout AND tracked in this repository's git history under
+# the same path (filter_plugins/asset_mirror.py). Files git never tracked there
+# (manual backups such as nginx/conf.d/*.before-*, generated files) are kept
+# and reported. Pruning stays inside the app_copy_paths directories (the
+# Compose file and .env files in app_dir are never listed), and
+# app_copy_prune_excludes protects what the roles render into them
+# (alertmanager/secrets). No rsync on the server.
 - name: Copy deployment asset directories
   ansible.builtin.copy:
     src: "{{ repo_root }}/{{ item }}"
@@ -37,21 +41,43 @@
     hidden: true
   register: app_copy_deployed_entries
 
-- name: Select the deployed asset files the repository no longer has
+# Every path ever tracked under the copied directories, on any ref. A shallow
+# or partial history only makes the prune keep more (unknown files are kept).
+- name: List the asset files tracked in the repository's git history
+  ansible.builtin.command:
+    argv: >-
+      {{ ['git', '-C', repo_root, 'log', '--all', '--no-renames', '--format=', '--name-only', '--']
+         + app_copy_paths }}
+  delegate_to: localhost
+  become: false
+  register: app_copy_history
+  changed_when: false
+
+- name: Plan the asset prune
   ansible.builtin.set_fact:
-    app_copy_stale_entries: >-
+    app_copy_prune_plan: >-
       {{
         app_copy_deployed_entries.files
         | map(attribute='path')
         | map('relpath', app_dir)
-        | difference(
+        | asset_mirror_plan(
             app_copy_source_entries.files
             | map(attribute='path')
             | map('relpath', repo_root)
-          )
-        | reject('match', '^(' ~ (app_copy_prune_excludes | map('regex_escape') | join('|')) ~ ')(/|$)')
-        | sort
+            | list,
+            app_copy_history.stdout_lines | unique | list,
+            app_copy_prune_excludes)
       }}
+
+- name: Select the deployed asset files Ansible deployed and the repository no longer has
+  ansible.builtin.set_fact:
+    app_copy_stale_entries: "{{ app_copy_prune_plan.stale }}"
+
+- name: Report untracked files on the server (kept)
+  ansible.builtin.debug:
+    msg: >-
+      untracked files on the server (kept):
+      {{ app_copy_prune_plan.untracked | join(', ') if app_copy_prune_plan.untracked else 'none' }}
 
 # A missing or empty source listing would turn the prune into a wipe of the
 # deployed directory: refuse unless every copied directory listed files, and

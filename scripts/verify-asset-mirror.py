@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Run the deploy's asset mirror against fixtures: deleted repository files are
-pruned on the server, server-only runtime files are kept.
+"""Run the deploy's asset mirror against fixtures: files the repository tracked
+and deleted are pruned on the server; files git never tracked there (manual
+backups), rendered secrets and app_dir runtime files are kept.
 
-Needs ansible-playbook and the ansible.posix collection (json callback). Runs the real roles/app/tasks/assets.yml on localhost
+Needs git, ansible-playbook and the ansible.posix collection (json callback). Runs the real roles/app/tasks/assets.yml on localhost
 (with sudo when not root, because the copy sets root ownership).
 """
 
@@ -16,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ANSIBLE_DIR = ROOT / "ansible"
-COPY_PATHS = ["docs", "alertmanager", "prometheus"]
+COPY_PATHS = ["docs", "alertmanager", "prometheus", "nginx"]
 
 
 def write(path: Path, text: str = "x\n") -> None:
@@ -24,20 +25,37 @@ def write(path: Path, text: str = "x\n") -> None:
     path.write_text(text)
 
 
+def git(repo: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+                    "-c", "commit.gpgsign=false", *args], check=True, capture_output=True)
+
+
 def fixture(base: Path) -> None:
     repo, app = base / "repo", base / "app"
-    # Repository checkout: what the next release ships.
+    # Repository history: the previous release tracked these files...
+    for rel in ("docs/INDEX.md", "docs/SSO_FLOW.md", "docs/.stale-hidden", "docs/retired/deep/page.md",
+                "docs/old/a.md", "docs/guides/kept.md", "docs/.hidden-kept", "alertmanager/alertmanager.yml",
+                "prometheus/rules/kept.yml", "prometheus/rules/retired.yml", "nginx/conf.d/edge-gateway.conf"):
+        write(repo / rel)
+    git(repo, "init", "--quiet")
+    git(repo, "add", "-A")
+    git(repo, "commit", "--quiet", "-m", "previous release")
+    # ...and the next release deletes some of them.
+    git(repo, "rm", "--quiet", "-r", "docs/SSO_FLOW.md", "docs/.stale-hidden", "docs/retired", "docs/old",
+        "prometheus/rules/retired.yml")
     write(repo / "docs/INDEX.md", "new index\n")
-    write(repo / "docs/guides/kept.md")
-    write(repo / "docs/.hidden-kept")
-    write(repo / "alertmanager/alertmanager.yml")
-    write(repo / "prometheus/rules/kept.yml")
+    git(repo, "commit", "--quiet", "-am", "next release")
+
     # Server state left by the previous release.
     write(app / "docs/INDEX.md", "old index\n")
-    write(app / "docs/SSO_FLOW.md")                   # deleted from the repository
-    write(app / "docs/.stale-hidden")                 # hidden and deleted
-    write(app / "docs/retired/deep/page.md")          # whole directory deleted
-    write(app / "prometheus/rules/retired.yml")       # deleted rule file
+    write(app / "docs/SSO_FLOW.md")                   # tracked, then deleted
+    write(app / "docs/.stale-hidden")                 # hidden, tracked, then deleted
+    write(app / "docs/retired/deep/page.md")          # whole tracked directory deleted
+    write(app / "docs/old/a.md")                      # tracked, then deleted...
+    write(app / "docs/old/notes.txt")                 # ...next to a manual file: the directory stays
+    write(app / "prometheus/rules/retired.yml")       # tracked rule file, then deleted
+    write(app / "nginx/conf.d/edge-gateway.conf")
+    write(app / "nginx/conf.d/edge-gateway.conf.before-x")  # manual backup, never tracked
     write(app / "alertmanager/alertmanager.yml")
     write(app / "alertmanager/secrets/telegram_bot_token")  # rendered by the app role
     write(app / ".env.runtime")                       # runtime secret in app_dir
@@ -62,12 +80,16 @@ def run_playbook(base: Path) -> dict:
     return json.loads(result.stdout)
 
 
-def task_changed(report: dict, name: str) -> bool:
+def task_result(report: dict, name: str) -> dict:
     for play in report["plays"]:
         for task in play["tasks"]:
             if task["task"]["name"].split(" : ")[-1] == name:
-                return any(host.get("changed") for host in task["hosts"].values())
+                return task["hosts"]["localhost"]
     raise AssertionError(f"task not run: {name}")
+
+
+def task_changed(report: dict, name: str) -> bool:
+    return bool(task_result(report, name).get("changed"))
 
 
 def main() -> None:
@@ -82,12 +104,16 @@ def main() -> None:
 
         for kept in ("docs/INDEX.md", "docs/guides/kept.md", "docs/.hidden-kept",
                      "alertmanager/alertmanager.yml", "prometheus/rules/kept.yml",
-                     "alertmanager/secrets/telegram_bot_token", ".env.runtime",
+                     "nginx/conf.d/edge-gateway.conf", "nginx/conf.d/edge-gateway.conf.before-x",
+                     "docs/old/notes.txt", "alertmanager/secrets/telegram_bot_token", ".env.runtime",
                      "docker-compose.server.yml", "backups/dump.sql.enc"):
             assert exists(kept), f"{kept} must remain"
         for pruned in ("docs/SSO_FLOW.md", "docs/.stale-hidden", "docs/retired",
-                       "prometheus/rules/retired.yml"):
+                       "docs/old/a.md", "prometheus/rules/retired.yml"):
             assert not exists(pruned), f"{pruned} must be pruned"
+        report = task_result(first, "Report untracked files on the server (kept)")["msg"]
+        assert report == ("untracked files on the server (kept): "
+                          "docs/old/notes.txt, nginx/conf.d/edge-gateway.conf.before-x"), report
         assert (app / "docs/INDEX.md").read_text() == "new index\n", "changed files must be copied"
         assert task_changed(first, "Remove deployed asset files that the repository no longer has")
 

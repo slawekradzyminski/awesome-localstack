@@ -43,8 +43,10 @@ Everything that can fail for a reason unrelated to the database migration
 runs **before** any service is stopped. The `app` role's `prepare.yml`
 validates the Vault keys and the image gates; copies the Compose file;
 mirrors the `nginx`, `prometheus`, `alertmanager`, `postgres`, `docs`,
-`docs-site` and other asset directories (files deleted in the repository are
-deleted on the server, except the rendered `alertmanager/secrets`); renders
+`docs-site` and other asset directories (a file the repository tracked and
+has since deleted is deleted on the server; files git never tracked there,
+such as manual backups, and the rendered `alertmanager/secrets` are kept and
+listed as `untracked files on the server (kept)`); renders
 `.env.runtime`, `.env.warehouse`, `.env.payment` and the `.env.aitesters*`
 files from Vault; runs `docker compose config --quiet`; pulls missing images;
 and builds the docs image with `mkdocs build --strict`. Only then does the
@@ -130,8 +132,9 @@ The play ends with a message naming the failed task and the state it left:
   back by re-pinning the previous release and restoring the quiesced backup
   ([Backups](backups.md)).
 
-Silences and the watchdog pause expire after 15 minutes. Never delete files by
-hand on the server: the asset mirror prunes what the repository removed.
+Silences and the watchdog pause expire after 15 minutes. Never delete deployed
+files by hand on the server: the asset mirror prunes what the repository
+tracked and removed.
 Details: [Ansible — Recovering from a failed deploy](../reference/ANSIBLE.md#recovering-from-a-failed-deploy).
 
 More: [Ansible](../reference/ANSIBLE.md), [SSH server](../reference/SSH_SERVER.md),
