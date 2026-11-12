@@ -280,9 +280,12 @@ Disposable API/UI testing sandbox:
 - local email outbox: `https://aitesters.byst.re/api/v1/local/email/outbox`
 - images through gateway: `https://aitesters.byst.re/images/iphone.png`
 
-Rate-limit capacities are intentionally increased for repeated parallel course
-and regression-suite runs. Policy windows remain unchanged from the backend
-defaults.
+Rate-limit capacities keyed by IP are intentionally increased for repeated
+parallel course and regression-suite runs, because a whole classroom shares one
+address. Policies keyed by one account (MFA per user, password-forgot per
+identifier) stay strict: course suites use a fresh account per test, so 20
+requests per window protect a single account without slowing classes. Policy
+windows remain unchanged from the backend defaults.
 
 | Policy | `awesome.byst.re` | `aitesters.byst.re` |
 | --- | ---: | ---: |
@@ -292,9 +295,9 @@ defaults.
 | Sign-in per IP and username | 1,000 | 1,000 |
 | MFA per IP | 600 | 600 |
 | MFA per challenge | 80 | 80 |
-| MFA per user | 300 | 300 |
+| MFA per user | 20 | 20 |
 | Password-forgot per IP | 2,000 | 100 |
-| Password-forgot per identifier | 600 | 30 |
+| Password-forgot per identifier | 20 | 20 |
 | Password-reset per IP | 2,000 | 100 |
 | Refresh per IP | 12,000 | 600 |
 | Email per user | 6,000 | 300 |

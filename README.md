@@ -521,9 +521,10 @@ Production hardening in this profile:
 - aitesters backend, frontend, warehouse-service and payment-service are
   internal-only behind the same gateway; the sandbox has its own
   `aitesters-postgres`, signing key, service tokens and webhook secret, and the nightly reset recreates it from a fresh volume
-- both public training backends use explicitly increased rate-limit capacities
-  for repeated parallel API regression suites while retaining the original
-  policy windows; see `docs/PROFILE_URLS.md` for the per-policy values
+- both public training backends use explicitly increased IP-keyed rate-limit
+  capacities for repeated parallel API regression suites while retaining the
+  original policy windows; per-account MFA and password-forgot limits stay at 20;
+  see `docs/PROFILE_URLS.md` for the per-policy values
 - images are served directly by the gateway
 - the aitesters backend and frontend reuse the exact current application images;
   their sandbox behavior comes from runtime configuration, not stale releases

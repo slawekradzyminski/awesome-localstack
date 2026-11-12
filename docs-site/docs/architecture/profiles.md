@@ -26,7 +26,7 @@ the other.
 | SSO | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) |
 | LLM | `ollama-mock` on `11434` | Docker Model Runner through `ollama-dmr-adapter` | `ollama-mock` (internal) |
 | Monitoring | opt-in overlay | opt-in overlay (included by `./run-docker-compose.sh`) | Prometheus, Alertmanager, cAdvisor, Node Exporter, Blackbox, host watchdog (no Grafana) |
-| Rate limiting | off | off | on, with raised capacities for parallel course suites |
+| Rate limiting | off | off | on: raised IP-keyed capacities for parallel course suites, strict per-account MFA and password-forgot limits |
 | Signing key | ephemeral per backend start | ephemeral per backend start | `JWT_SIGNING_KEY` from Ansible Vault |
 | Docs wiki | `/docs/` | `/docs/` | `/docs/` on both hosts |
 
