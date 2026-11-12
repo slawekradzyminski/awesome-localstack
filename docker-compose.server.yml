@@ -20,6 +20,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker,server
       SPRING_PROFILES_INCLUDE: graphql,grpc
+      # Security (2026-11-12): the server profile's legacy public traffic access let anonymous
+      # callers read every user's traffic, including password-reset bodies. Reads are now
+      # limited to the caller's own X-Client-Session-Id, as on aitesters.
+      APP_TRAFFIC_LEGACY_PUBLIC_ACCESS: "false"
       GRPC_HOST: 0.0.0.0
       GRPC_PORT: "9091"
       GRPC_REFLECTION_ENABLED: "false"
