@@ -1,0 +1,19 @@
+# Runs the app role's asset mirror (roles/app/tasks/assets.yml) against local
+# fixture directories. Driven by scripts/verify-asset-mirror.py; never targets
+# the production inventory.
+- name: Mirror fixture asset directories
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: "{{ asset_mirror_become | default(true) | bool }}"
+
+  vars:
+    repo_root: "{{ asset_mirror_fixture }}/repo"
+    app_dir: "{{ asset_mirror_fixture }}/app"
+    app_copy_paths: "{{ asset_mirror_copy_paths }}"
+
+  tasks:
+    - name: Mirror the asset directories
+      ansible.builtin.import_role:
+        name: app
+        tasks_from: assets

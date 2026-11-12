@@ -3,18 +3,98 @@
   become: true
   gather_facts: true
 
-  roles:
-    - swap
+  # Order (docs/ANSIBLE.md, "How Deploy Works"):
+  #   1. host roles and the pre-deploy backup, nothing stopped;
+  #   2. app/prepare.yml: every step that can fail for reasons unrelated to a
+  #      database migration (assertions, asset mirror, env files, Compose
+  #      validation, image pulls, docs image build), while the previous release
+  #      still serves traffic;
+  #   3. warning silence, then the optional backend_upgrade quiesce (stop the
+  #      backends, quiesced backup) and app/converge.yml (docker compose up);
+  #      a failure there restarts the previous backends when no new container
+  #      started yet, and always ends with a runbook message;
+  #   4. verify, expire the silence, cleanup.
+  tasks:
+    - name: Converge the guarded emergency swap
+      ansible.builtin.import_role:
+        name: swap
+
     # Installed first so the backup units' OnFailure= notifier exists and the
     # deployment silence below can pause its container checks.
-    - watchdog
-    - postgres_backup
-    - role: deployment_silence
-      deployment_silence_state: present
-    - role: backend_upgrade
-      when: backend_upgrade_quiesce | default(false) | bool
-    - app
-    - verify
-    - role: deployment_silence
-      deployment_silence_state: absent
-    - cleanup
+    - name: Install the host watchdog
+      ansible.builtin.import_role:
+        name: watchdog
+
+    - name: Install backups and take the pre-deploy backup
+      ansible.builtin.import_role:
+        name: postgres_backup
+
+    - name: Prepare the release while the previous release still serves traffic
+      ansible.builtin.import_role:
+        name: app
+        tasks_from: prepare
+
+    - name: Silence planned deployment warnings
+      ansible.builtin.import_role:
+        name: deployment_silence
+      vars:
+        deployment_silence_state: present
+
+    - name: Quiesce the backends when requested and converge the new release
+      block:
+        - name: Stop the backends and take the quiesced backup
+          ansible.builtin.import_role:
+            name: backend_upgrade
+          when: backend_upgrade_quiesce | default(false) | bool
+
+        - name: Converge the containers
+          ansible.builtin.import_role:
+            name: app
+            tasks_from: converge
+
+      rescue:
+        - name: Restart the previous backends when the new release never started
+          ansible.builtin.import_role:
+            name: backend_upgrade
+            tasks_from: recover
+          when:
+            - backend_upgrade_quiesce | default(false) | bool
+            - backend_upgrade_stopped_containers | default([]) | length > 0
+            - not (app_stack_converge_started | default(false) | bool)
+
+        - name: Stop the deploy with the recovery runbook
+          ansible.builtin.fail:
+            msg: >-
+              Deploy failed at "{{ ansible_failed_task.name | default('unknown task') }}".
+              {% if not (app_stack_converge_started | default(false) | bool) %}
+              {% if backend_upgrade_stopped_containers | default([]) | length > 0 %}
+              The new release never started and no migration ran: the previous
+              backend containers were restarted
+              ({{ (backend_upgrade_recovery_health.stdout_lines | default(['state unknown'])) | join('; ') }}).
+              {% else %}
+              No service was stopped; the previous release is still running.
+              {% endif %}
+              Fix the cause and rerun the same make target.
+              {% else %}
+              The new release had started (docker compose up), so migrations may
+              have run: do not start the previous backends. Fix the cause and
+              rerun the same make target; it converges idempotently. If the new
+              backend cannot start, roll back by restoring the quiesced backup
+              with the previous pins (docs/PRODUCTION_BACKUPS.md).
+              {% endif %}
+              Warning silences and the watchdog pause expire on their own after
+              15 minutes. Runbook: docs/ANSIBLE.md, "Recovering from a failed deploy".
+
+    - name: Verify the deployed stack
+      ansible.builtin.import_role:
+        name: verify
+
+    - name: Expire the deployment silence after successful verification
+      ansible.builtin.import_role:
+        name: deployment_silence
+      vars:
+        deployment_silence_state: absent
+
+    - name: Retire unused images and volumes
+      ansible.builtin.import_role:
+        name: cleanup

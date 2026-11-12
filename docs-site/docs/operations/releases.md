@@ -45,7 +45,9 @@ python3 scripts/release-train.py pr --merge       # PR, CI, squash-merge
 python3 scripts/release-train.py deploy --yes     # merged main, clean, Vault links present
 ```
 
-`deploy` picks `make ansible-deploy-backend-upgrade` when the backend version
+`deploy` first runs the local preflight (`release-train.py preflight`: server
+Compose config and the strict docs image build), then picks
+`make ansible-deploy-backend-upgrade` when the backend version
 changed (quiesce, backup, migrate), otherwise `make ansible-deploy`. Every
 step, its checks and its refusals:
 [Container releases — Release sequence](../reference/CONTAINER_RELEASES.md#release-sequence).
@@ -64,10 +66,11 @@ Vault keys go in before the deploy; backend migrations use
 | `scripts/verify-image-pins.py` | Every remotely pulled image in every profile, CI workflow, the root `Dockerfile`, `docs-site/Dockerfile` and the restore tooling is pinned by digest; locally built `:local` images are exempt |
 | `scripts/verify-release-images.py` | The six first-party images form one compatibility set across profiles; the sandbox reuses the same images; env-file isolation; no backend sets `PAYMENT_BASE_URL` (removed in backend 3.16.0); gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
 | `scripts/verify-java-security.py` | The frozen Java certificate blocklist is mounted in every JVM container |
-| `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties |
+| `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties: preparation (docs build, pulls, Compose validation) before the quiesce, rescue restart of the stopped backends |
+| `scripts/verify-asset-mirror.py` | Runs the deploy's asset mirror against a fixture git repository: files the repository tracked and deleted are pruned; untracked manual files, rendered secrets and `app_dir` runtime files are kept (CI job `verifyAnsible`, with `ansible-playbook --syntax-check` of every playbook) |
 | `scripts/verify-edge-proxy.sh` | The edge only trusts forwarded headers from the provider range |
 | `scripts/verify-correlation-ids.py` | Every gateway server block validates or generates `X-Request-Id` and `traceparent`, passes them from every proxied location, returns `X-Request-Id` and logs JSON; the server's Spring services log ECS JSON. `--routing` proves it against stub upstreams ([Tracing a request](tracing.md)) |
-| `scripts/test_release_train.py` | Unit tests of the release train: version parsing, pin replacement, release-section rendering, deploy target |
+| `scripts/test_release_train.py` | Unit tests of the release train: version parsing, pin replacement, release-section rendering, deploy target, deploy preflight |
 
 The current pins and the release history are in
 [Container releases](../reference/CONTAINER_RELEASES.md#current-compatibility-set).

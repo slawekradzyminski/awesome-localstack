@@ -1,13 +1,17 @@
-"""Unit tests for the pure parts of scripts/release-train.py (no network, no Docker).
+"""Unit tests for scripts/release-train.py (no network, no Docker: side effects go through fake shells).
 
 Run: python3 -m unittest discover -s scripts -p test_release_train.py
 """
 
+import contextlib
 import datetime as dt
+import io
 import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location("release_train", Path(__file__).with_name("release-train.py"))
 rt = importlib.util.module_from_spec(SPEC)
@@ -225,3 +229,72 @@ class ChangedReleaseFiles(unittest.TestCase):
 
     def test_no_changes_is_empty(self):
         self.assertEqual(rt.changed_release_files(self.FakeShell("")), [])
+
+
+class DeployPreflight(unittest.TestCase):
+    """The checks that would otherwise fail on the server, mid-deploy (deploy of 12 November 2026)."""
+
+    class FakeShell:
+        def __init__(self, failing: str | None = None):
+            self.failing = failing
+            self.events: list[tuple[str, list[str]]] = []
+
+        def run(self, args, **_kwargs):
+            self.events.append(("run", args))
+            return 1 if self.failing and self.failing in args else 0
+
+        def act(self, args, **_kwargs):
+            self.events.append(("act", args))
+            return ""
+
+        def read(self, args, **_kwargs):
+            if args[:2] == ["git", "show"]:
+                return (rt.ROOT / rt.SERVER_COMPOSE).read_text()
+            if "--abbrev-ref" in args:
+                return "main"
+            return "" if "--porcelain" in args else "same-sha"
+
+    def test_validates_the_server_compose_file_and_builds_the_docs_image_strictly(self):
+        compose, docs = rt.preflight_commands()
+        self.assertEqual(compose, ["docker", "compose", "-f", "docker-compose.server.yml", "config", "--quiet"])
+        self.assertEqual(docs[:2], ["docker", "build"])
+        self.assertEqual(docs[docs.index("--build-context") + 1], "repo-docs=docs")
+        self.assertEqual(docs[-1], "docs-site")
+        self.assertIn("mkdocs build --strict", (rt.ROOT / "docs-site/Dockerfile").read_text())
+
+    def test_docs_build_matches_the_server_build(self):
+        compose = (rt.ROOT / rt.SERVER_COMPOSE).read_text()
+        self.assertIn(f"context: ./{rt.DOCS_BUILD_CONTEXT}\n", compose)
+        self.assertIn(f"repo-docs: ./{rt.DOCS_REPO_CONTEXT}\n", compose)
+
+    def test_stops_at_the_first_failure(self):
+        shell = self.FakeShell(failing="config")
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(io.StringIO()):
+            rt.run_preflight(shell)
+        self.assertIn("Nothing was deployed", str(raised.exception))
+        self.assertEqual(len(shell.events), 1)
+
+    def deploy(self, shell):
+        args = SimpleNamespace(yes=True, since="HEAD~1")
+        with mock.patch.object(rt.os.path, "lexists", return_value=True), \
+                contextlib.redirect_stdout(io.StringIO()):
+            rt.cmd_deploy(shell, args)
+
+    def test_deploy_runs_the_preflight_before_ansible(self):
+        shell = self.FakeShell()
+        self.deploy(shell)
+        self.assertEqual([kind for kind, _ in shell.events], ["run", "run", "act"])
+        self.assertEqual(shell.events[-1][1], ["make", "ansible-deploy", "SKIP_DEPLOY_PREFLIGHT=1"])
+
+    def test_broken_docs_never_reach_ansible(self):
+        shell = self.FakeShell(failing="docs-site")
+        with self.assertRaises(SystemExit):
+            self.deploy(shell)
+        self.assertNotIn("act", [kind for kind, _ in shell.events])
+
+    def test_makefile_deploy_targets_run_the_preflight(self):
+        makefile = (rt.ROOT / "Makefile").read_text()
+        for target in ("ansible-deploy", "ansible-deploy-backend-upgrade", "ansible-reset-demo-state"):
+            self.assertIn(f"\n{target}: deploy-preflight\n", makefile)
+        self.assertIn("python3 scripts/release-train.py preflight", makefile)
+        self.assertEqual(rt.build_parser().parse_args(["preflight"]).command, "preflight")

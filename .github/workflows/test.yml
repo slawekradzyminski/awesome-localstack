@@ -23,6 +23,25 @@ jobs:
     - name: Verify bounded deployment alert silence
       run: python3 scripts/verify-deployment-silence.py
 
+  verifyAnsible:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Install Ansible and the deploy collections
+      run: |
+        python3 -m venv /tmp/ansible-venv
+        /tmp/ansible-venv/bin/pip install --quiet ansible-core==2.20.5
+        /tmp/ansible-venv/bin/ansible-galaxy collection install -r ansible/requirements.yml
+    - name: Syntax-check every playbook
+      working-directory: ansible
+      run: |
+        for playbook in playbooks/*.yml tests/*.yml; do
+          /tmp/ansible-venv/bin/ansible-playbook --syntax-check "$playbook"
+        done
+    - name: Mirror asset directories against fixtures (prune deleted files, keep runtime files)
+      run: PATH="/tmp/ansible-venv/bin:$PATH" python3 scripts/verify-asset-mirror.py
+
   verifyProductionMonitoring:
     runs-on: ubuntu-latest
     timeout-minutes: 5

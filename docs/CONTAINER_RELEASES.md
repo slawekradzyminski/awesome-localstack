@@ -1057,13 +1057,14 @@ python3 scripts/release-train.py deploy --yes
 | `pin` | Resolves the Docker Hub digest (`docker buildx imagetools inspect`), replaces the **current** pin of each image in every Compose file (other versions, e.g. rollback references in documents, are left alone), updates the image rows of [Current compatibility set](#current-compatibility-set) and inserts a release-section stub (PR, commit, run links; text marked TODO) above the newest dated section. | The publish run is not `success`. |
 | `verify` | `docker compose config --quiet` for every profile (overlays on their base), every contract script, the release-train unit tests and `verify-release-images.py --remote` (`--offline` skips it). `--compat` first checks that Docker's clock is within 5 s of the host's (JWT issued-at checks fail otherwise), then runs `verify-course-compatibility.py`. | Any check fails. |
 | `pr` | Creates `release/<image>-<version>…`, commits only the Compose files and this document, pushes, opens the PR, waits for its checks; `--merge` squash-merges. | Nothing was pinned. |
-| `deploy` | `make ansible-deploy-backend-upgrade` when the backend version differs from the previous commit's (`--since`, default `HEAD~1`: the squash-merged release), else `make ansible-deploy`. | No `--yes`; not on `main`; `HEAD` is not `origin/main`; dirty tree; the Vault links `ansible/.vault_pass` or `ansible/inventory/group_vars/production/vault.yml` missing (presence only, never read). |
+| `preflight` | `docker compose -f docker-compose.server.yml config --quiet` and `docker build --build-context repo-docs=docs docs-site` (the server's docs image build, `mkdocs build --strict`). Also `make deploy-preflight`, a prerequisite of the deploy targets. | Either check fails. |
+| `deploy` | Runs `preflight`, then `make ansible-deploy-backend-upgrade` when the backend version differs from the previous commit's (`--since`, default `HEAD~1`: the squash-merged release), else `make ansible-deploy`. The target runs with `SKIP_DEPLOY_PREFLIGHT=1`. | No `--yes`; not on `main`; `HEAD` is not `origin/main`; dirty tree; the preflight fails; the Vault links `ansible/.vault_pass` or `ansible/inventory/group_vars/production/vault.yml` missing (presence only, never read). |
 
 Fill in the release-section stub (what changes, LocalStack changes, upgrade
 order, rollback) in the release PR before merging. New Vault keys still go in
 before `deploy`, and the course suite (`l20`) runs after it. The pure parts
-(version parsing, pin replacement, release-section rendering, deploy target)
-are unit-tested in `scripts/test_release_train.py` (CI job
+(version parsing, pin replacement, release-section rendering, deploy target,
+deploy preflight) are unit-tested in `scripts/test_release_train.py` (CI job
 `verifyReleaseTrain`).
 
 The manual sequence the script follows:

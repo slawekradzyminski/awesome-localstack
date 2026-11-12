@@ -31,11 +31,15 @@ ansible/
     base/
     docker/
     swap/
+    watchdog/
     postgres_backup/
     deployment_silence/
-    app/
+    backend_upgrade/      # main.yml: quiesce; recover.yml: restart after an early failure
+    app/                  # prepare.yml: no service touched; converge.yml: containers
     verify/
     cleanup/
+  tests/
+    asset-mirror.yml      # driven by scripts/verify-asset-mirror.py
   requirements.yml
 Makefile
 ```
@@ -70,7 +74,16 @@ Deploy the stack:
 
 ```bash
 make ansible-deploy
+make ansible-deploy-backend-upgrade   # backend version changed: quiesce, quiesced backup, migrate
 ```
+
+Both targets (and `make ansible-reset-demo-state`) first run
+`make deploy-preflight` on the laptop: `docker compose -f
+docker-compose.server.yml config --quiet` and the docs image build with its
+`mkdocs build --strict` (`python3 scripts/release-train.py preflight`). A broken
+docs tree or Compose file stops there, before Ansible connects.
+`scripts/release-train.py deploy` runs the same preflight itself and calls the
+target with `SKIP_DEPLOY_PREFLIGHT=1`.
 
 Run verification only:
 
@@ -123,9 +136,10 @@ ansible-vault encrypt inventory/group_vars/production/vault.yml --vault-password
 
 ## How Deploy Works
 
-`deploy.yml` is the normal operational entrypoint.
+`deploy.yml` is the normal operational entrypoint. Nothing that can fail for
+a reason unrelated to the database migration runs after a service is stopped.
 
-It performs eight steps in order:
+It performs these steps in order:
 
 1. Runs the guarded `swap` role. It can converge a 1 GiB emergency swap file
    and low swappiness on capable hosts; it reports a tracked reason and makes no
@@ -135,21 +149,38 @@ It performs eight steps in order:
    `awesome-watchdog-notify@.service` template the backup units use as
    `OnFailure=` (see [the lean monitoring plan](PRODUCTION_MONITORING_PLAN.md#lean-monitoring-phases-a-b-and-c)).
 3. Runs the `postgres_backup` role and creates the encrypted pre-deploy backup.
-4. Pauses the watchdog's container checks for 15 minutes and creates 15-minute
+4. **Prepares the release while the previous release still serves traffic**
+   (`app` role, `prepare.yml`): validates the Vault keys and image gates,
+   copies the Compose file, mirrors the asset directories (copy, then prune
+   files the repository tracked and has since deleted; see
+   [Asset directory mirror](#asset-directory-mirror)), renders the runtime
+   `.env*` files and Alertmanager secrets, validates the result with
+   `docker compose config --quiet`, pulls every missing image and builds the
+   docs image (`mkdocs build --strict`). Running containers keep their old
+   configuration: env files and single-file mounts are read when a container
+   is created. A failure here stops the deploy with every service running.
+5. Pauses the watchdog's container checks for 15 minutes and creates 15-minute
    Alertmanager silences for the warning-level
    `PublicEndpointProbeFailed` alert and the backend, consumer,
    warehouse-service and payment-service `PrometheusTargetDown` warnings when the existing monitoring stack is
    reachable. The five-minute critical alerts and the watchdog's OOM, disk,
    memory and backup checks remain active.
-5. Runs the `app` role to reconcile the existing PostgreSQL role with the
-   Vault-managed password, render the protected runtime environment, and
-   converge files and Docker Compose state in `/opt/awesome-localstack`.
-6. Runs the `verify` role to make sure the deployed stack is actually
+6. With `backend_upgrade_quiesce=true` (`make ansible-deploy-backend-upgrade`),
+   runs the `backend_upgrade` role: pulls the reviewed backend, records the
+   running backend, warehouse-service and payment-service containers, stops
+   them and takes the quiesced encrypted backup (no writes after it).
+7. Converges the containers (`app` role, `converge.yml`): reconciles the
+   PostgreSQL role password with Vault, runs `docker compose up` (no build:
+   the docs image is already built), restarts Prometheus or Alertmanager when
+   their files changed, and recreates `gateway` and `edge`.
+   Steps 6 and 7 run in one block whose `rescue` handles a failure: see
+   [Recovering from a failed deploy](#recovering-from-a-failed-deploy).
+8. Runs the `verify` role to make sure the deployed stack is actually
    reachable.
-7. Expires the warning silences and resumes the watchdog immediately after
+9. Expires the warning silences and resumes the watchdog immediately after
    verification succeeds. If a deploy fails first, both expire automatically
    after 15 minutes.
-8. Runs the guarded `cleanup` role only after verification succeeds.
+10. Runs the guarded `cleanup` role only after verification succeeds.
 
 This is intentional. In this project, a deploy that leaves the gateway returning `502` is a failed deploy, not a successful deploy with a separate follow-up check.
 
@@ -161,7 +192,57 @@ This is intentional. In this project, a deploy that leaves the gateway returning
 
 Because `mailpit` is recreated as part of the stack restart, its in-memory inbox is cleared too.
 
+## Recovering from a failed deploy
+
+The play ends with a message naming the failed task and what it did:
+
+| Failed in | State | What to do |
+| --- | --- | --- |
+| Local preflight (`make deploy-preflight`) | Nothing was deployed. | Fix the Compose file or the docs (`mkdocs build --strict` names the page), commit, rerun. |
+| Steps 1 to 5 (backup, prepare, silence) | No service was stopped; the previous release serves traffic. The server may hold the new files and env files, which running containers ignore. | Fix the cause and rerun the same make target. |
+| Step 6 or 7 before `docker compose up` (quiesced backup, password reconciliation) | The rescue restarts the exact backend, warehouse-service and payment-service containers it stopped and waits until they are healthy; no migration ran. | Check the message's container states, fix the cause, rerun `make ansible-deploy-backend-upgrade`. |
+| Step 7 from `docker compose up` on, or `verify` | The new release started; migrations may have run. The old backends are **not** restarted (their binaries may not accept the migrated schema). | Fix the cause and rerun the same make target; the play converges idempotently. If the new backend cannot run, roll back: re-pin the previous release and restore the quiesced backup ([Production backups](PRODUCTION_BACKUPS.md)). |
+
+Silences and the watchdog pause expire after 15 minutes on their own; after
+that a still-broken stack alerts normally. Check the state with
+`make ansible-verify` or `docker compose -f docker-compose.server.yml ps` over
+`make ansible-ssh`. Do not delete deployed files by hand in
+`/opt/awesome-localstack`: the next run removes files the repository tracked
+and deleted, and keeps (and lists) files git never tracked there.
+
 ## Patterns Used
+
+### Asset directory mirror
+
+The `app_copy_paths` directories (`security`, `postgres`, `nginx`,
+`prometheus`, `alertmanager`, `blackbox`, `images`, `branding`, `docs`,
+`docs-site`) mirror the checkout (`roles/app/tasks/assets.yml`):
+`ansible.builtin.copy` uploads them (root-owned, modes preserved), then the
+prune deletes only what Ansible could have put there. A deployed path is
+deleted when it is
+
+1. absent from the checkout, **and**
+2. tracked in this repository's git history under the same path
+   (`git log --all --no-renames --name-only -- <dirs>` on the laptop), **and**
+3. not under `app_copy_prune_excludes` (role default: `alertmanager/secrets`,
+   the rendered Telegram credentials).
+
+A directory is deleted only when it held tracked files and nothing untracked
+remains below it. Everything else the checkout lacks, such as manual backups
+like `nginx/conf.d/edge-gateway.conf.before-*`, is **kept** and listed in the
+play output as `untracked files on the server (kept): …`; delete those by hand
+if they are no longer wanted. A shallow or incomplete local history only makes
+the prune keep more.
+
+Pruning never leaves those directories: the Compose file, the rendered `.env*`
+files, backups and Docker volumes are outside them and are never listed. The
+prune refuses to run when the checkout listing misses one of the directories
+(a wipe instead of a mirror). The decision is
+`roles/app/filter_plugins/asset_mirror.py`; built-in modules do the rest, with
+no rsync on the server. `scripts/verify-asset-mirror.py` (CI job
+`verifyAnsible`) runs the real tasks against a fixture git repository: a
+tracked and deleted file is removed, an unknown manual file and the secrets
+are kept.
 
 ### Convergent deploys
 
@@ -241,7 +322,11 @@ For that reason, HTTP verification uses retries and delay rather than failing im
 - `deployment_silence`: bounded suppression of planned warning-level public
   endpoint and backend/consumer scrape alerts plus the bounded watchdog pause;
   critical alerts are never silenced
-- `app`: file sync, runtime env rendering, Compose convergence
+- `backend_upgrade`: opt-in quiesce (stop both backends and their services,
+  quiesced backup) and the rescue restart of the stopped containers
+- `app`: `prepare.yml` (gates, asset mirror, env rendering, Compose
+  validation, pulls, docs build: no service touched) and `converge.yml`
+  (Compose convergence); `main.yml` runs both for `reset-demo-state.yml`
 - `verify`: operational checks after deploy
 - `cleanup`: checksum- and age-guarded retirement of the legacy Artemis volume
   plus pruning of unused images older than the retention window
@@ -447,8 +532,9 @@ which) before adding further services.
 ## Documentation wiki image
 
 The `docs` service (the MkDocs wiki at `/docs/`, `mem_limit: 32m`) is the only
-image built on the server. The `app` role copies `docs/` and `docs-site/` and
-runs `docker compose build docs` before `docker compose up`; the image is
+image built on the server. The `app` role mirrors `docs/` and `docs-site/` and
+runs `docker compose build docs` in `prepare.yml`, before any service is
+stopped (`docker compose up` then runs with `build: never`); the image is
 static files on the digest-pinned `nginx:1.31.3-trixie` base (shared with the
 gateway), so no registry release or digest pin is needed for documentation
 edits (`awesome-localstack/docs:local`, `pull_policy: build`, exempt from

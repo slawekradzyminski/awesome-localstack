@@ -32,10 +32,10 @@ def main() -> None:
         playbook,
         [
             "deployment_silence_state: present",
-            "    - app",
-            "    - verify",
+            "            tasks_from: converge",
+            "        name: verify",
             "deployment_silence_state: absent",
-            "    - cleanup",
+            "        name: cleanup",
         ],
     )
     require(positions == sorted(positions), "silence must wrap app convergence and verification")
