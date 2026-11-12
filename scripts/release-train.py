@@ -540,9 +540,14 @@ def compat_command(output: Path, course_repo: Path, course_ref: str) -> list[str
 
 
 def changed_release_files(shell: Shell) -> list[str]:
+    """Release files with uncommitted changes. Shell.read strips its output, so porcelain status
+    lines (" M file") would lose their first column; --name-only has no status columns."""
     candidates = [p.name for p in compose_files()] + [RELEASES_DOC]
-    out = shell.read(["git", "status", "--porcelain", "--", *candidates])
-    return [line[3:] for line in out.splitlines() if line]
+    return names_only(shell.read(["git", "diff", "--name-only", "HEAD", "--", *candidates]))
+
+
+def names_only(out: str) -> list[str]:
+    return [line.strip() for line in out.splitlines() if line.strip()]
 
 
 def cmd_pr(shell, args):

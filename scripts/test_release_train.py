@@ -205,3 +205,23 @@ class CompatCommandTest(unittest.TestCase):
         self.assertEqual(command[command.index("--ref") + 1], "origin/master")
         self.assertIn("--graphql-preview", command)
 
+
+
+class ChangedReleaseFiles(unittest.TestCase):
+    class FakeShell:
+        def __init__(self, output: str):
+            self.output = output
+            self.calls: list[list[str]] = []
+
+        def read(self, args, **_kwargs):
+            self.calls.append(args)
+            # Shell.read strips stdout, which removed the first status column of porcelain output.
+            return self.output.strip()
+
+    def test_keeps_the_first_file_name_whole(self):
+        shell = self.FakeShell("docker-compose.compatibility.yml\ndocs/CONTAINER_RELEASES.md\n")
+        self.assertEqual(rt.changed_release_files(shell), ["docker-compose.compatibility.yml", "docs/CONTAINER_RELEASES.md"])
+        self.assertEqual(shell.calls[0][:4], ["git", "diff", "--name-only", "HEAD"])
+
+    def test_no_changes_is_empty(self):
+        self.assertEqual(rt.changed_release_files(self.FakeShell("")), [])
