@@ -16,10 +16,7 @@ services:
       OLLAMA_BASE_URL: http://ollama-mock:11434
       PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
-      APP_SSO_ENABLED: "true"
-      APP_SSO_ISSUER_URI: http://localhost:8082/realms/awesome-testing
-      APP_SSO_JWK_SET_URI: http://keycloak:8080/realms/awesome-testing/protocol/openid-connect/certs
-      APP_SSO_AUDIENCE: awesome-testing-frontend
+      APP_SSO_ENABLED: "false"
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
       # warehouse-service and payment-service verify access tokens with the backend
       # JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
@@ -32,8 +29,6 @@ services:
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
     depends_on:
-      keycloak:
-        condition: service_started
       postgres:
         condition: service_healthy
     healthcheck:
@@ -193,42 +188,6 @@ services:
     restart: always
     expose:
       - "80"
-    networks:
-      - my-private-ntwk
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
-    restart: always
-    command:
-      - start-dev
-      - --import-realm
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: http://localhost:8082
-    ports:
-      - "8082:8080"
-    volumes:
-      - type: bind
-        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
-        target: /usr/lib/jvm/jre-21/lib/security/blocked.certs
-        read_only: true
-        bind:
-          create_host_path: false
-      - ./keycloak:/opt/keycloak/data/import:ro
-    networks:
-      - my-private-ntwk
-
-  keycloak-init:
-    image: curlimages/curl:8.21.0@sha256:7c12af72ceb38b7432ab85e1a265cff6ae58e06f95539d539b654f2cfa64bb13
-    entrypoint: ["/bin/sh", "/init/init-mock-users.sh"]
-    volumes:
-      - ./keycloak/init-mock-users.sh:/init/init-mock-users.sh:ro
-    environment:
-      KEYCLOAK_URL: http://keycloak:8080
-    depends_on:
-      - keycloak
-    restart: "no"
     networks:
       - my-private-ntwk
 

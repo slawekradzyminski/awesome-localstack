@@ -45,7 +45,6 @@ check. Use the lightweight profile unless a scenario says otherwise.
     | Shop | [localhost:8081/login](http://localhost:8081/login) |
     | Swagger UI (backend, warehouse, payment) | [localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) |
     | GraphiQL | [localhost:8081/api/v1/graphiql](http://localhost:8081/api/v1/graphiql) |
-    | Keycloak admin (`admin` / `admin`) | [localhost:8082/admin/](http://localhost:8082/admin/) |
     | Mailpit inbox (full profile) | [localhost:8025](http://localhost:8025/) |
     | Grafana with the k6 dashboard (full profile) | [localhost:3000](http://localhost:3000/login) |
 
@@ -73,7 +72,7 @@ How to sign in inside Swagger UI, GraphiQL and gRPC: [API explorers](../operatio
 | What each business feature does, end to end | [Business flows](../flows/index.md) |
 | Test cards and their outcomes | [Card payments](../flows/payments.md#test-cards) |
 | Allowed status transitions | [State machines](../flows/state-machines.md) |
-| SSO, social login and MFA labs | [SSO flow](../reference/SSO_FLOW.md), [Social login](../reference/SOCIAL_LOGIN.md) |
+| MFA (TOTP) lab | [Accounts and MFA](../flows/accounts.md#mfa) |
 | REST vs GraphQL vs gRPC labs | [Protocol testing lab](../reference/PROTOCOL_TESTING_LAB.md), [gRPC training runbook](../reference/GRPC_TRAINING_RUNBOOK.md) |
 | Words used across the platform | [Glossary](../glossary.md) |
 | Blog behind the training | [awesome-testing.com](https://www.awesome-testing.com/) |

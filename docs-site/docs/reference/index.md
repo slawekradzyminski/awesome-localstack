@@ -14,7 +14,6 @@ wiki: contracts, runbooks and release history.
 | [Event feed](EVENT_FEED.md) | The backend's pull feed of domain events and how the services consume it |
 | [Architecture decisions](ARCHITECTURE_DECISIONS.md) | ADRs: pull event feed, fulfilment read model, per-service outboxes, one PostgreSQL server |
 | [Webhooks](WEBHOOKS.md) | Payment result signatures and user webhooks |
-| [SSO flow](SSO_FLOW.md), [Social login](SOCIAL_LOGIN.md), [Direct social login](DIRECT_SOCIAL_LOGIN.md) | Keycloak, OIDC and social identity brokering |
 | [gRPC inventory](GRPC_INVENTORY.md), [gRPC training runbook](GRPC_TRAINING_RUNBOOK.md), [Protocol testing lab](PROTOCOL_TESTING_LAB.md) | REST, GraphQL and gRPC exercises |
 | [Course compatibility](COURSE_COMPATIBILITY.md) | Running the frozen course suite against disposable backends |
 | [Ansible](ANSIBLE.md), [SSH server](SSH_SERVER.md), [SSH tunnelling](SSH_TUNNELLING.md) | Production operations |

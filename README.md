@@ -19,7 +19,7 @@ unchanged in its Reference section.
 
 For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
-For the local SSO flow, standard-login comparison, and local credentials, see [docs/SSO_FLOW.md](docs/SSO_FLOW.md).
+SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were removed from every profile on 2026-11-12; all profiles run the backend with `APP_SSO_ENABLED=false`. Sign in with the application password users below.
 
 For repository-owned image publishing and the first-party compatibility set
 (six published images; payment-service 1.0.0 joins once its digest is pinned),
@@ -69,31 +69,15 @@ Other useful lightweight URLs:
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - image through gateway: `http://localhost:8081/images/iphone.png`
-- Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
 
-The lightweight profile also starts Keycloak with the `awesome-testing` realm and these training users:
-
-- `sso-e2e-client` / `SsoClient123!`
-- `sso-admin` / `SsoAdmin123!`
-
-Social login mock users (simulated Google and GitHub via Keycloak brokering):
-
-- Google: `google-user` / `GoogleUser123!` (email: `google-user@gmail.com`)
-- GitHub: `github-user` / `GitHubUser123!` (email: `github-user@github.test`)
-
-These mock social providers use additional Keycloak realms (`google-mock`, `github-mock`) on the same instance. See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the identity brokering flow.
-
-Password-login demo users are still available through the application login:
+Password-login demo users:
 
 - `admin` / `LocalDemoAdmin123!`
 - `client` / `client`
 - `client2` / `client2`
 - `client3` / `client3`
 - `warehouse` / `warehouse` (warehouse role)
-
-Keycloak Admin Console is available at `http://localhost:8082/admin/` with `admin` / `admin`.
-The local realm enables browser Authorization Code + PKCE for the frontend and direct access grants for Playwright training fixtures. Direct grants are included only so tests can obtain an ID token over HTTP, exchange it through the backend, and start UI tests already authenticated with app-issued tokens.
 
 Architecture:
 
@@ -133,7 +117,7 @@ curl -i -X POST http://localhost:11434/api/generate \
 
 Expected:
 
-- long-running containers are `Up`; the one-shot `postgres-roles` and `keycloak-init` show `Exited (0)`
+- long-running containers are `Up`; the one-shot `postgres-roles` shows `Exited (0)`
 - login page loads
 - Swagger and the three OpenAPI documents (backend, warehouse and payment) respond with `200`
 - product image responds with `200`
@@ -144,7 +128,7 @@ Useful logs:
 
 ```bash
 docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service gateway
-docker compose -f lightweight-docker-compose.yml logs -f keycloak ollama-mock
+docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
 ```
 
 Stop it with:
@@ -213,8 +197,6 @@ Other useful full-profile URLs:
 - Grafana (monitoring overlay): `http://localhost:3000/login` (`admin` / `grafana`)
 - ActiveMQ console: `http://localhost:8161`
 - Mailpit UI: `http://localhost:8025/`
-- Keycloak realm: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
-- Keycloak Admin Console: `http://localhost:8082/admin/` (`admin` / `admin`)
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
 - Docker Model Runner status: `docker model status`
 - Postgres: `localhost:5432`
@@ -279,21 +261,6 @@ docker model ps
 Docker Model Runner models are not containers, so Bonsai appears in
 `docker model ps`, not `docker compose ps`. Models are loaded lazily on the
 first inference request.
-
-SSO is enabled in the local `lightweight` and `full` compose profiles. Both
-profiles start Keycloak and configure the backend with the local issuer and JWK
-endpoint. The `server` profile should not use this local training realm by
-default; production/server SSO needs a real issuer, real redirect URLs, and
-managed credentials configured deliberately for that deployment.
-
-Social login mock users (simulated Google and GitHub via Keycloak brokering):
-
-- Google: `google-user` / `GoogleUser123!` (email: `google-user@gmail.com`)
-- GitHub: `github-user` / `GitHubUser123!` (email: `github-user@github.test`)
-
-These mock social providers use additional Keycloak realms (`google-mock`, `github-mock`) on the same instance. See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the identity brokering flow.
-
-See [docs/SSO_FLOW.md](docs/SSO_FLOW.md) for the detailed browser redirect flow, backend exchange flow, and the difference between application password login and SSO login.
 
 Architecture:
 

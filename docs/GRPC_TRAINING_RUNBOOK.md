@@ -23,7 +23,7 @@ or exposing the listener on a public interface.
 
 Use a local checkout of `awesome-localstack`. If the lightweight stack is
 already running, keep it running and check only that host port 9091 is free.
-For a fresh stack, ports 8081, 8082, 9091, and 11434 must be free. The
+For a fresh stack, ports 8081, 9091, and 11434 must be free. The
 published backend image already contains gRPC; students do not need to build
 Java or clone the backend source. The second Compose file is the Docker-level
 gRPC switch: applying it recreates the backend with the listener while keeping

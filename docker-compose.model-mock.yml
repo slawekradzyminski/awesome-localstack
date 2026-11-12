@@ -8,8 +8,6 @@ services:
     depends_on: !override
       activemq:
         condition: service_started
-      keycloak:
-        condition: service_started
       ollama:
         condition: service_started
       postgres:

@@ -11,7 +11,6 @@ Its goal is to give you a fast local environment with:
 - warehouse-service (shipments, tracking, returns, suppliers and purchase orders)
 - payment-service (card payments with test cards)
 - PostgreSQL shared by the backend, warehouse-service and payment-service
-- Keycloak for SSO and the mocked Google and GitHub social logins
 - a gateway that serves the frontend, the three APIs and the static product images
 - a mocked LLM
 
@@ -34,19 +33,17 @@ Use that URL for:
 
 Do not think in terms of “frontend on one port and backend on another port” for normal usage. The gateway on `8081` is the intended entrypoint; the backend, warehouse-service and payment-service are not published on host ports.
 
-Only two other host ports are published:
+Only one other host port is published:
 
-- `8082` for Keycloak (the SSO login page and the admin console)
 - `11434` for the mocked LLM
 
-Make sure `8081`, `8082` and `11434` are free before you start.
+Make sure `8081` and `11434` are free before you start.
 
 ## Lightweight Architecture
 
 ```mermaid
 flowchart TB
     U[Browser] --> G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
-    U --> K[Keycloak<br/>localhost:8082]
     G --> F[Frontend]
     G --> B[Backend]
     G --> W[warehouse-service]
@@ -76,7 +73,7 @@ This profile has its own Compose project name (`awesome-light`), so switching fr
 
 Still, do not run the full profile and the lightweight profile at the same time. They use the same local ports.
 
-The first start downloads the images. After that the stack is usually ready within a minute; Keycloak is normally the last service to finish starting.
+The first start downloads the images. After that the stack is usually ready within a minute.
 
 ## Check That Containers Started
 
@@ -91,18 +88,16 @@ Long-running services, expected state `Up`:
 - `backend` (`healthy`)
 - `frontend`
 - `gateway`
-- `keycloak`
 - `ollama-mock`
 - `postgres` (`healthy`, shared by the backend, warehouse-service and payment-service)
 - `warehouse-service` (`healthy`, fulfilment, tracking, returns and purchasing)
 - `payment-service` (`healthy`, card payments)
 
-One-shot setup containers, expected state `Exited (0)`:
+One-shot setup container, expected state `Exited (0)`:
 
 - `postgres-roles` creates the warehouse and payment database roles
-- `keycloak-init` sets the passwords of the social login mock users
 
-`Exited (0)` is correct for these two. Without `-a`, `docker compose ps` hides them.
+`Exited (0)` is correct for it. Without `-a`, `docker compose ps` hides it.
 
 ## Your Data Is Temporary
 
@@ -128,8 +123,6 @@ Useful lightweight URLs:
 - payment OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - GraphiQL: `http://localhost:8081/api/v1/graphiql`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
-- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
-- Keycloak admin console: `http://localhost:8082` (`admin` / `admin`)
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
 
 Training users:
@@ -142,19 +135,10 @@ Application password login (also for `POST /api/v1/users/signin`):
 - `client3` / `client3`
 - `warehouse` / `warehouse` (warehouse role)
 
-Keycloak SSO login (the SSO option on the login page):
-
-- `sso-e2e-client` / `SsoClient123!`
-- `sso-admin` / `SsoAdmin123!`
-
-Social login mocks (the Google and GitHub options on the login page):
-
-- `google-user` / `GoogleUser123!`
-- `github-user` / `GitHubUser123!`
-
-For the full SSO flow and the difference between password login and SSO, see
-[SSO_FLOW.md](SSO_FLOW.md). The social login mocks are described in
-[SOCIAL_LOGIN.md](SOCIAL_LOGIN.md).
+SSO and the mocked Google/GitHub social login were removed from the stack on
+2026-11-12, together with Keycloak. If your frontend image still shows a
+**Sign in with SSO**, Google or GitHub button, ignore it and sign in with a
+password.
 
 For everyday work, prefer `8081`.
 
@@ -174,8 +158,7 @@ Expected:
 - styling is present
 - images load
 
-Sign in with one of the application-password or Keycloak SSO training users
-listed above before continuing.
+Sign in with one of the training users listed above before continuing.
 
 ### 2. Swagger Loads
 
@@ -238,19 +221,7 @@ Expected:
 
 - HTTP `200`
 
-### 6. Keycloak Responds
-
-Run:
-
-```bash
-curl -i http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration
-```
-
-Expected:
-
-- HTTP `200`
-
-### 7. Mocked LLM Responds
+### 6. Mocked LLM Responds
 
 Run:
 
@@ -280,7 +251,6 @@ curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/warehouse/v3/api-docs
 curl -i http://localhost:8081/payment/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
-curl -i http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
   -d '{"model":"qwen3.5:2b","prompt":"hello"}'
@@ -296,7 +266,7 @@ Usually means:
 
 - backend, warehouse-service or payment-service is still starting
 - the backend, warehouse-service and payment-service are ready within seconds once PostgreSQL is
-  up; Keycloak is usually the last service to become ready
+  up
 
 What to do:
 
@@ -317,7 +287,7 @@ docker compose -f lightweight-docker-compose.yml logs -f postgres-roles warehous
 
 ### `port is already allocated`
 
-Another program already uses `8081`, `8082` or `11434`. A locally installed
+Another program already uses `8081` or `11434`. A locally installed
 Ollama on `11434` is the most common case. Stop it, or find the owner:
 
 ```bash
@@ -340,21 +310,6 @@ What to check:
 docker compose -f lightweight-docker-compose.yml ps -a
 curl -i http://localhost:8081/images/iphone.png
 ```
-
-### SSO Or Social Login Fails
-
-Usually means Keycloak is still starting, or `keycloak-init` did not finish.
-
-What to check:
-
-```bash
-curl -i http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration
-docker compose -f lightweight-docker-compose.yml ps -a keycloak keycloak-init
-docker compose -f lightweight-docker-compose.yml logs keycloak-init
-```
-
-`keycloak-init` should be `Exited (0)`. If it failed because Keycloak was not
-ready yet, run `docker compose -f lightweight-docker-compose.yml up -d` again.
 
 ### Swagger Loads But “Try it out” Fails
 
@@ -415,10 +370,10 @@ All lightweight services:
 docker compose -f lightweight-docker-compose.yml logs -f
 ```
 
-Keycloak and the mocked LLM:
+The mocked LLM:
 
 ```bash
-docker compose -f lightweight-docker-compose.yml logs -f keycloak ollama-mock
+docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
 ```
 
 ## Commerce Features To Explore

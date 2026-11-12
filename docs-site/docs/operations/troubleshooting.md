@@ -10,11 +10,11 @@
 | `401` from warehouse/payment with a token that works on the backend | Token signed by a key the service cannot fetch, or an old token after a backend restart (ephemeral key) | Sign in again; check the service can reach `/internal/v1/jwks.json` |
 | Order stays `PENDING` although the payment is `CAPTURED` | Result notification rejected (signature or secret mismatch) or backend down — the outbox retries | payment-service logs; `PAYMENT_WEBHOOK_SECRET` must match on both sides |
 | warehouse-service or payment-service restarts at start | `postgres-roles` failed or the role password differs | `docker compose ... logs postgres-roles` |
-| `port is already allocated` | Another profile (or tool) uses 8081, 8082 or 11434 | Stop the other profile first |
+| `port is already allocated` | Another profile (or tool) uses 8081 or 11434 | Stop the other profile first |
 | Images missing in the shop | Wrong origin; images come from the gateway | Open `http://localhost:8081/images/iphone.png` |
 | Swagger "Try it out" calls the wrong host | `servers[0].url` in `/v3/api-docs` | Use the gateway URL, not the service port |
 | nginx changes not applied | The gateway still runs the old config | `docker compose ... up -d --force-recreate gateway` |
-| SSO login fails | Keycloak not ready or realm not imported | `docker compose ... logs keycloak`; see [SSO flow](../reference/SSO_FLOW.md#troubleshooting) |
+| "Sign in with SSO", Google or GitHub button does nothing | SSO and Keycloak were removed; frontend images up to 3.12.x still show the buttons on `localhost:8081` | Sign in with a password; see [Authentication](../architecture/auth.md#single-sign-on-removed) |
 | No email arrives (full profile) | ActiveMQ or consumer down; the backend retries for ~15 minutes | Mailpit `:8025`, `GET /api/v1/users/me/email-events`, consumer logs |
 
 ## TOTP codes rejected locally (Docker VM clock drift)

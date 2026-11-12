@@ -126,7 +126,7 @@ nav:
       - Streaming and WebSockets: architecture/realtime.md
   - Business flows:
       - flows/index.md
-      - Accounts, MFA and SSO: flows/accounts.md
+      - Accounts and MFA: flows/accounts.md
       - Catalog and search: flows/catalog-search.md
       - Cart, coupons, gift cards, loyalty: flows/cart.md
       - Checkout, VAT and tenders: flows/checkout.md
@@ -164,9 +164,6 @@ nav:
       - Event feed: reference/EVENT_FEED.md
       - Architecture decisions: reference/ARCHITECTURE_DECISIONS.md
       - Webhooks: reference/WEBHOOKS.md
-      - SSO flow: reference/SSO_FLOW.md
-      - Social login: reference/SOCIAL_LOGIN.md
-      - Direct social login: reference/DIRECT_SOCIAL_LOGIN.md
       - gRPC inventory: reference/GRPC_INVENTORY.md
       - gRPC training runbook: reference/GRPC_TRAINING_RUNBOOK.md
       - Protocol testing lab: reference/PROTOCOL_TESTING_LAB.md

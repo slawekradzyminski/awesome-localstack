@@ -146,9 +146,6 @@ Recommended app URLs:
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
-- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
-- Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
-- Keycloak Admin Console: `http://localhost:8082/admin/`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -167,7 +164,6 @@ Published host ports:
 | Consumer metrics | `http://localhost:4002/actuator/prometheus` | Direct metrics |
 | InfluxDB | `localhost:8086` | Monitoring overlay only; k6 results |
 | Ollama | `http://localhost:11434/api/tags` | Raw model API |
-| Keycloak | `http://localhost:8082` | Local SSO identity provider |
 What is internal only:
 
 - backend raw port `4001`
@@ -202,9 +198,6 @@ Recommended app URLs:
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
-- Keycloak issuer: `http://localhost:8082/realms/awesome-testing`
-- Keycloak discovery: `http://localhost:8082/realms/awesome-testing/.well-known/openid-configuration`
-- Keycloak Admin Console: `http://localhost:8082/admin/`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -213,7 +206,6 @@ Published host ports:
 | --- | --- | --- |
 | Gateway | `http://localhost:8081` | Main app entrypoint |
 | Ollama mock | `http://localhost:11434` | Mocked LLM API |
-| Keycloak | `http://localhost:8082` | Local SSO identity provider |
 What is not included:
 
 - Postgres
@@ -234,20 +226,9 @@ Application password-login users:
 | Client | `client2` | `client2` |
 | Client | `client3` | `client3` |
 
-Keycloak SSO users:
-
-| Role | Username | Password |
-| --- | --- | --- |
-| Client | `sso-e2e-client` | `SsoClient123!` |
-| Admin | `sso-admin` | `SsoAdmin123!` |
-
-Keycloak Admin Console:
-
-| Username | Password |
-| --- | --- |
-| `admin` | `admin` |
-
-For the full SSO flow and the difference between password login and SSO, see [SSO_FLOW.md](SSO_FLOW.md).
+SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were
+removed from every profile on 2026-11-12; the backend runs with
+`APP_SSO_ENABLED=false`.
 
 What is internal only:
 

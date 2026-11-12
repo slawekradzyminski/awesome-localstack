@@ -64,7 +64,7 @@ The default stack verifies REST directly. The optional `graphql-preview` Compose
 profile also starts the pinned frontend and nginx, reusing the actual lightweight
 gateway configuration on `http://127.0.0.1:14081`. The runner checks equal GraphQL
 responses directly and through nginx, plus unauthenticated rejection on both
-routes. Browser, SSO, and PostgreSQL concurrency verification remain separate gates.
+routes. Browser and PostgreSQL concurrency verification remain separate gates.
 
 The ordinary backend uses `local,server`: local fixtures on PostgreSQL with the existing
 server profile's course-compatible UUID refresh tokens, public traffic routes,

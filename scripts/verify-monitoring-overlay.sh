@@ -33,7 +33,7 @@ trap cleanup EXIT
 
 "${compose[@]}" config --quiet
 "${compose[@]}" pull --ignore-buildable --quiet
-# No --wait: some Compose releases treat the keycloak-init one-shot's exit as a
+# No --wait: some Compose releases treat the postgres-roles one-shot's exit as a
 # failure. The polling below waits for what this check needs.
 "${compose[@]}" up -d
 

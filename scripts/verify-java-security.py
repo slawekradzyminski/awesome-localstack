@@ -52,10 +52,10 @@ def verify(root=ROOT):
                     raise ValueError(f'{profile}/{name}: native image must not mount a JVM blocklist')
                 continue
             if not any(part in image for part in (
-                'slawekradzyminski/ollama-mock:', 'apache/artemis:', 'quay.io/keycloak/keycloak:',
+                'slawekradzyminski/ollama-mock:', 'apache/artemis:',
             )):
                 continue
-            target = ('/usr/lib/jvm/jre-21' if 'keycloak' in image else '/opt/java/openjdk') + '/lib/security/blocked.certs'
+            target = '/opt/java/openjdk/lib/security/blocked.certs'
             mounts = [mount for mount in service.get('volumes', []) if mount.get('target') == target]
             if len(mounts) != 1:
                 raise ValueError(f'{profile}/{name}: JVM blocklist mount missing or duplicated')
