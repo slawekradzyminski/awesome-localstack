@@ -1,5 +1,8 @@
 # For testers
 
+Looking for automated examples? The [reference Playwright suite](e2e-commerce.md) tests every
+commerce feature through the API, the browser and cross-service journeys.
+
 Test ideas per feature, chosen because each one exercises a real rule in the
 code. Every scenario names the expected result so it can become an automated
 check. Use the lightweight profile unless a scenario says otherwise.

@@ -152,6 +152,7 @@ nav:
       - This documentation site: operations/docs-site.md
   - For testers:
       - testers/index.md
+      - End-to-end tests of the commerce features: testers/e2e-commerce.md
   - Glossary: glossary.md
   - Reference:
       - reference/index.md
