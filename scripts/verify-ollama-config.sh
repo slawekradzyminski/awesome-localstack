@@ -3,7 +3,7 @@ set -euo pipefail
 
 DEFAULT_MODEL="hf.co/prism-ml/Bonsai-27B-gguf:Q1_0"
 QWEN_MODEL="hf.co/unsloth/Qwen3.5-2B-GGUF:Q4_K_M"
-MOCK_IMAGE="slawekradzyminski/ollama-mock:1.0.11@sha256:2dc7b225ed7351e4dc60cbdd9cb7a817bcfb4d671ccb7551a0fe1969ff065a29"
+MOCK_IMAGE="slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f"
 
 default_config="$(OLLAMA_BASE_URL=http://ollama:11434 docker compose -f docker-compose.yml config)"
 grep -F "name: awesome-full-native" <<<"$default_config"

@@ -23,7 +23,7 @@ the other.
 | warehouse-service / payment-service profile | `docker,demo` | `docker,demo` | `docker` |
 | PostgreSQL | tmpfs, 256 MiB, data lost on recreate | named volume `postgres-data`, host port 5432 | named volume, Vault password, nightly encrypted backups |
 | Emails | local outbox (`GET /api/v1/local/email/outbox`) | ActiveMQ → consumer → Mailpit (`http://localhost:8025`) | ActiveMQ → consumer → Mailpit (private) |
-| SSO | no (`APP_SSO_ENABLED=false`, Keycloak removed) | no (`APP_SSO_ENABLED=false`, Keycloak removed) | no (`APP_SSO_ENABLED=false`) |
+| SSO | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) |
 | LLM | `ollama-mock` on `11434` | Docker Model Runner through `ollama-dmr-adapter` | `ollama-mock` (internal) |
 | Monitoring | opt-in overlay | opt-in overlay (included by `./run-docker-compose.sh`) | Prometheus, Alertmanager, cAdvisor, Node Exporter, Blackbox, host watchdog (no Grafana) |
 | Rate limiting | off | off | on, with raised capacities for parallel course suites |

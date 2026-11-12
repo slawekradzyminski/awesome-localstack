@@ -227,8 +227,8 @@ Application password-login users:
 | Client | `client3` | `client3` |
 
 SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were
-removed from every profile on 2026-11-12; the backend runs with
-`APP_SSO_ENABLED=false`.
+removed from every profile on 2026-11-12 (backend 3.18.0 and frontend 3.13.0 have
+no SSO code).
 
 What is internal only:
 

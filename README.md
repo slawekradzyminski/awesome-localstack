@@ -19,7 +19,7 @@ unchanged in its Reference section.
 
 For classroom or workshop use focused on the lightweight stack, see [docs/STUDENT_GUIDE.md](docs/STUDENT_GUIDE.md).
 
-SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were removed from every profile on 2026-11-12; all profiles run the backend with `APP_SSO_ENABLED=false`. Sign in with the application password users below.
+SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were removed from every profile on 2026-11-12 (backend 3.18.0 and frontend 3.13.0 have no SSO code). Sign in with the application password users below.
 
 For repository-owned image publishing and the first-party compatibility set
 (six published images; payment-service 1.0.0 joins once its digest is pinned),
