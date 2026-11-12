@@ -2,7 +2,7 @@
 name: awesome-compatibility
 
 x-backend: &backend
-  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.18.0@sha256:7b5ffeade75935ec76053d88136e6dd769d534b983cbdc35dfde19991e4c32c3}
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.19.0@sha256:4891deae0e2f8f2155996db391fd12b3d83d66321dc2f3f71ff0a253f25972f8}
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
@@ -89,7 +89,7 @@ services:
 
   frontend:
     profiles: [graphql-preview]
-    image: slawekradzyminski/frontend:3.13.1@sha256:9151c313ac6ebe91a59fa100fd76348f05f64e4266f9bf2dc412ff1d46d58931
+    image: slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea
   gateway:
     profiles: [graphql-preview]
     image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942
