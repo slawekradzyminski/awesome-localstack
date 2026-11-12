@@ -9,6 +9,14 @@ take part in a course.
 
 ## What it covers
 
+606 tests: 441 API, 160 UI and 5 journeys, run in about three minutes with 4 workers.
+On its first full run the suite found 11 bugs in four services. Among them were
+connection-pool deadlocks in payment-service and warehouse-service under concurrent
+requests, and an event retention job that never deleted anything. All 11 were fixed in
+backend 3.17.1, payment-service 1.2.1, warehouse-service 1.4.1 and frontend 3.12.1, and
+the tests that caught them now guard against regressions.
+
+
 | Project | Folder | What a test does |
 | --- | --- | --- |
 | `api` | `tests/api/<feature>/` | Calls one endpoint group through the gateway and checks every documented status code, the body and the stored state |
