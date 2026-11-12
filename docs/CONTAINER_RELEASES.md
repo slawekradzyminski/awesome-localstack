@@ -132,6 +132,49 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.19.0, frontend 3.14.0 — 13 November 2026
+
+Fixes from the owner's exploratory session of 2026-11-07 (triage: 40 findings, 16 still reproduced).
+
+- **backend 3.19.0**:
+  - **X-03, traffic logs (security):**
+    - **Masking:** secrets are masked by name pattern in every profile, including `newPassword`, `confirmPassword`, `giftCardCode`, tokens and codes.
+    - **Scoping:** reads are bound to the session and its user. Anonymous reads under legacy public access get an empty page, which is the l20 page shape.
+    - **Stored data:** V20 and the startup `TrafficHistoryMasker` re-mask the stored history.
+    - **Safety:** a long JSON string can no longer overflow the stack in the masking regex.
+  - **X-01:** the seeding profiles no longer crash-loop on products with a null `imageUrl`. V19 stores them as `''` and makes the column NOT NULL.
+  - **X-04:** a 2FA sign-in challenge is consumed after 5 wrong codes (V21).
+  - **X-06:** right to be forgotten cancels open orders, with stock restored, before erasing the user. The course bug, a repeated request returning 500, is unchanged.
+  - **X-10:** `POST /email` without `to` returns a 400 field error.
+  - **X-18:** unknown paths and unsupported methods answer in the ErrorDto shape.
+  - **X-21:** QR validation errors are 400 JSON whatever `Accept` says.
+  - **X-24:** OpenAPI fixes (zipCode, login example).
+  - **X-02:** the service refuses to start with the reset token exposed in shared profiles.
+  - V19–V21 are guarded for schemas baselined at V1.
+- **frontend 3.14.0**:
+  - **Traffic sessions:** a new traffic session id on login and logout.
+  - **Admin only:** the user directory and recipient picker.
+  - **Errors:** inline checkout and register errors instead of `alert()`.
+  - **Smaller fixes:** a 404 page, the email form resets after sending, a label for the chat input, and honest copy about the local reset token.
+
+The gateway changes merged before this release ship with it: JSON 404 for unknown `/api/**` paths, and
+production forgot-password and MFA limits of 20 per account.
+
+Still open from the triage (next release): X-08 token revocation on logout and password reset, X-12 masked
+emails for non-admins, X-05 email templates, X-23 authorization before validation, and X-26 mock tool answers.
+
+LocalStack changes: image pins only. Upgrade: `scripts/release-train.py deploy --yes` (backend upgrade; migrations V19–V21).
+Rollback: re-pin backend 3.18.0 and frontend 3.13.1; V19–V21 only add columns, a default and a NOT NULL on
+`products.image_url`, so 3.18.0 runs on the migrated schema.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.19.0@sha256:4891deae0e2f8f2155996db391fd12b3d83d66321dc2f3f71ff0a253f25972f8` | [PR #102](https://github.com/slawekradzyminski/test-secure-backend/pull/102), `a229ce1` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43327324870) |
+| `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` | [PR #102](https://github.com/slawekradzyminski/vite-react-frontend/pull/102), `78fcd16` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43327329729) |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: frontend 3.13.1 — 12 November 2026
 
 - **frontend 3.13.1**:
@@ -852,12 +895,12 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: frontend 3.13.1, released 12 November 2026:
+Release train: backend 3.19.0, frontend 3.14.0, released 13 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.18.0@sha256:7b5ffeade75935ec76053d88136e6dd769d534b983cbdc35dfde19991e4c32c3` |
-| Frontend | `slawekradzyminski/frontend:3.13.1@sha256:9151c313ac6ebe91a59fa100fd76348f05f64e4266f9bf2dc412ff1d46d58931` |
+| Backend | `slawekradzyminski/backend:3.19.0@sha256:4891deae0e2f8f2155996db391fd12b3d83d66321dc2f3f71ff0a253f25972f8` |
+| Frontend | `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
