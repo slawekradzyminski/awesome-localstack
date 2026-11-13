@@ -132,6 +132,32 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.20.0, ollama-mock 1.0.13 — 13 November 2026
+
+The remaining fixes from the owner's exploratory session of 2026-11-07.
+
+- **backend 3.20.0**:
+  - **X-08, token revocation:** logout and password reset revoke every access and refresh token of the user. Access tokens carry the user's token version (`ver`, V22), which the backend checks on HTTP, the traffic WebSocket and gRPC. warehouse-service and payment-service verify tokens offline, so a revoked access token keeps working there until it expires (1 h at most), but it can no longer be refreshed. Enabling or disabling 2FA still revokes only refresh tokens, because l20 keeps using the access token afterwards.
+  - **X-12, masked emails:** non-admins see other users' emails masked (`b***@google.com`); your own account and admins see full addresses.
+  - **X-05, email templates:** clients may only send the GENERIC template; admins may use any.
+  - **X-23, authorization before validation:** admin URLs (`/api/v1/admin/**`, product writes, order status, admin order list, user deletion) and `PUT /users/{username}` are checked by role before the body is read, so clients get 403 instead of the admin validation rules.
+- **ollama-mock 1.0.13, X-26:**
+  - **Unknown models:** they return 404 like real Ollama.
+  - **Tool answers:** final answers are built from the tool output for every scenario except "beauty", whose canned answer the AI Testers API course asserts word for word.
+
+LocalStack changes: image pins, including the ollama-mock pin in `scripts/verify-ollama-config.sh`. Upgrade:
+`scripts/release-train.py deploy --yes` (backend upgrade; migration V22 adds `app_user.token_version`).
+Rollback: re-pin backend 3.19.0 and ollama-mock 1.0.12; V22 only adds a column with a default.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.20.0@sha256:2fc90af8dcbffc81ff1bd8a5c83a0dc7f8356bfcff320b9a595bfffe2618aa69` | [PR #104](https://github.com/slawekradzyminski/test-secure-backend/pull/104), `998ed3d` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43380128361) |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.14.0` | unchanged | unchanged |
+| `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` | [PR #33](https://github.com/slawekradzyminski/ollama-mock/pull/33) | tag `v1.0.13` |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.19.0, frontend 3.14.0 — 13 November 2026
 
 Fixes from the owner's exploratory session of 2026-11-07 (triage: 40 findings, 16 still reproduced).
@@ -895,14 +921,14 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.19.0, frontend 3.14.0, released 13 November 2026:
+Release train: backend 3.20.0, ollama-mock 1.0.13, released 13 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.19.0@sha256:4891deae0e2f8f2155996db391fd12b3d83d66321dc2f3f71ff0a253f25972f8` |
+| Backend | `slawekradzyminski/backend:3.20.0@sha256:2fc90af8dcbffc81ff1bd8a5c83a0dc7f8356bfcff320b9a595bfffe2618aa69` |
 | Frontend | `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
-| Ollama mock | `slawekradzyminski/ollama-mock:1.0.12@sha256:ee8a22bbc6b0f00959cf751e6f78d523fcc74eb32759ead0b9b274dc098d310f` |
+| Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
 | Payment service | `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` |
 
