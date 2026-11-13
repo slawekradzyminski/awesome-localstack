@@ -132,6 +132,24 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Release train: backend 3.20.1 — 13 November 2026
+
+Restores the public traffic endpoints on awesome.byst.re for the AI Testers API course (owner's decision: this is a
+training app with fake data). With legacy public access on (server profile), anonymous callers read traffic as before
+3.19.0: with `X-Client-Session-Id` that session's records (list and detail); without it every record. The global
+`/topic/traffic` WebSocket feed is back. Secrets stay masked. Authenticated callers and profiles with legacy access off
+(local, aitesters) keep the 3.19 rules. awesome-localstack #99 removed the configuration override that had closed access.
+
+LocalStack changes: image pin only. Upgrade: `scripts/release-train.py deploy --yes`. Rollback: re-pin backend 3.20.0.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.20.1@sha256:a47d14898c727aa64374efeb405ac1aea95fe0d047cfbf3b160ea89f46a4de52` | [PR #105](https://github.com/slawekradzyminski/test-secure-backend/pull/105), `134f256` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43390534081) |
+| `slawekradzyminski/warehouse-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.2.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.14.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.20.0, ollama-mock 1.0.13 — 13 November 2026
 
 The remaining fixes from the owner's exploratory session of 2026-11-07.
@@ -921,11 +939,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.20.0, ollama-mock 1.0.13, released 13 November 2026:
+Release train: backend 3.20.1, released 13 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.20.0@sha256:2fc90af8dcbffc81ff1bd8a5c83a0dc7f8356bfcff320b9a595bfffe2618aa69` |
+| Backend | `slawekradzyminski/backend:3.20.1@sha256:a47d14898c727aa64374efeb405ac1aea95fe0d047cfbf3b160ea89f46a4de52` |
 | Frontend | `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
