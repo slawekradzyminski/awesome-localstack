@@ -1,0 +1,9 @@
+[
+  {"name": "warehouse-to-backend", "listen": "0.0.0.0:14001", "upstream": "backend:4001", "enabled": true},
+  {"name": "payment-to-backend", "listen": "0.0.0.0:24001", "upstream": "backend:4001", "enabled": true},
+  {"name": "notification-to-backend", "listen": "0.0.0.0:34001", "upstream": "backend:4001", "enabled": true},
+  {"name": "backend-to-postgres", "listen": "0.0.0.0:15432", "upstream": "postgres:5432", "enabled": true},
+  {"name": "warehouse-to-postgres", "listen": "0.0.0.0:25432", "upstream": "postgres:5432", "enabled": true},
+  {"name": "payment-to-postgres", "listen": "0.0.0.0:35432", "upstream": "postgres:5432", "enabled": true},
+  {"name": "notification-to-postgres", "listen": "0.0.0.0:45432", "upstream": "postgres:5432", "enabled": true}
+]

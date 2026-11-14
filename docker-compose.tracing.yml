@@ -1,0 +1,48 @@
+# Distributed tracing: Jaeger all-in-one (v2, in-memory storage) receiving OTLP
+# from the Spring services. Add it after a local base profile, alone or with
+# the chaos and monitoring overlays:
+#
+#   make tracing-up                       # lightweight + tracing
+#   docker compose -f lightweight-docker-compose.yml -f docker-compose.tracing.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.chaos.yml \
+#     -f docker-compose.monitoring.yml -f docker-compose.tracing.yml up -d
+#
+# Jaeger UI: http://127.0.0.1:${JAEGER_UI_PORT:-16686} (loopback only). OTLP HTTP
+# (4318) is reachable inside the Compose network only.
+#
+# The images export spans only from backend 3.21.0, warehouse-service 1.5.0 and
+# payment-service 1.3.0 (and notification-service 1.0.0); older images ignore
+# the TRACING_* variables, so Jaeger then shows only its own service.
+# notification-service's variables live in docker-compose.tracing-notification.yml.
+# Docs: docs-site/docs/operations/tracing.md (Jaeger section).
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0@sha256:836b967b5abcf1f7758066aa6b348619267a2f1459f72d472840570f9bd88a17
+    restart: unless-stopped
+    # Default all-in-one configuration (memory storage) with a bounded trace count.
+    command: ["--set=extensions.jaeger_storage.backends.some_storage.memory.max_traces=20000"]
+    ports:
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+    expose:
+      - "4318"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    networks:
+      - my-private-ntwk
+
+  backend:
+    environment: &tracing
+      TRACING_ENABLED: "true"
+      TRACING_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      TRACING_SAMPLING_PROBABILITY: "1.0"
+
+  warehouse-service:
+    environment: *tracing
+
+  payment-service:
+    environment: *tracing

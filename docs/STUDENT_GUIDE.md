@@ -444,6 +444,26 @@ docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.ym
 The overlay keeps k6 results in the `influxdb-storage` volume; add `--volumes`
 to `down` to discard them.
 
+## Fault Injection (Chaos Lab)
+
+To see how the services behave when a link between them breaks, start the same
+profile with the fault-injection lab. Nothing to install; one command line tool
+drives it:
+
+```bash
+scripts/chaos up                     # or: make chaos-up
+scripts/chaos list                   # what you can break
+scripts/chaos backend-down warehouse # warehouse-service loses the backend
+scripts/chaos status                 # what is broken now
+scripts/chaos heal                   # everything back to normal
+```
+
+The guided exercises (a warehouse 503, an outbox backlog that drains, an
+event-feed consumer resuming from its cursor, a payment losing the race against
+an expiring reservation, a stalled database) are in the
+[fault-injection lab guide](FAULT_INJECTION_LAB.md). Add Jaeger traces with
+`scripts/chaos up lightweight tracing` (UI `http://127.0.0.1:16686`).
+
 ## Stop The Profile
 
 ```bash

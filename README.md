@@ -195,6 +195,8 @@ Other useful full-profile URLs:
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - Prometheus (monitoring overlay): `http://localhost:9090/graph`
 - Grafana (monitoring overlay): `http://localhost:3000/login` (`admin` / `grafana`)
+- Toxiproxy API (fault-injection lab): `http://127.0.0.1:8474`
+- Jaeger UI (tracing overlay): `http://127.0.0.1:16686`
 - ActiveMQ console: `http://localhost:8161`
 - Mailpit UI: `http://localhost:8025/`
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
@@ -364,6 +366,35 @@ no target rather than a DOWN one. It also accepts k6 remote write
 (`k6 run -o experimental-prometheus-rw`). `scripts/verify-monitoring-overlay.sh`
 starts a profile with the overlay and checks the dashboards and targets; CI
 runs it for the lightweight profile.
+
+## Fault-injection lab and tracing
+
+`docker-compose.chaos.yml` puts Toxiproxy between the services, the backend and
+PostgreSQL (one proxy per link), so a class can break one link on purpose and
+watch timeouts, 503s, outbox backlogs and feed cursors. One command drives it
+(bash, curl and Docker only):
+
+```bash
+scripts/chaos up                     # running profile (else lightweight) + lab; make chaos-up
+scripts/chaos backend-down warehouse # make chaos SCENARIO=backend-down TARGET=warehouse
+scripts/chaos status                 # make chaos-status
+scripts/chaos heal                   # make chaos-reset
+scripts/chaos down                   # make chaos-down
+```
+
+`scripts/chaos list` shows every scenario (`backend-down`, `backend-slow`,
+`backend-flaky`, `bandwidth`, `postgres-stall`, `postgres-down`,
+`partition-<service>`). The Toxiproxy API listens on `127.0.0.1:8474`
+(`TOXIPROXY_PORT`). Guide and guided exercises:
+[docs/FAULT_INJECTION_LAB.md](docs/FAULT_INJECTION_LAB.md);
+`scripts/verify-chaos-overlay.sh` runs every scenario against the published
+images.
+
+`docker-compose.tracing.yml` adds Jaeger (UI `http://127.0.0.1:16686`) and
+turns OTLP export on in the Spring services: `make tracing-up` /
+`make tracing-down`, or `scripts/chaos up lightweight tracing`. Spans come from
+backend 3.21.0, warehouse-service 1.5.0 and payment-service 1.3.0 on; see
+[Tracing a request](docs-site/docs/operations/tracing.md#jaeger-traces).
 
 ## Server Profile
 

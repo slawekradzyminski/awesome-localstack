@@ -147,6 +147,7 @@ nav:
       - Releases and image pinning: operations/releases.md
       - Monitoring and alerts: operations/monitoring.md
       - Tracing a request: operations/tracing.md
+      - Fault-injection lab: operations/fault-injection.md
       - Backups: operations/backups.md
       - Troubleshooting: operations/troubleshooting.md
       - This documentation site: operations/docs-site.md
@@ -167,6 +168,7 @@ nav:
       - gRPC inventory: reference/GRPC_INVENTORY.md
       - gRPC training runbook: reference/GRPC_TRAINING_RUNBOOK.md
       - Protocol testing lab: reference/PROTOCOL_TESTING_LAB.md
+      - Fault-injection lab: reference/FAULT_INJECTION_LAB.md
       - Course compatibility: reference/COURSE_COMPATIBILITY.md
       - Ansible: reference/ANSIBLE.md
       - Container releases: reference/CONTAINER_RELEASES.md

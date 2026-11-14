@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: ansible-galaxy ansible-bootstrap deploy-preflight ansible-deploy ansible-deploy-backend-upgrade ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-prometheus ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-prometheus ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images
+.PHONY: ansible-galaxy ansible-bootstrap deploy-preflight ansible-deploy ansible-deploy-backend-upgrade ansible-verify ansible-cleanup ansible-reset-demo-state ansible-reset-aitesters-state ansible-ping ansible-ssh ansible-edit-vault ansible-tunnel-prometheus ansible-tunnel-mailpit ansible-tunnel-all ansible-tunnel-kill-prometheus ansible-tunnel-kill-mailpit ansible-tunnel-kill-all sync-release-images chaos-up chaos chaos-list chaos-status chaos-reset chaos-heal chaos-down tracing-up tracing-down
 
 ANSIBLE_VAULT_FILE := .vault_pass
 
@@ -66,3 +66,35 @@ ansible-tunnel-kill-mailpit:
 
 ansible-tunnel-kill-all:
 	pkill -f 'ssh .*9090:127.0.0.1:9090|ssh .*8025:127.0.0.1:8025' || true
+
+# Fault-injection lab (docs/FAULT_INJECTION_LAB.md). PROFILE: lightweight (default
+# when nothing runs) or full; WITH: extra overlays, e.g. WITH="tracing monitoring".
+#   make chaos-up PROFILE=full
+#   make chaos SCENARIO=backend-down TARGET=warehouse
+#   make chaos SCENARIO=backend-slow VALUE=5000 TARGET=payment
+chaos-up:
+	@scripts/chaos up $(PROFILE) $(WITH)
+
+chaos:
+	@if [[ -z "$(SCENARIO)" ]]; then echo "usage: make chaos SCENARIO=<name> [VALUE=<number>] [TARGET=<service>]"; echo; scripts/chaos list; exit 2; fi
+	@scripts/chaos $(SCENARIO) $(VALUE) $(TARGET)
+
+chaos-list:
+	@scripts/chaos list
+
+chaos-status:
+	@scripts/chaos status
+
+chaos-reset chaos-heal:
+	@scripts/chaos reset
+
+chaos-down:
+	@scripts/chaos down
+
+# Jaeger (docker-compose.tracing.yml) on the running profile, keeping the chaos
+# and monitoring overlays when they run. UI: http://127.0.0.1:16686
+tracing-up:
+	@scripts/tracing up $(PROFILE)
+
+tracing-down:
+	@scripts/tracing down $(PROFILE)

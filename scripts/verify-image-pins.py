@@ -18,6 +18,9 @@ COMPOSE_PROFILES = (
     ("lightweight-docker-compose.yml",),
     ("docker-compose.yml", "docker-compose.monitoring.yml"),
     ("lightweight-docker-compose.yml", "docker-compose.monitoring.yml"),
+    # Fault-injection lab (Toxiproxy) and tracing (Jaeger) overlays.
+    ("docker-compose.yml", "docker-compose.chaos.yml", "docker-compose.tracing.yml"),
+    ("lightweight-docker-compose.yml", "docker-compose.chaos.yml", "docker-compose.tracing.yml"),
     ("docker-compose.server.yml",),
 )
 # Marker used in docker-compose.server.yml until payment-service is published.
