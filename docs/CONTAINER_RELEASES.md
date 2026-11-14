@@ -189,6 +189,20 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.21.1, warehouse-service 1.5.1, payment-service 1.3.1, notification-service 1.0.1 — 14 November 2026
+
+Published by `scripts/release-train.py`. TODO: what changes, LocalStack
+changes, upgrade order and rollback.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73` | [PR #110](https://github.com/slawekradzyminski/test-secure-backend/pull/110), `6e49088` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43630031469) |
+| `slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e` | [PR #12](https://github.com/slawekradzyminski/warehouse-service/pull/12), `65c1f71` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43630033303) |
+| `slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8` | [PR #8](https://github.com/slawekradzyminski/payment-service/pull/8), `fd5cd1f` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43630035458) |
+| `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` | [PR #3](https://github.com/slawekradzyminski/notification-service/pull/3), `4fe4cb6` | [run](https://github.com/slawekradzyminski/notification-service/actions/runs/43630037686) |
+| `slawekradzyminski/frontend:3.14.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.20.1 — 13 November 2026
 
 Restores the public traffic endpoints on awesome.byst.re for the AI Testers API course (owner's decision: this is a
@@ -996,17 +1010,17 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.20.1, released 13 November 2026:
+Release train: backend 3.21.1, warehouse-service 1.5.1, payment-service 1.3.1, notification-service 1.0.1, released 14 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.20.1@sha256:a47d14898c727aa64374efeb405ac1aea95fe0d047cfbf3b160ea89f46a4de52` |
+| Backend | `slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73` |
 | Frontend | `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
-| Payment service | `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` |
-| Notification service | `slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST` (not published yet; see [Distributed lab release](#distributed-lab-release-pending)) |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e` |
+| Payment service | `slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8` |
+| Notification service | `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` (not published yet; see [Distributed lab release](#distributed-lab-release-pending)) |
 
 ## Backend 3.9.1 traffic preview patch
 
