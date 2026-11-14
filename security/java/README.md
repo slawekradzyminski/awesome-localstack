@@ -31,7 +31,8 @@ base JVM before running its plugin installer.
 
 `blocked.certs` is the identical build-time artifact for standalone Dockerfiles;
 the versioned copy is the immutable Compose source. The backend, consumer,
-warehouse-service and payment-service run as GraalVM native images: their builder stage installs
+warehouse-service, payment-service and notification-service run as GraalVM native images: their
+builder stage installs
 this artifact before compilation and the runtime image has no JDK, so they need
 no mount (`scripts/verify-java-security.py` rejects one). The remaining JVMs in
 Compose (ActiveMQ, the Ollama mock and the optional Jenkins) keep the

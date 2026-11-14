@@ -78,7 +78,8 @@ def phase_b_compose(server: dict) -> None:
     services = server["services"]
     for service in ("backend", "aitesters-backend", "gateway", "edge", "activemq", "frontend",
                     "aitesters-frontend", "warehouse-service", "aitesters-warehouse-service",
-                    "payment-service", "aitesters-payment-service", "postgres", "aitesters-postgres", "docs"):
+                    "payment-service", "aitesters-payment-service", "notification-service",
+                    "aitesters-notification-service", "postgres", "aitesters-postgres", "docs"):
         test = (services[service].get("healthcheck") or {}).get("test") or []
         require(len(test) > 1 and not services[service]["healthcheck"].get("disable"),
                 f"{service} must have a Docker healthcheck")
@@ -89,6 +90,8 @@ def phase_b_compose(server: dict) -> None:
                                           ("gateway", "backend", "service_healthy"),
                                           ("warehouse-service", "backend", "service_healthy"),
                                           ("payment-service", "backend", "service_healthy"),
+                                          ("notification-service", "backend", "service_healthy"),
+                                          ("notification-service", "activemq", "service_healthy"),
                                           ("gateway", "aitesters-backend", "service_started"),
                                           ("backend", "activemq", "service_started")):
         require(condition(services, service, dependency) == expected,
@@ -186,7 +189,7 @@ def local_overlay() -> None:
         services = compose(base, "docker-compose.monitoring.yml")["services"]
         for name in monitoring:
             require(name in services and services[name].get("image"), f"{base} + overlay must run {name}")
-        for name in ("backend", "warehouse-service", "payment-service"):
+        for name in ("backend", "warehouse-service", "payment-service", "notification-service"):
             exposure = services[name].get("environment", {}).get("MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE", "")
             require("prometheus" in exposure.split(","), f"{base} + overlay must expose {name} metrics")
         mounts = [volume.get("target") for volume in services["grafana"].get("volumes", [])]

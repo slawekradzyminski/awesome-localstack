@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Gives one service its own PostgreSQL role, limited to a schema of the same
 # backend database (warehouse-service: role and schema `warehouse`;
-# payment-service: role and schema `payment`). Idempotent: it runs before every
+# payment-service: role and schema `payment`; notification-service: role and
+# schema `notification`). Idempotent: it runs before every
 # service start, on fresh and on existing databases (where it takes over the
 # schema and the tables an earlier deployment created as the superuser). The
 # backend's tables in `public` stay owned by the superuser without grants, so

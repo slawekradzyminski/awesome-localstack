@@ -78,6 +78,9 @@ REPOS = (
     Repo("warehouse-service", "warehouse-service", "warehouse-service", "pom.xml", "ci.yml",
          "Warehouse service"),
     Repo("payment-service", "payment-service", "payment-service", "pom.xml", "ci.yml", "Payment service"),
+    # First release pending: the Compose files carry a placeholder (pending_pin) until `pin`.
+    Repo("notification-service", "notification-service", "notification-service", "pom.xml", "ci.yml",
+         "Notification service"),
     Repo("frontend", "vite-react-frontend", "frontend", "package.json", "ci.yml", "Frontend"),
     Repo("consumer", "jms-email-consumer", "consumer", "pom.xml", "ci.yml", "Consumer", optional=True),
 )
@@ -129,6 +132,27 @@ def current_pin(compose_text: str, image: str) -> tuple[str, str] | None:
     return pins.pop() if pins else None
 
 
+def pending_pattern(image: str) -> re.Pattern:
+    """An image's first release before it is published: `@sha256:PENDING_<SERVICE>_DIGEST`
+    on the server profile, the bare tag in the local profiles and the docs."""
+    return re.compile(re.escape(f"{OWNER}/{image}:") + r"(?P<version>[0-9][^@\s\"'}`]*?)"
+                      r"(?:@sha256:PENDING_[A-Z0-9_]+_DIGEST)?(?=[\s\"'}`|]|$)")
+
+
+def pending_pin(compose_text: str, image: str) -> str | None:
+    """Version of the image's PENDING placeholder, when the image has no real pin yet."""
+    versions = {m["version"] for m in pending_pattern(image).finditer(compose_text)
+                if "@sha256:PENDING_" in m.group(0)}
+    if len(versions) > 1:
+        raise ValueError(f"{image} has several pending placeholders: {sorted(versions)}")
+    return versions.pop() if versions else None
+
+
+def replace_pending(text: str, image: str, new: tuple[str, str]) -> tuple[str, int]:
+    """First pin: every placeholder or bare-tag reference becomes the published tag@sha256."""
+    return pending_pattern(image).subn(pin_ref(image, *new), text)
+
+
 def pin_ref(image: str, version: str, digest: str) -> str:
     return f"{OWNER}/{image}:{version}@{digest}"
 
@@ -144,11 +168,19 @@ def section_bounds(doc: str, heading: str) -> tuple[int, int]:
     return start, following.start() if following else len(doc)
 
 
-def update_compat_set(doc: str, image: str, old: tuple[str, str], new: tuple[str, str],
+def update_compat_set(doc: str, image: str, old: tuple[str, str | None], new: tuple[str, str],
                       title: str | None = None) -> str:
     """Rewrite the image's row in "Current compatibility set" only (and its intro line)."""
     start, end = section_bounds(doc, COMPAT_HEADING)
     section = doc[start:end]
+    if old[1] is None:
+        # First release: the row carries the PENDING placeholder.
+        section, count = replace_pending(section, image, new)
+        if not count:
+            raise ValueError(f"{RELEASES_DOC}: current compatibility set has no pending {image} row")
+        if title:
+            section = re.sub(r"(?m)^(?!\|)(.+), released [^\n]+:$", f"{title}:", section, count=1)
+        return doc[:start] + section + doc[end:]
     if pin_ref(image, *old) not in section:
         raise ValueError(f"{RELEASES_DOC}: current compatibility set does not list {pin_ref(image, *old)}")
     section = section.replace(pin_ref(image, *old), pin_ref(image, *new))
@@ -278,6 +310,7 @@ class RepoState:
     version: str
     tags: list[str]
     pinned: tuple[str, str] | None
+    pending: str | None = None
     action: str = field(init=False)
 
     def __post_init__(self):
@@ -292,6 +325,8 @@ class RepoState:
 COMPOSE_OVERLAYS = {
     "docker-compose.model-mock.yml": ("docker-compose.yml",),
     "docker-compose.monitoring.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),
+    "docker-compose.chaos.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),
+    "docker-compose.tracing.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),
 }
 
 
@@ -325,7 +360,9 @@ def gather(shell: Shell, args) -> list[RepoState]:
         text = base64.b64decode(content["content"]).decode()
         version = pom_version(text) if repo.version_file == "pom.xml" else package_version(text)
         tags = [t["name"] for t in shell.gh_json(f"repos/{slug}/tags?per_page=100")]
-        states.append(RepoState(repo, branch, head, version, tags, current_pin(compose, repo.image)))
+        pinned = current_pin(compose, repo.image)
+        pending = None if pinned else pending_pin(compose, repo.image)
+        states.append(RepoState(repo, branch, head, version, tags, pinned, pending))
     return states
 
 
@@ -333,7 +370,8 @@ def print_plan(states: list[RepoState]) -> None:
     rows = [("repository", "image", "default branch", "version", "latest tag", "pinned", "action")]
     for s in states:
         rows.append((s.repo.name, s.repo.image, f"{s.branch}@{s.head[:7]}", s.version,
-                     latest_tag(s.tags) or "-", s.pinned[0] if s.pinned else "-", s.action))
+                     latest_tag(s.tags) or "-",
+                     s.pinned[0] if s.pinned else (f"pending {s.pending}" if s.pending else "-"), s.action))
     widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
     for index, row in enumerate(rows):
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
@@ -473,6 +511,8 @@ def cmd_pin(shell, args):
         for item, s in zip(released, states):
             if s.pinned:
                 text, _ = replace_pin(text, item.repo.image, s.pinned, (item.version, item.digest))
+            elif s.pending:
+                text, _ = replace_pending(text, item.repo.image, (item.version, item.digest))
         if text != original:
             shell.write(path, text)
     doc_path = ROOT / RELEASES_DOC
@@ -482,6 +522,8 @@ def cmd_pin(shell, args):
     for item, s in zip(released, states):
         if s.pinned:
             doc = update_compat_set(doc, item.repo.image, s.pinned, (item.version, item.digest), title)
+        elif s.pending:
+            doc = update_compat_set(doc, item.repo.image, (s.pending, None), (item.version, item.digest), title)
     released_images = {item.repo.image for item in released}
     compose = (ROOT / SERVER_COMPOSE).read_text()
     unchanged = {}

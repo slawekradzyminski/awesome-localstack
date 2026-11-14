@@ -84,6 +84,16 @@ groups:
           description: cAdvisor has not reported the payment-service container for at least 15 minutes.
 
       - alert: CriticalContainerMissing
+        expr: absent(container_last_seen{name=~".*awesome-server-notification-service-1"})
+        for: 15m
+        labels:
+          severity: critical
+          service: notification-service
+        annotations:
+          summary: Critical notification-service container is missing
+          description: cAdvisor has not reported the notification-service container for at least 15 minutes.
+
+      - alert: CriticalContainerMissing
         expr: absent(container_last_seen{name=~".*awesome-server-gateway-1"})
         for: 15m
         labels:

@@ -111,14 +111,14 @@
         endsAt: "{{ deployment_silence_ends_at }}"
         createdBy: "{{ deployment_silence_created_by }}"
         comment: "{{ deployment_silence_comment }}"
-      # Backend, consumer, warehouse-service and payment-service restarts during convergence briefly fail their metrics scrape.
+      # Backend, consumer, warehouse-, payment- and notification-service restarts during convergence briefly fail their metrics scrape.
       - matchers:
           - name: alertname
             value: PrometheusTargetDown
             isRegex: false
             isEqual: true
           - name: job
-            value: spring_backend_micrometer|spring_consumer_micrometer|spring_warehouse_micrometer|spring_payment_micrometer
+            value: spring_backend_micrometer|spring_consumer_micrometer|spring_warehouse_micrometer|spring_payment_micrometer|spring_notification_micrometer
             isRegex: true
             isEqual: true
         startsAt: "{{ deployment_silence_starts_at }}"
@@ -180,7 +180,7 @@
 - name: Report deployment silence
   ansible.builtin.debug:
     msg: >-
-      Silenced PublicEndpointProbeFailed and backend/consumer/warehouse-service/payment-service
+      Silenced PublicEndpointProbeFailed and backend/consumer/warehouse-/payment-/notification-service
       PrometheusTargetDown warnings until {{ deployment_silence_ends_at }};
       critical alerts remain active.
   when: deployment_silence_available | bool

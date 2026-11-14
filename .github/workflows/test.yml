@@ -138,10 +138,11 @@ jobs:
         curl --fail --silent --show-error http://127.0.0.1:8081/login >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/docs/ | grep -F 'Awesome LocalStack Wiki' >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/v3/api-docs >/dev/null
-        # warehouse-service and payment-service through the gateway (up --wait already
-        # required their healthchecks and the postgres-roles one-shot to pass).
+        # warehouse-, payment- and notification-service through the gateway (up --wait
+        # already required their healthchecks and the postgres-roles one-shot to pass).
         curl --fail --silent --show-error http://127.0.0.1:8081/warehouse/v3/api-docs >/dev/null
         curl --fail --silent --show-error http://127.0.0.1:8081/payment/v3/api-docs >/dev/null
+        curl --fail --silent --show-error http://127.0.0.1:8081/notification/v3/api-docs >/dev/null
         curl --fail --silent --show-error --request POST http://127.0.0.1:11434/api/generate \
           --header 'Content-Type: application/json' \
           --data '{"model":"qwen3.5:2b","prompt":"Provide a motivational quote","stream":false}' \

@@ -1,9 +1,0 @@
-# notification-service part of docker-compose.tracing.yml, kept apart because
-# Compose rejects overrides of a service the base profile does not define.
-# `make tracing-up` adds it by itself when the base profile has the service.
-services:
-  notification-service:
-    environment:
-      TRACING_ENABLED: "true"
-      TRACING_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
-      TRACING_SAMPLING_PROBABILITY: "1.0"

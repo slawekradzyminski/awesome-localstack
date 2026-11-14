@@ -20,10 +20,17 @@ PRODUCTION_SERVICES = (
     "ollama-mock",
     "warehouse-service",
     "payment-service",
+    "notification-service",
 )
-# docker-compose.server.yml carries this marker until payment-service 1.0.0 is
-# published. It must never pass verification.
-PENDING_DIGEST_MARKER = "PENDING_PAYMENT_SERVICE_DIGEST"
+# docker-compose.server.yml carries a `@sha256:PENDING_<SERVICE>_DIGEST` placeholder
+# for a first-party service whose first release is not published yet (the local
+# profiles carry its bare tag). It must never pass verification; the release
+# train replaces it with the published digest.
+PENDING_DIGEST = re.compile(r"@sha256:PENDING_[A-Z0-9_]+_DIGEST$")
+
+
+def is_pending(image: str) -> bool:
+    return bool(PENDING_DIGEST.search(image))
 SERVICE_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
 SERVICE_KEY = re.compile(r"^    ([A-Za-z0-9_-]+):\s*$")
 ENV_FILE_PATH = re.compile(r"^      - path: (\S+)\s*$")
@@ -138,15 +145,15 @@ def main() -> int:
                                 ("docker-compose.yml", full),
                                 ("lightweight-docker-compose.yml", lightweight))
         for service, image in images.items()
-        if PENDING_DIGEST_MARKER in image
+        if is_pending(image)
     )
     require(
         not pending,
-        f"PLACEHOLDER DIGEST: {', '.join(pending)} still use "
-        f"@sha256:{PENDING_DIGEST_MARKER}. Publish payment-service, then replace the "
-        "placeholder with its Docker Hub manifest digest in docker-compose.server.yml "
-        "(payment-service and aitesters-payment-service) and pin the same tag@sha256 in "
-        "docker-compose.yml and lightweight-docker-compose.yml",
+        f"PLACEHOLDER DIGEST: {', '.join(pending)} still use a @sha256:PENDING_*_DIGEST "
+        "placeholder. Publish the service, then replace the placeholder with its Docker Hub "
+        "manifest digest in docker-compose.server.yml (the service and its aitesters- twin) and "
+        "pin the same tag@sha256 in docker-compose.yml and lightweight-docker-compose.yml "
+        "(scripts/release-train.py pin does all three)",
         failures,
     )
 
@@ -154,7 +161,7 @@ def main() -> int:
     for service in PRODUCTION_SERVICES:
         image = server.get(service, "")
         require(bool(image), f"server profile is missing {service}", failures)
-        if PENDING_DIGEST_MARKER not in image:
+        if not is_pending(image):
             # A placeholder is reported once above instead of as a malformed pin.
             require(
                 bool(PINNED_IMAGE.fullmatch(image)),
@@ -165,18 +172,20 @@ def main() -> int:
 
     def same_release(profile: dict[str, str], service: str) -> bool:
         image = profile.get(service, "")
-        if PENDING_DIGEST_MARKER in release_images[service]:
+        if is_pending(release_images[service]):
             # Until the digest exists the other profiles must at least run the same tag.
             return image.split("@", 1)[0] == release_images[service].split("@", 1)[0]
         return image == release_images[service]
 
-    for service in ("backend", "frontend", "consumer", "warehouse-service", "payment-service"):
+    for service in ("backend", "frontend", "consumer", "warehouse-service", "payment-service",
+                    "notification-service"):
         require(
             same_release(full, service),
             f"full and server profiles must use the same {service} release",
             failures,
         )
-    for service in ("backend", "frontend", "ollama-mock", "warehouse-service", "payment-service"):
+    for service in ("backend", "frontend", "ollama-mock", "warehouse-service", "payment-service",
+                    "notification-service"):
         require(
             same_release(lightweight, service),
             f"lightweight and server profiles must use the same {service} release",
@@ -200,6 +209,11 @@ def main() -> int:
     require(
         server.get("aitesters-payment-service") == release_images["payment-service"],
         "the aitesters payment-service must reuse the current payment-service release",
+        failures,
+    )
+    require(
+        server.get("aitesters-notification-service") == release_images["notification-service"],
+        "the aitesters notification-service must reuse the current notification-service release",
         failures,
     )
     require(
@@ -337,6 +351,79 @@ def main() -> int:
             failures,
         )
 
+    notification_secrets = {"JWT_SECRET_KEY", "JWT_SIGNING_KEY", "NOTIFICATION_SERVICE_TOKEN",
+                            "SPRING_DATASOURCE_PASSWORD", "SPRING_ARTEMIS_PASSWORD",
+                            "WEBHOOKS_SECRET_ENCRYPTION_PASSWORD", "WEBHOOKS_SECRET_ENCRYPTION_SALT",
+                            "LOCAL_EMAIL_OUTBOX_ACCESS_KEY"}
+    for notification, env_file, other_env_file in (
+            ("notification-service", ".env.notification", ".env.aitesters-notification"),
+            ("aitesters-notification-service", ".env.aitesters-notification", ".env.notification")):
+        notification_env_files = declared_env_files(notification)
+        require(
+            notification_env_files == [env_file]
+            and not notification_secrets & set(server_services[notification].get("environment", {})),
+            f"{notification} must read its token, database password and keys only from "
+            f"{env_file} (files: {notification_env_files})",
+            failures,
+        )
+        require(
+            other_env_file not in notification_env_files,
+            f"{notification} must not read the other site's {other_env_file}",
+            failures,
+        )
+    for notification, roles, backend, database, transport in (
+            ("notification-service", "postgres-roles", "backend", "jdbc:postgresql://postgres:5432/testdb?",
+             "jms"),
+            ("aitesters-notification-service", "aitesters-postgres-roles", "aitesters-backend",
+             "jdbc:postgresql://aitesters-postgres:5432/aitesters?", "local-outbox")):
+        service = server_services[notification]
+        environment = service.get("environment", {})
+        require(
+            environment.get("SPRING_DATASOURCE_USERNAME") == "notification"
+            and str(environment.get("SPRING_DATASOURCE_URL", "")).startswith(database)
+            and "currentSchema=notification" in str(environment.get("SPRING_DATASOURCE_URL", ""))
+            and service.get("depends_on", {}).get(roles, {}).get("condition")
+            == "service_completed_successfully"
+            and service.get("depends_on", {}).get(backend, {}).get("condition") == "service_healthy",
+            f"{notification} must use the dedicated notification database role and schema prepared by "
+            f"{roles} and start after a healthy {backend}",
+            failures,
+        )
+        require(
+            environment.get("BACKEND_BASE_URL") == f"http://{backend}:4001",
+            f"{notification} must call its own site's {backend}, never the other site",
+            failures,
+        )
+        require(
+            environment.get("NOTIFICATION_EMAIL_TRANSPORT") == transport,
+            f"{notification} must deliver commerce emails with the {transport} transport, like {backend}",
+            failures,
+        )
+        require(
+            service.get("command") == ["-Xmx64m"] and str(service.get("mem_limit")) in {"167772160", "160m"},
+            f"{notification} must run the native image with -Xmx64m in 160m",
+            failures,
+        )
+    # Every profile that runs notification-service hands it the commerce emails and
+    # user webhooks (backend 3.21.0): the backend records feed events instead.
+    for profile_name, services, pairs in (
+            ("docker-compose.server.yml", server_services,
+             (("backend", "notification-service"), ("aitesters-backend", "aitesters-notification-service"))),
+            ("docker-compose.yml", compose_services("docker-compose.yml"),
+             (("backend", "notification-service"),)),
+            ("lightweight-docker-compose.yml", compose_services("lightweight-docker-compose.yml"),
+             (("backend", "notification-service"),))):
+        for backend, notification in pairs:
+            environment = services.get(backend, {}).get("environment", {})
+            require(
+                notification in services
+                and environment.get("NOTIFICATIONS_DELIVERY") == "feed"
+                and str(environment.get("WEBHOOKS_ENABLED")).lower() == "false",
+                f"{profile_name} {backend} must set NOTIFICATIONS_DELIVERY=feed and WEBHOOKS_ENABLED=false "
+                f"next to {notification}",
+                failures,
+            )
+
     sandbox_environment = server_services["aitesters-backend"].get("environment", {})
     sandbox_warehouse_environment = server_services["aitesters-warehouse-service"].get("environment", {})
     require(
@@ -386,6 +473,14 @@ def main() -> int:
         f"each gateway host must route payment paths to its own payment-service: {payment_upstreams}",
         failures,
     )
+    notification_upstreams = gateway_upstreams(gateway_config, "notification")
+    require(
+        notification_upstreams.get("awesome.byst.re") == "http://notification-service:4005"
+        and notification_upstreams.get("aitesters.byst.re") == "http://aitesters-notification-service:4005",
+        f"each gateway host must route notification paths to its own notification-service: "
+        f"{notification_upstreams}",
+        failures,
+    )
     for config in (gateway_config, ROOT / "nginx" / "conf.d" / "lightweight-app-gateway.conf"):
         text = config.read_text()
         blocks = len(re.findall(r"^server \{", text, flags=re.MULTILINE))
@@ -393,8 +488,13 @@ def main() -> int:
                          "location = /api/v1/admin/payments {",
                          "location ~ ^/api/v1/orders/\\d+/payments$ {",
                          "location ^~ /payment/v3/api-docs {",
-                         "location ~ ^/api/v1/orders/\\d+/(shipment|shipment/tracking|returns)$ {",
-                         "location /api/v1/tracking/ {", "location /internal/ {"):
+                         "location ~ ^/api/v1/orders/\\d+/(shipment|shipments|shipment/tracking|returns)$ {",
+                         "location /api/v1/tracking/ {", "location /internal/ {",
+                         "location = /api/v1/webhooks {", "location /api/v1/webhooks/ {",
+                         "location = /api/v1/webhook-inboxes {", "location /api/v1/webhook-inboxes/ {",
+                         "location = /api/v1/admin/webhooks {", "location /api/v1/notifications/ {",
+                         "location /api/v1/local/notifications/ {",
+                         "location ^~ /notification/v3/api-docs {"):
             require(
                 text.count(location) == blocks,
                 f"{config.name} must declare `{location}` in each of its {blocks} server blocks",
@@ -458,7 +558,7 @@ def main() -> int:
 
     runbook = (ROOT / "docs" / "CONTAINER_RELEASES.md").read_text()
     for service, image in release_images.items():
-        if PENDING_DIGEST_MARKER in image:
+        if is_pending(image):
             continue  # already reported; the runbook records the digest once it exists
         require(
             image in runbook,

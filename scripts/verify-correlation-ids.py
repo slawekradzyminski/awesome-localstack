@@ -11,7 +11,7 @@ Static checks (default, no Docker):
 
 --routing additionally starts the pinned nginx image with stub upstreams and
 proves that ids are generated, preserved when valid, replaced when invalid,
-passed to every kind of upstream (backend, warehouse, payment, docs, frontend,
+passed to every kind of upstream (backend, warehouse, payment, notification, docs, frontend,
 the aitesters server block, and edge -> gateway), echoed once to the client,
 and written to the JSON access log.
 """
@@ -43,6 +43,8 @@ ECS_SERVICES = (
     "aitesters-warehouse-service",
     "payment-service",
     "aitesters-payment-service",
+    "notification-service",
+    "aitesters-notification-service",
 )
 LOG_FIELDS = (
     "request_id",
@@ -155,6 +157,7 @@ server {{
   listen 4001;
   listen 4003;
   listen 4004;
+  listen 4005;
   location / {{
     default_type text/plain;
     # Like a Spring service that already echoes its own X-Request-Id.
@@ -229,9 +232,10 @@ def routing_test() -> list[str]:
     try:
         docker("network", "create", network)
         for stub, aliases in {
-            "main": ["backend", "frontend", "warehouse-service", "payment-service", "docs"],
-            "sandbox": ["aitesters-backend", "aitesters-frontend",
-                        "aitesters-warehouse-service", "aitesters-payment-service"],
+            "main": ["backend", "frontend", "warehouse-service", "payment-service",
+                     "notification-service", "docs"],
+            "sandbox": ["aitesters-backend", "aitesters-frontend", "aitesters-warehouse-service",
+                        "aitesters-payment-service", "aitesters-notification-service"],
         }.items():
             path = tmpdir / f"stub-{stub}.conf"
             path.write_text(STUB_CONFIG.format(name=stub))
@@ -256,18 +260,36 @@ def routing_test() -> list[str]:
             (app, awesome, "/api/v1/payments", "main:4004"),
             (app, awesome, "/api/v1/orders/7/payments", "main:4004"),
             (app, awesome, "/payment/v3/api-docs", "main:4004"),
+            (app, awesome, "/api/v1/orders/7/shipments", "main:4003"),
+            (app, awesome, "/api/v1/webhooks", "main:4005"),
+            (app, awesome, "/api/v1/webhooks/3/deliveries", "main:4005"),
+            (app, awesome, "/api/v1/webhook-inboxes/tok/requests", "main:4005"),
+            (app, awesome, "/api/v1/admin/webhooks", "main:4005"),
+            (app, awesome, "/api/v1/notifications/emails", "main:4005"),
+            (app, awesome, "/api/v1/local/notifications/outbox", "main:4005"),
+            (app, awesome, "/notification/v3/api-docs", "main:4005"),
+            (app, awesome, "/api/v1/local/email/outbox", "main:4001"),
             (app, awesome, "/docs/", "main:80"),
             (app, awesome, "/login", "main:80"),
             (app, sandbox, "/api/v1/products", "sandbox:4001"),
             (app, sandbox, "/api/v1/warehouse/shipments", "sandbox:4003"),
             (app, sandbox, "/api/v1/payments", "sandbox:4004"),
+            (app, sandbox, "/api/v1/webhook-inboxes", "sandbox:4005"),
+            (app, sandbox, "/api/v1/local/notifications/outbox", "sandbox:4005"),
+            (app, sandbox, "/api/v1/orders/7/shipments", "sandbox:4003"),
             (app, sandbox, "/login", "sandbox:80"),
             (light, {}, "/api/v1/products", "main:4001"),
             (light, {}, "/api/v1/tracking/X1", "main:4003"),
             (light, {}, "/api/v1/admin/payments", "main:4004"),
+            (light, {}, "/api/v1/orders/7/shipments", "main:4003"),
+            (light, {}, "/api/v1/webhooks/1", "main:4005"),
+            (light, {}, "/api/v1/notifications/emails?page=0", "main:4005"),
+            (light, {}, "/notification/v3/api-docs", "main:4005"),
+            (light, {}, "/api/v1/users/me/email-events", "main:4001"),
             (light, {}, "/login", "main:80"),
             (edge, awesome, "/api/v1/products", "main:4001"),
             (edge, sandbox, "/api/v1/payments", "sandbox:4004"),
+            (edge, awesome, "/api/v1/webhooks", "main:4005"),
         ]
         valid_tp = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
         for port, host, path, upstream in routes:

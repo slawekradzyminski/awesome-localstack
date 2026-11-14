@@ -57,6 +57,23 @@ aitesters_payment_service_token: replace-with-a-different-random-value-of-at-lea
 # per site and from the service tokens.
 payment_webhook_secret: replace-with-at-least-32-random-bytes
 aitesters_payment_webhook_secret: replace-with-a-different-random-value-of-at-least-32-bytes
+# notification-service (one per site). Its X-Service-Token for the backend's
+# event feed, JWKS and webhook export: `openssl rand -hex 32`, distinct from every
+# other token and secret.
+notification_service_token: replace-with-at-least-32-random-bytes
+aitesters_notification_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
+# Passwords of the `notification` database roles (schema notification only),
+# distinct from every other database password.
+notification_postgres_password: replace-with-a-fifth-value-of-at-least-16-characters
+aitesters_notification_postgres_password: replace-with-a-sixth-value-of-at-least-16-characters
+# Key that encrypts the webhook signing secrets notification-service stores
+# (WEBHOOKS_SECRET_ENCRYPTION_PASSWORD / _SALT). Password: at least 32 random
+# characters; salt: at least 16 random bytes in hex (`openssl rand -hex 16`).
+# Changing them makes stored secrets unreadable, so keep them stable.
+notification_webhook_secret_encryption_password: replace-with-at-least-32-random-characters
+notification_webhook_secret_encryption_salt: replace-with-at-least-16-random-bytes-in-hex
+aitesters_notification_webhook_secret_encryption_password: replace-with-a-different-value-of-at-least-32-characters
+aitesters_notification_webhook_secret_encryption_salt: replace-with-at-least-16-random-bytes-in-hex
 
 # Required when postgres_backup_enabled is true. Keep a separate offline copy:
 # losing this passphrase makes encrypted backups unrecoverable.

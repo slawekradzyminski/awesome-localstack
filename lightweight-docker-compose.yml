@@ -17,8 +17,8 @@ services:
       PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      # warehouse-service and payment-service verify access tokens with the backend
-      # JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
+      # warehouse-, payment- and notification-service verify access tokens with the
+      # backend JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
@@ -27,6 +27,13 @@ services:
       # result notifications with the webhook secret. The backend never calls it.
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+      # notification-service (backend 3.21.0+) reads the event feed and the one-time
+      # webhook export with its own token, sends the commerce emails and owns user
+      # webhooks: the backend records notification.requested feed events instead of
+      # sending those emails and runs no webhook dispatcher of its own.
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATIONS_DELIVERY: feed
+      WEBHOOKS_ENABLED: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,10 +131,54 @@ services:
     networks:
       - my-private-ntwk
 
+  notification-service:
+    # TODO(release train): notification-service 1.0.0 is not published yet. Pin the
+    # published tag@sha256 here, in docker-compose.yml and (replacing the
+    # PENDING_NOTIFICATION_SERVICE_DIGEST placeholder) in docker-compose.server.yml.
+    image: slawekradzyminski/notification-service:1.0.0
+    restart: always
+    expose:
+      - "4005"
+    hostname: notification-service
+    environment:
+      # Shares the backend database (schema notification). No broker in this
+      # profile: commerce emails stay in memory, readable through
+      # GET /api/v1/local/notifications/outbox like the backend's local outbox.
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=notification
+      SPRING_DATASOURCE_USERNAME: notification
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      BACKEND_BASE_URL: http://backend:4001
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATION_EMAIL_TRANSPORT: local-outbox
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
+    mem_limit: 160m
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4005;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks:
+      - my-private-ntwk
+
   postgres-roles:
-    # One-shot: gives warehouse-service and payment-service their own roles, each
-    # limited to its own schema (postgres/service-roles.sh). Runs before every
-    # warehouse-service and payment-service start.
+    # One-shot: gives warehouse-service, payment-service and notification-service
+    # their own roles, each limited to its own schema (postgres/service-roles.sh).
+    # Runs before every warehouse-, payment- and notification-service start.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
@@ -138,6 +189,7 @@ services:
       PGPASSWORD: postgres
       WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-db-password}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:
@@ -149,7 +201,8 @@ services:
 
   postgres:
     # Disposable tmpfs Postgres for the backend (testdb), warehouse-service (schema
-    # warehouse) and payment-service (schema payment).
+    # warehouse), payment-service (schema payment) and notification-service (schema
+    # notification).
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: always
     environment:

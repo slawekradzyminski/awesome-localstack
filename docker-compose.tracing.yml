@@ -10,10 +10,9 @@
 # Jaeger UI: http://127.0.0.1:${JAEGER_UI_PORT:-16686} (loopback only). OTLP HTTP
 # (4318) is reachable inside the Compose network only.
 #
-# The images export spans only from backend 3.21.0, warehouse-service 1.5.0 and
-# payment-service 1.3.0 (and notification-service 1.0.0); older images ignore
+# The images export spans only from backend 3.21.0, warehouse-service 1.5.0,
+# payment-service 1.3.0 and notification-service 1.0.0; older images ignore
 # the TRACING_* variables, so Jaeger then shows only its own service.
-# notification-service's variables live in docker-compose.tracing-notification.yml.
 # Docs: docs-site/docs/operations/tracing.md (Jaeger section).
 services:
   jaeger:
@@ -45,4 +44,7 @@ services:
     environment: *tracing
 
   payment-service:
+    environment: *tracing
+
+  notification-service:
     environment: *tracing

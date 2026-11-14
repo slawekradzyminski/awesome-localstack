@@ -74,9 +74,14 @@ api GET "/api/v1/currencies/convert?amount=100&from=USD&to=EUR" "$T"
 order_for "$T" Poland
 check "order to Poland carries taxRate 23" "$(echo "$ORDER" | jq -r ".taxRate == 23")" true
 check "order status is still PENDING (l20 contract)" "$(echo "$ORDER" | jq -r .status)" PENDING
+# Stock reservation with a time limit (backend 3.21.0): the hold expires.
+[ "$(echo "$ORDER" | jq -r '.reservationExpiresAt // empty')" ] \
+  && ok "order carries reservationExpiresAt ($(echo "$ORDER" | jq -r .reservationExpiresAt))" \
+  || bad "reservationExpiresAt" "$ORDER"
 OID=$(echo "$ORDER" | jq -r .id); TOTAL=$(echo "$ORDER" | jq -r .totalAmount)
 
-section "Webhooks (inbox + signature + SSRF)"
+section "Webhooks (inbox + signature + SSRF), served by notification-service"
+code=$(curl -s -o /dev/null -w '%{http_code}' "$B/notification/v3/api-docs"); check "notification-service OpenAPI through the gateway" "$code" 200
 api POST /api/v1/webhook-inboxes "$T" ""; INBOX=$(echo "$BODY" | jq -r .token); INBOX_URL=$(echo "$BODY" | jq -r .url)
 check "inbox created" "$CODE" 201
 api POST /api/v1/webhooks "$T" "{\"url\":\"$INBOX_URL\",\"events\":[\"order.paid\",\"order.cancelled\",\"refund.booked\"],\"description\":\"curl check\"}"
@@ -103,6 +108,12 @@ check "async card -> PROCESSING" "$(echo "$BODY" | jq -r .status)" PROCESSING; P
 api POST /api/v1/payments "$T" "{\"orderId\":$O2,\"card\":{\"number\":\"4000000000000077\",\"expiryMonth\":12,\"expiryYear\":2031,\"cvc\":\"123\",\"holderName\":\"Feat Tester\"}}" -H "Idempotency-Key: $KEY"
 check "same Idempotency-Key replays the payment" "$(echo "$BODY" | jq -r .id) $(grep -i '^idempotent-replayed' "$HDRS" | tr -d '\r' | awk '{print $2}')" "$P2 true"
 check "async payment settles to CAPTURED" "$(wait_for 40 "api GET /api/v1/payments/$P2 $T; echo \$BODY | jq -r .status" CAPTURED)" CAPTURED
+
+section "Commerce emails (notification-service, from notification.requested feed events)"
+check "PAYMENT_RECEIVED recorded for the customer" \
+  "$(wait_for 30 "api GET '/api/v1/notifications/emails?size=20' $T; echo \$BODY | jq -r '[.content[].template] | index(\"PAYMENT_RECEIVED\") != null'" true)" true
+api GET "/api/v1/notifications/emails" "$T2"; check "another customer sees no emails of this one" "$(echo "$BODY" | jq -r '[.content[].template] | index("PAYMENT_RECEIVED") == null')" true
+api GET "/api/v1/notifications/emails" ""; check "email log needs a token" "$CODE" 401
 
 section "Event feed: cancel a card-paid order -> card refunded"
 api POST "/api/v1/orders/$OID/cancel" "$T" ""; check "cancel paid order" "$CODE" 200
@@ -134,11 +145,20 @@ if [ "$MODE" = full ]; then
   pay "$T" "$O3" 4242424242424242; check "card pays amountDue" "$(echo "$PAY" | jq -r '.status')" CAPTURED
   check "order PAID" "$(wait_for 15 "order_status $T $O3" PAID)" PAID
 
+  section "Reservations: admin expires a PENDING order's hold"
+  order_for "$T" Poland; O4=$(echo "$ORDER" | jq -r .id)
+  api POST "/api/v1/admin/orders/$O4/expire-reservation" "$A" ""; check "expire-reservation -> 200" "$CODE" 200
+  check "expired order is CANCELLED" "$(wait_for 15 "order_status $T $O4" CANCELLED)" CANCELLED
+  api POST "/api/v1/admin/orders/$O4/expire-reservation" "$A" ""; check "expiring a non-PENDING order -> 409" "$CODE" 409
+
   section "Warehouse: simulated carrier tracking"
   api POST /api/v1/warehouse/shipments "$W" "{\"orderId\":$O3}"; SID=$(echo "$BODY" | jq -r .id); check "shipment created" "$CODE" 201
   api POST "/api/v1/warehouse/shipments/$SID/pick" "$W" ""; api POST "/api/v1/warehouse/shipments/$SID/pack" "$W" '{"weightKg":1.2}'
   api POST "/api/v1/warehouse/shipments/$SID/ship" "$W" '{"carrier":"DHL"}'; TN=$(echo "$BODY" | jq -r .trackingNumber)
   check "ship without number -> simulated" "$CODE" 200
+  api GET "/api/v1/orders/$O3/shipments" "$T"; check "parcels list through the gateway (warehouse-service)" "$CODE" 200
+  [ "$(echo "$BODY" | jq -r '.[0].locationCode // empty')" ] && ok "parcel 1 of $(echo "$BODY" | jq -r '.[0].parcelCount') ships from $(echo "$BODY" | jq -r '.[0].locationCode')" \
+    || bad "parcel location" "$BODY"
   for _ in 1 2 3 4 5 6; do api POST "/api/v1/warehouse/shipments/$SID/carrier/advance" "$W" ""; done
   api GET "/api/v1/tracking/$TN" ""; check "public tracking shows DELIVERED" "$(echo "$BODY" | jq -r .currentStatus)" DELIVERED
   check "order DELIVERED in backend" "$(wait_for 15 "order_status $T $O3" DELIVERED)" DELIVERED

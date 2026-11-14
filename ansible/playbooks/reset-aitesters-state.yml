@@ -4,9 +4,9 @@
   gather_facts: false
 
   tasks:
-    - name: Recreate the aitesters database, its service roles, backend, warehouse-service and payment-service
+    - name: Recreate the aitesters database, its service roles, backend, warehouse-, payment- and notification-service
       ansible.builtin.command:
-        cmd: docker compose -f {{ app_compose_file }} up -d --force-recreate --renew-anon-volumes --no-deps aitesters-postgres aitesters-postgres-roles aitesters-backend aitesters-warehouse-service aitesters-payment-service
+        cmd: docker compose -f {{ app_compose_file }} up -d --force-recreate --renew-anon-volumes --no-deps aitesters-postgres aitesters-postgres-roles aitesters-backend aitesters-warehouse-service aitesters-payment-service aitesters-notification-service
         chdir: "{{ app_dir }}"
       changed_when: true
 

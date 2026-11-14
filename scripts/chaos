@@ -97,10 +97,6 @@ running_profile() {
   fi
 }
 
-has_service() {  # compose file service
-  (cd "$ROOT" && docker compose -f "$1" config --services 2>/dev/null | grep -qx "$2")
-}
-
 up() {
   require_docker
   local profile="" tracing=false monitoring=false arg
@@ -121,14 +117,8 @@ up() {
   running "$project" prometheus && monitoring=true
 
   local files=(-f "$base" -f docker-compose.chaos.yml)
-  local notification=false
-  has_service "$base" notification-service && notification=true
-  $notification && files+=(-f docker-compose.chaos-notification.yml)
   $monitoring && files+=(-f docker-compose.monitoring.yml)
-  if $tracing; then
-    files+=(-f docker-compose.tracing.yml)
-    $notification && files+=(-f docker-compose.tracing-notification.yml)
-  fi
+  $tracing && files+=(-f docker-compose.tracing.yml)
   local extra
   for extra in ${CHAOS_EXTRA_FILES:-}; do files+=(-f "$extra"); done
 

@@ -37,26 +37,17 @@ case "$profile" in
 esac
 project="$(project_of "$profile")"
 
-notification=false
-(cd "$ROOT" && docker compose -f "$base" config --services | grep -qx notification-service) && notification=true
-
 files=(-f "$base")
-if running "$project" toxiproxy; then
-  files+=(-f docker-compose.chaos.yml)
-  $notification && files+=(-f docker-compose.chaos-notification.yml)
-fi
+running "$project" toxiproxy && files+=(-f docker-compose.chaos.yml)
 running "$project" prometheus && files+=(-f docker-compose.monitoring.yml)
-if [ "$action" = up ]; then
-  files+=(-f docker-compose.tracing.yml)
-  $notification && files+=(-f docker-compose.tracing-notification.yml)
-fi
+[ "$action" = up ] && files+=(-f docker-compose.tracing.yml)
 for extra in ${CHAOS_EXTRA_FILES:-}; do files+=(-f "$extra"); done
 
 echo "docker compose ${files[*]} up -d"
 (cd "$ROOT" && docker compose "${files[@]}" up -d)
 if [ "$action" = up ]; then
   echo "Jaeger UI: http://127.0.0.1:${JAEGER_UI_PORT:-16686}"
-  echo "Spans are exported from backend 3.21.0, warehouse-service 1.5.0 and payment-service 1.3.0 on."
+  echo "Spans are exported from backend 3.21.0, warehouse-service 1.5.0, payment-service 1.3.0 and notification-service 1.0.0 on."
 else
   jaeger="$(docker ps -aq --filter "label=com.docker.compose.project=$project" --filter label=com.docker.compose.service=jaeger)"
   [ -z "$jaeger" ] || docker rm -f $jaeger >/dev/null

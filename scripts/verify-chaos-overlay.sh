@@ -2,8 +2,7 @@
 # Contract check of the fault-injection lab and the tracing overlay.
 #
 # 1. `docker compose config --quiet` for every overlay combination (full and
-#    lightweight with chaos, tracing and monitoring; the notification files
-#    against a stub notification-service).
+#    lightweight with chaos, tracing and monitoring).
 # 2. Starts lightweight + docker-compose.chaos.yml with the published images
 #    through scripts/chaos, in its own Compose project and on its own host
 #    ports, so it runs beside a developer's stack.
@@ -42,12 +41,6 @@ services:
   docs:
     profiles: ["verify-skip"]
 EOF
-cat > "$work/notification-stub.yml" <<'EOF'
-services:
-  notification-service:
-    image: busybox:1.37.0@sha256:00000000000000000000000000000000000000000000000000000000000000aa
-    networks: [my-private-ntwk]
-EOF
 export CHAOS_EXTRA_FILES="$work/verify-ports.yml"
 compose=(docker compose -f lightweight-docker-compose.yml -f docker-compose.chaos.yml -f "$work/verify-ports.yml")
 
@@ -62,7 +55,7 @@ cleanup() {
   result=$?
   if [[ $result -ne 0 || $FAIL -ne 0 ]]; then
     "${compose[@]}" ps --all || true
-    "${compose[@]}" logs --no-color --tail=60 toxiproxy warehouse-service payment-service || true
+    "${compose[@]}" logs --no-color --tail=60 toxiproxy warehouse-service payment-service notification-service || true
   fi
   if [[ "${KEEP_RUNNING:-false}" != "true" ]]; then
     docker compose -p "$COMPOSE_PROJECT_NAME" down --volumes --remove-orphans >/dev/null 2>&1 || true
@@ -115,22 +108,14 @@ pay() {  # token orderId card -> payment id in $PID, status in $PSTATUS
 order_status() { api GET "/api/v1/orders/$2" "$1"; echo "$BODY" | json 'd["status"]'; }
 
 section "Compose configurations"
-stub="$work/notification-stub.yml"
 for base in docker-compose.yml lightweight-docker-compose.yml; do
   for overlays in "chaos" "tracing" "chaos tracing" "chaos monitoring" "tracing monitoring" "chaos tracing monitoring"; do
     files=(-f "$base")
     for overlay in $overlays; do files+=(-f "docker-compose.$overlay.yml"); done
     if docker compose "${files[@]}" config --quiet; then ok "$base + $overlays"; else bad "$base + $overlays" "config failed"; fi
   done
-  if docker compose -f "$base" -f "$stub" -f docker-compose.chaos.yml -f docker-compose.chaos-notification.yml \
-      -f docker-compose.tracing.yml -f docker-compose.tracing-notification.yml config --quiet; then
-    ok "$base + notification-service + chaos/tracing notification files"
-  else
-    bad "$base + notification files" "config failed"
-  fi
 done
-url="$(docker compose -f lightweight-docker-compose.yml -f "$stub" -f docker-compose.chaos.yml \
-  -f docker-compose.chaos-notification.yml config --format json \
+url="$(docker compose -f lightweight-docker-compose.yml -f docker-compose.chaos.yml config --format json \
   | json 'd["services"]["notification-service"]["environment"]["BACKEND_BASE_URL"]')"
 check "notification-service goes through toxiproxy:34001" "$url" "http://toxiproxy:34001"
 
@@ -140,7 +125,7 @@ scripts/chaos up lightweight
 status="$(scripts/chaos status)"
 check "status lists the 7 proxies" "$(printf '%s\n' "$status" | grep -cE '^[a-z]+-to-(backend|postgres) ')" 7
 printf '%s\n' "$status" | grep -q 'No faults active' && ok "no faults after start" || bad "no faults after start" "$status"
-for svc in backend warehouse-service payment-service; do
+for svc in backend warehouse-service payment-service notification-service; do
   env="$(docker inspect "$("${compose[@]}" ps -q "$svc")" --format '{{range .Config.Env}}{{println .}}{{end}}')"
   printf '%s\n' "$env" | grep -qE '^(SPRING_DATASOURCE_URL=jdbc:postgresql://toxiproxy:|BACKEND_BASE_URL=http://toxiproxy:)' \
     && ok "$svc is wired through toxiproxy" || bad "$svc wiring" "$env"

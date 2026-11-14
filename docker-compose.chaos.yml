@@ -15,10 +15,6 @@
 #   notification ───── toxiproxy:34001 ──┘            payment ─── toxiproxy:35432 ┤
 #                                                     notification ─ toxiproxy:45432 ┘
 #
-# notification-service is not part of the base profiles yet. Its proxies
-# exist already; its two overrides live in docker-compose.chaos-notification.yml,
-# which scripts/chaos adds by itself once the base profile runs the service.
-#
 # The Toxiproxy API is published on 127.0.0.1 only (TOXIPROXY_PORT, default
 # 8474). Docs: docs/FAULT_INJECTION_LAB.md.
 services:
@@ -67,6 +63,14 @@ services:
       # Simulated provider delay for PROCESSING cards (4000 0000 0000 0077);
       # lengthen it for the "payment settles after the reservation expired" exercise.
       PAYMENT_SETTLEMENT_DELAY: ${PAYMENT_SETTLEMENT_DELAY:-PT10S}
+    depends_on:
+      toxiproxy:
+        condition: service_healthy
+
+  notification-service:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:45432/testdb?currentSchema=notification
+      BACKEND_BASE_URL: http://toxiproxy:34001
     depends_on:
       toxiproxy:
         condition: service_healthy

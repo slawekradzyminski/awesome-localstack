@@ -23,8 +23,8 @@ services:
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
       OLLAMA_BASE_URL: http://ollama-dmr-adapter:11434
       OLLAMA_MAX_TOOL_CALL_ITERATIONS: ${OLLAMA_MAX_TOOL_CALL_ITERATIONS:-8}
-      # warehouse-service and payment-service verify access tokens with the backend
-      # JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
+      # warehouse-, payment- and notification-service verify access tokens with the
+      # backend JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
@@ -33,6 +33,13 @@ services:
       # result notifications with the webhook secret. The backend never calls it.
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+      # notification-service (backend 3.21.0+) reads the event feed and the one-time
+      # webhook export with its own token, sends the commerce emails and owns user
+      # webhooks: the backend records notification.requested feed events instead of
+      # sending those emails and runs no webhook dispatcher of its own.
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATIONS_DELIVERY: feed
+      WEBHOOKS_ENABLED: "false"
     models:
       local_llm:
         endpoint_var: DMR_MODEL_ENDPOINT
@@ -122,6 +129,52 @@ services:
     networks:
       - my-private-ntwk
 
+  notification-service:
+    # TODO(release train): notification-service 1.0.0 is not published yet. Pin the
+    # published tag@sha256 here, in lightweight-docker-compose.yml and (replacing the
+    # PENDING_NOTIFICATION_SERVICE_DIGEST placeholder) in docker-compose.server.yml.
+    image: slawekradzyminski/notification-service:1.0.0
+    restart: always
+    expose:
+      - "4005"
+    hostname: notification-service
+    environment:
+      # Shares the backend database (schema notification). Commerce emails go to
+      # the `email` queue like the backend's, so consumer delivers them to Mailpit.
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=notification
+      SPRING_DATASOURCE_USERNAME: notification
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+      BACKEND_BASE_URL: http://backend:4001
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATION_EMAIL_TRANSPORT: jms
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+    depends_on:
+      activemq:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4005;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks:
+      - my-private-ntwk
+
   ollama-dmr-adapter:
     image: awesome-localstack/ollama-dmr-adapter:local
     build:
@@ -197,9 +250,9 @@ services:
       - my-private-ntwk
 
   postgres-roles:
-    # One-shot: gives warehouse-service and payment-service their own roles, each
-    # limited to its own schema (postgres/service-roles.sh). Runs before every
-    # warehouse-service and payment-service start.
+    # One-shot: gives warehouse-service, payment-service and notification-service
+    # their own roles, each limited to its own schema (postgres/service-roles.sh).
+    # Runs before every warehouse-, payment- and notification-service start.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
@@ -210,6 +263,7 @@ services:
       PGPASSWORD: postgres
       WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-db-password}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:

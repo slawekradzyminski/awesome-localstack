@@ -57,6 +57,18 @@ scrape_configs:
       - target_label: instance
         replacement: payment-service:4004
 
+  - job_name: spring_notification_micrometer
+    metrics_path: /actuator/prometheus
+    scrape_interval: 5s
+    dns_sd_configs:
+      - names: [notification-service]
+        type: A
+        port: 4005
+        refresh_interval: 15s
+    relabel_configs:
+      - target_label: instance
+        replacement: notification-service:4005
+
   - job_name: cadvisor
     static_configs:
       - targets: [cadvisor:8080]

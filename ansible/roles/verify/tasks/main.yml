@@ -89,7 +89,7 @@
   loop_control:
     label: "{{ item.item }}"
 
-- name: Verify the warehouse and payment database roles cannot read backend tables
+- name: Verify the warehouse, payment and notification database roles cannot read backend tables
   ansible.builtin.command:
     argv:
       - docker
@@ -110,35 +110,45 @@
         || has_table_privilege('{{ item.role }}', 'public.orders', 'SELECT')::text || ' '
         || has_table_privilege('{{ item.role }}', 'public.app_user', 'SELECT')::text || ' '
         || has_schema_privilege('{{ item.role }}', 'public', 'CREATE')::text || ' '
-        || has_schema_privilege('{{ item.role }}', '{{ item.other }}', 'USAGE')::text
+        || ({% for other in item.others %}{{ ' OR ' if not loop.first else '' }}has_schema_privilege('{{ item.role }}', '{{ other }}', 'USAGE'){% endfor %})::text
     chdir: "{{ app_dir }}"
   loop:
     - service: postgres
       superuser: postgres
       database: testdb
       role: warehouse
-      other: payment
+      others: [payment, notification]
     - service: aitesters-postgres
       superuser: aitesters
       database: aitesters
       role: warehouse
-      other: payment
+      others: [payment, notification]
     - service: postgres
       superuser: postgres
       database: testdb
       role: payment
-      other: warehouse
+      others: [warehouse, notification]
     - service: aitesters-postgres
       superuser: aitesters
       database: aitesters
       role: payment
-      other: warehouse
+      others: [warehouse, notification]
+    - service: postgres
+      superuser: postgres
+      database: testdb
+      role: notification
+      others: [warehouse, payment]
+    - service: aitesters-postgres
+      superuser: aitesters
+      database: aitesters
+      role: notification
+      others: [warehouse, payment]
   loop_control:
     label: "{{ item.service }} {{ item.role }}"
   register: verify_service_role_isolation
   changed_when: false
   # Each role owns its schema and can neither read the backend's tables, create
-  # objects in public, nor use the other service's schema.
+  # objects in public, nor use another service's schema.
   failed_when: verify_service_role_isolation.stdout != item.role ~ ' false false false false'
 
 - name: Read running production services
@@ -438,6 +448,33 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
+- name: Verify the direct notification-service routes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - gateway
+      - curl
+      - -fsS
+      - -o
+      - /dev/null
+      - "{{ item }}"
+    chdir: "{{ app_dir }}"
+  loop:
+    - http://notification-service:4005/actuator/health
+    - http://notification-service:4005/v3/api-docs
+    - http://aitesters-notification-service:4005/actuator/health
+    - http://aitesters-notification-service:4005/v3/api-docs
+  register: verify_notification_direct
+  changed_when: false
+  until: verify_notification_direct.rc == 0
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
 - name: Verify the direct docs wiki route
   ansible.builtin.command:
     argv:
@@ -482,6 +519,7 @@
       - spring_consumer_micrometer
       - spring_warehouse_micrometer
       - spring_payment_micrometer
+      - spring_notification_micrometer
       - node
       - cadvisor
       - alertmanager
@@ -523,6 +561,7 @@
     - spring_consumer_micrometer
     - spring_warehouse_micrometer
     - spring_payment_micrometer
+    - spring_notification_micrometer
     - node
     - cadvisor
     - alertmanager
@@ -653,7 +692,7 @@
   until:
     - public_probe_response.rc == 0
     # Four awesome.byst.re routes and two aitesters.byst.re routes.
-    - ((public_probe_response.stdout | from_json).data.result | length) == 6
+    - ((public_probe_response.stdout | from_json).data.result | length) == 7
     - >-
       (
         (public_probe_response.stdout | from_json).data.result
@@ -729,7 +768,7 @@
     alertmanager_secret_permissions.rc != 0
     or alertmanager_secret_permissions.stdout != "400:65534:65534"
 
-# GraalVM native images (backends, consumer, warehouse- and payment-services) report an
+# GraalVM native images (backends, consumer, warehouse-, payment- and notification-services) report an
 # unknown (-1) heap maximum, so their bound is checked on the process arguments.
 - name: Read native-image runtime arguments
   ansible.builtin.shell:
@@ -745,6 +784,8 @@
     - aitesters-warehouse-service
     - payment-service
     - aitesters-payment-service
+    - notification-service
+    - aitesters-notification-service
   register: native_runtime_args
   changed_when: false
 
@@ -766,6 +807,8 @@
       aitesters-warehouse-service: -Xmx64m
       payment-service: -Xmx64m
       aitesters-payment-service: -Xmx64m
+      notification-service: -Xmx64m
+      aitesters-notification-service: -Xmx64m
 
 - name: Read the host watchdog timer state
   ansible.builtin.command:
@@ -874,7 +917,7 @@
   retries: "{{ verify_retries }}"
   delay: "{{ verify_delay_seconds }}"
 
-- name: Verify aitesters warehouse-service and payment-service routes through gateway host routing
+- name: Verify aitesters warehouse-, payment- and notification-service routes through gateway host routing
   ansible.builtin.uri:
     url: "http://127.0.0.1{{ item.path }}"
     headers:
@@ -884,6 +927,8 @@
     - path: /warehouse/v3/api-docs
       status: 200
     - path: /payment/v3/api-docs
+      status: 200
+    - path: /notification/v3/api-docs
       status: 200
     - path: /docs/
       status: 200

@@ -50,7 +50,7 @@ curl --fail --silent --show-error --user admin:grafana "$grafana/api/datasources
   | python3 -c 'import json, sys; names = {d["name"] for d in json.load(sys.stdin)}; assert {"Prometheus", "InfluxDB"} <= names, names'
 
 # Consumer exists only in the full profile; DNS discovery gives it no target elsewhere.
-expected="spring_backend_micrometer spring_warehouse_micrometer spring_payment_micrometer cadvisor node prometheus"
+expected="spring_backend_micrometer spring_warehouse_micrometer spring_payment_micrometer spring_notification_micrometer cadvisor node prometheus"
 if "${compose[@]}" config --services | grep -qx consumer; then
   expected="$expected spring_consumer_micrometer"
 fi
