@@ -18,7 +18,7 @@ The rule "the backend calls no service" (ADR 1) is reversed for stock only. Reco
 
 ## 2. Synchronous commands: backend → warehouse
 
-- Base URL: backend `WAREHOUSE_URL` (default `http://warehouse-service:4002`; with the chaos overlay
+- Base URL: backend `WAREHOUSE_URL` (default `http://warehouse-service:4003`; with the chaos overlay
   `http://toxiproxy:14005`).
 - Auth: the backend's service token. The backend sends `Authorization: Bearer <BACKEND_SERVICE_TOKEN>`. warehouse
   checks it against its new `BACKEND_SERVICE_TOKEN` env var, with the same constant-time comparison it uses
@@ -248,7 +248,7 @@ The existing code calls `inventoryService.adjust`, which becomes 4.2.
 
 | Service | Variable | Default |
 |---|---|---|
-| backend | `WAREHOUSE_URL` | `http://warehouse-service:4002` |
+| backend | `WAREHOUSE_URL` | `http://warehouse-service:4003` |
 | backend | `WAREHOUSE_CONNECT_TIMEOUT` / `WAREHOUSE_READ_TIMEOUT` | `PT2S` / `PT5S` |
 | backend | `BACKEND_SERVICE_TOKEN` (sent to warehouse) | none, required |
 | warehouse | `BACKEND_SERVICE_TOKEN` (expected from backend) | none, required |
@@ -265,7 +265,7 @@ Vault, for both sites: `backend_service_token`, `aitesters_backend_service_token
   `stock_reservation_lines`, `stock_restores`, `stock_level_outbox`.
 
 ## 9. Fault lab
-- New Toxiproxy proxy `backend→warehouse` on `toxiproxy:14005`, which forwards to `warehouse-service:4002`.
+- New Toxiproxy proxy `backend→warehouse` on `toxiproxy:14005`, which forwards to `warehouse-service:4003`.
 - New `scripts/chaos` scenarios:
   - `warehouse-down`: checkout and admin adjust return 503, while reads and the cart still work;
   - `warehouse-slow`: latency up to the 5 s read timeout.
