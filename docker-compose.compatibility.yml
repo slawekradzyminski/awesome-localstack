@@ -89,7 +89,7 @@ services:
 
   frontend:
     profiles: [graphql-preview]
-    image: slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea
+    image: slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325
   gateway:
     profiles: [graphql-preview]
     image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942

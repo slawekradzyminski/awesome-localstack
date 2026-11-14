@@ -189,6 +189,20 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: frontend 3.15.0 — 14 November 2026
+
+Published by `scripts/release-train.py`. TODO: what changes, LocalStack
+changes, upgrade order and rollback.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` | [PR #107](https://github.com/slawekradzyminski/vite-react-frontend/pull/107), `f8ba7fb` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/43632605872) |
+| `slawekradzyminski/backend:3.21.1` | unchanged | unchanged |
+| `slawekradzyminski/warehouse-service:1.5.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.3.1` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.0.1` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.21.1, warehouse-service 1.5.1, payment-service 1.3.1, notification-service 1.0.1 — 14 November 2026
 
 Published by `scripts/release-train.py`. TODO: what changes, LocalStack
@@ -1010,12 +1024,12 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.21.1, warehouse-service 1.5.1, payment-service 1.3.1, notification-service 1.0.1, released 14 November 2026:
+Release train: frontend 3.15.0, released 14 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
 | Backend | `slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73` |
-| Frontend | `slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea` |
+| Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e` |
