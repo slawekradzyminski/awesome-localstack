@@ -22,6 +22,7 @@ flowchart TB
         NOT[(schema notification)]
     end
     B --> PUB
+    B -->|"stock commands<br/>(backend 3.22.0+)"| W
     W -->|role warehouse| WH
     P -->|role payment| PAY
     N -->|role notification| NOT
@@ -58,7 +59,8 @@ flowchart TB
         direction LR
         I["internal API<br/>/internal/v1"] -->|"same transaction"| F[("event feed<br/>domain_events")]
     end
-    W -->|"orders, fulfilment,<br/>refunds, notifications"| I
+    W -->|"orders, fulfilment, refunds,<br/>notifications, stock levels"| I
+    B -->|"stock commands (sync):<br/>reserve, confirm, adjust"| W
     P -->|"order data,<br/>signed payment results"| I
     W -.->|"polls order.cancelled"| F
     P -.->|"polls card-refund.requested"| F

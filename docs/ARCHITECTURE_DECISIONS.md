@@ -6,16 +6,19 @@ from it. A superseded decision stays in this file with its status changed.
 
 | ADR | Decision | Status | Since |
 | --- | --- | --- | --- |
-| [1](#adr-1-internal-integration-via-a-pull-event-feed) | Internal integration via a pull event feed | Accepted | backend 3.16.0, warehouse-service 1.3.0, payment-service 1.1.0 |
+| [1](#adr-1-internal-integration-via-a-pull-event-feed) | Internal integration via a pull event feed | Accepted; reversed for stock by ADR 6 | backend 3.16.0, warehouse-service 1.3.0, payment-service 1.1.0 |
 | [2](#adr-2-backend-keeps-a-fulfilment-read-model) | Backend keeps a fulfilment read model | Accepted | backend 3.11.0, warehouse-service 1.0.0 |
 | [3](#adr-3-outbox-and-feed-consumer-implementations-stay-per-service) | Outbox and feed consumer implementations stay per service | Accepted | warehouse-service 1.0.0, payment-service 1.0.0 |
 | [4](#adr-4-database-per-service-on-one-postgresql-server) | Database per service on one PostgreSQL server | Accepted | backend 3.12.0, warehouse-service 1.0.0 |
 | [5](#adr-5-notifications-move-out-of-the-backend) | Notifications move out of the backend | Accepted | backend 3.21.0, notification-service 1.0.0 |
+| [6](#adr-6-warehouse-service-owns-the-stock-ledger) | warehouse-service owns the stock ledger | Accepted | backend 3.22.0, warehouse-service 1.6.0 |
 
 ## ADR 1: Internal integration via a pull event feed
 
 **Status:** accepted, November 2026 (backend 3.16.0, warehouse-service 1.3.0,
-payment-service 1.1.0).
+payment-service 1.1.0). Reversed for stock only by
+[ADR 6](#adr-6-warehouse-service-owns-the-stock-ledger): the backend calls
+warehouse-service for stock commands.
 
 ### Context
 
@@ -259,7 +262,8 @@ consumer:
   commerce reactions.
 
 Every profile that runs notification-service sets `feed` and webhooks off; the
-l20 compatibility stack runs the backend alone with the defaults.
+l20 compatibility stack runs the backends without notification-service, with
+the defaults.
 
 ### Consequences
 
@@ -276,6 +280,57 @@ l20 compatibility stack runs the backend alone with the defaults.
   unreadable, so it lives in Vault next to the other service secrets.
 - The feed now has three consumers; a new event type needs no backend change
   to reach a user webhook once notification-service lists it.
+
+## ADR 6: warehouse-service owns the stock ledger
+
+**Status:** accepted, November 2026 (backend 3.22.0, warehouse-service 1.6.0).
+Contract: [INVENTORY_OWNERSHIP_CONTRACT.md](INVENTORY_OWNERSHIP_CONTRACT.md).
+
+### Context
+
+Stock had two writers. The backend kept `products.stock_quantity` and the
+`inventory_movements` ledger, while warehouse-service, which receives
+purchases and restocks returns, had to call the backend's internal receipts API
+to change stock it physically handles. Stock is a warehouse concern, and a
+second writer made every warehouse change a backend change.
+
+### Decision
+
+- **warehouse-service owns stock**: quantities (`stock_items`), movements and
+  checkout reservations live in its schema.
+- **The backend keeps a projection**: `products.stock_quantity` becomes a read
+  copy, updated from warehouse-service's answers and from its stock-level push
+  (`POST /internal/v1/inventory/levels`, applied only when the per-product
+  `ledgerVersion` is newer). Catalog, search, the cart and the admin stock levels
+  stay local and keep working without warehouse-service; the movement history
+  is read from warehouse-service.
+- **Commands are synchronous, backend → warehouse**: checkout reservations,
+  admin and GraphQL/gRPC adjustments, initial stock and product deletes call
+  `WAREHOUSE_URL` with `Authorization: Bearer BACKEND_SERVICE_TOKEN` (connect
+  2 s, read 5 s). If warehouse-service is unreachable, slow or failing, the
+  public call answers `503 {"message":"Inventory service unavailable"}`.
+- This **reverses ADR 1 for stock only**. Every other integration still points
+  to the backend, and the backend still publishes cancellations through the
+  event feed (stock restores travel there as `stockRestore`).
+
+### Consequences
+
+- The backend now depends on warehouse-service at run time for checkout and
+  stock writes, but not at start-up: warehouse-service needs the backend's JWKS,
+  so the backend must never `depends_on` warehouse-service in Compose. Until
+  warehouse-service is healthy, stock commands answer 503.
+- A command whose answer is lost (timeout) can leave a reservation without an
+  order; warehouse-service's reaper releases it after two minutes, asking the
+  backend first. Product creation and deletion go through a backend outbox, so
+  they never fail on warehouse-service.
+- The projection is eventually consistent: a warehouse-only change (receipt,
+  restock, cancel restore) reaches it after the push, and
+  `stock_outbox_pending` shows the backlog. The fault-injection lab's
+  `warehouse-down`, `warehouse-slow` and `backend-down warehouse` exercises
+  show all three effects.
+- One more secret per site (`backend_service_token`,
+  `aitesters_backend_service_token`), and the course compatibility stack runs
+  a warehouse-service next to each backend.
 
 ## Reservations saga (note)
 
