@@ -383,6 +383,7 @@ The local production Vault file stores values such as:
 - `payment_webhook_secret`, `aitesters_payment_webhook_secret`
 - `payment_postgres_password`, `aitesters_payment_postgres_password`
 - `notification_service_token`, `aitesters_notification_service_token`
+- `backend_service_token`, `aitesters_backend_service_token`
 - `notification_postgres_password`, `aitesters_notification_postgres_password`
 - `notification_webhook_secret_encryption_password`,
   `notification_webhook_secret_encryption_salt`,
@@ -569,6 +570,31 @@ notification-service 1.0.0 is published the server Compose file carries
 `slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST`,
 so the gate fails on purpose; set `notification_service_allow_unpinned_image=true`
 only for a deliberately pre-loaded image.
+
+## Backend service token (stock commands)
+
+From backend 3.22.0 and warehouse-service 1.6.0 warehouse-service owns the stock
+ledger and the backend calls it synchronously for every stock command
+([ADR 6](ARCHITECTURE_DECISIONS.md#adr-6-warehouse-service-owns-the-stock-ledger)).
+The backend authenticates with its own service token; add two values to
+Ansible Vault (see `vault.yml.example`):
+
+| Key | Rule | Reaches |
+| --- | --- | --- |
+| `backend_service_token` | at least 32 characters (`openssl rand -hex 32`) | `.env.runtime` (backend) and `.env.warehouse` (`BACKEND_SERVICE_TOKEN`) |
+| `aitesters_backend_service_token` | at least 32 characters | `.env.aitesters` and `.env.aitesters-warehouse` |
+
+The `app` role refuses to deploy unless both are set and the ten service tokens
+and webhook secrets (backend, warehouse, payment and notification tokens and the
+payment webhook secrets of both sites) are all distinct. Older images ignore
+the variable, so the values can be added before the release that needs them.
+Compose sets `WAREHOUSE_URL` on each backend to its own site's warehouse-service
+(`http://warehouse-service:4003`, `http://aitesters-warehouse-service:4003`);
+`scripts/verify-release-images.py` checks that pairing, that the token comes only
+from the env files, and that no backend `depends_on` its warehouse-service
+(warehouse-service waits for the backend's JWKS, so the dependency must point
+one way only). Until warehouse-service is healthy after a deploy, checkout and
+admin stock adjust answer `503 Inventory service unavailable`.
 
 ## Memory budget
 

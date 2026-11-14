@@ -32,8 +32,17 @@ services:
       # webhooks: the backend records notification.requested feed events instead of
       # sending those emails and runs no webhook dispatcher of its own.
       NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for every stock command (checkout reservation, admin
+      # adjust, initial stock) with Authorization: Bearer BACKEND_SERVICE_TOKEN.
+      # Ignored by older backends.
+      WAREHOUSE_URL: http://warehouse-service:4003
+      BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+    # No depends_on warehouse-service, on purpose: warehouse-service needs the
+    # backend's JWKS to start, so it waits for a healthy backend. A stock command
+    # sent before warehouse is up answers 503 "Inventory service unavailable".
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,6 +78,8 @@ services:
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       BACKEND_BASE_URL: http://backend:4001
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
+      # Checks the backend's stock-command calls (backend 3.22.0+, warehouse-service 1.6.0+).
+      BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
     depends_on:
       backend:
         condition: service_healthy

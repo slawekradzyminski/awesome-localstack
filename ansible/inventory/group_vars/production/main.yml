@@ -114,15 +114,19 @@ app_runtime_env:
   PAYMENT_SERVICE_TOKEN: "{{ payment_service_token | default('', true) }}"
   PAYMENT_WEBHOOK_SECRET: "{{ payment_webhook_secret | default('', true) }}"
   NOTIFICATION_SERVICE_TOKEN: "{{ notification_service_token | default('', true) }}"
+  # Sent by the backend to warehouse-service on stock commands (backend 3.22.0+).
+  BACKEND_SERVICE_TOKEN: "{{ backend_service_token | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
-# warehouse-service receives only what it needs: the service token and the
-# password of its own `warehouse` database role, which owns only the `warehouse`
-# schema of the backend database. It verifies access tokens with the backend's
-# public JWKS, so it holds no signing key.
+# warehouse-service receives only what it needs: its service token, the
+# backend's service token (warehouse-service 1.6.0+ checks it on the stock
+# commands the backend sends), and the password of its own `warehouse` database
+# role, which owns only the `warehouse` schema of the backend database. It
+# verifies access tokens with the backend's public JWKS, so it holds no signing key.
 warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
+  BACKEND_SERVICE_TOKEN: "{{ backend_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
 
 # The aitesters sandbox has its own warehouse-service and aitesters-postgres; it
@@ -130,6 +134,7 @@ warehouse_runtime_env:
 # authenticate there.
 aitesters_warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
+  BACKEND_SERVICE_TOKEN: "{{ aitesters_backend_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
 
 # payment-service receives only the payment service token (shared with the

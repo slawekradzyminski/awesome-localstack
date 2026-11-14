@@ -14,7 +14,8 @@ services:
     logging: *default-logging
     env_file:
       # Supplies JWT_SIGNING_KEY, WAREHOUSE_SERVICE_TOKEN, PAYMENT_SERVICE_TOKEN,
-      # PAYMENT_WEBHOOK_SECRET and NOTIFICATION_SERVICE_TOKEN from Ansible Vault.
+      # PAYMENT_WEBHOOK_SECRET, NOTIFICATION_SERVICE_TOKEN and BACKEND_SERVICE_TOKEN
+      # (sent to warehouse-service) from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -58,6 +59,13 @@ services:
       # runs no webhook dispatcher of its own.
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
+      # (from the env file). Ignored by older backends.
+      WAREHOUSE_URL: http://warehouse-service:4003
+    # No depends_on warehouse-service, on purpose: it needs this backend's JWKS to
+    # start and waits for a healthy backend. Until it is up, stock commands
+    # answer 503 "Inventory service unavailable".
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,8 +106,9 @@ services:
     hostname: warehouse-service
     logging: *default-logging
     env_file:
-      # Only WAREHOUSE_SERVICE_TOKEN and the warehouse role's SPRING_DATASOURCE_PASSWORD,
-      # rendered by Ansible from Vault. Access tokens are verified with the backend's JWKS.
+      # Only WAREHOUSE_SERVICE_TOKEN, BACKEND_SERVICE_TOKEN (checks the backend's stock
+      # commands) and the warehouse role's SPRING_DATASOURCE_PASSWORD, rendered by
+      # Ansible from Vault. Access tokens are verified with the backend's JWKS.
       - path: .env.warehouse
         required: false
     environment:
@@ -146,8 +155,9 @@ services:
     hostname: aitesters-warehouse-service
     logging: *default-logging
     env_file:
-      # Only its own service token and the warehouse role's database password; tokens
-      # are verified with aitesters-backend's JWKS, so stable-site tokens never match.
+      # Only its own service tokens (warehouse and backend) and the warehouse role's
+      # database password; tokens are verified with aitesters-backend's JWKS, so
+      # stable-site tokens never match.
       - path: .env.aitesters-warehouse
         required: false
     environment:
@@ -556,6 +566,13 @@ services:
       # runs no webhook dispatcher of its own.
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
+      # (from the env file). Ignored by older backends.
+      WAREHOUSE_URL: http://aitesters-warehouse-service:4003
+    # No depends_on aitesters-warehouse-service, on purpose: it needs this backend's JWKS to
+    # start and waits for a healthy backend. Until it is up, stock commands
+    # answer 503 "Inventory service unavailable".
     depends_on:
       aitesters-postgres:
         condition: service_healthy
