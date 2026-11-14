@@ -28,11 +28,13 @@ an HTTP API changes that connection while traffic flows:
   (data stops; the connection hangs or closes after a delay) or `reset_peer`
   (TCP reset). A toxic can hit only a share of the connections (`toxicity`).
 
-The services do not know about it. The overlay only changes two settings:
+The services do not know about it. The overlay only changes three settings:
 `BACKEND_BASE_URL` (how warehouse-, payment- and notification-service reach the
-backend) and `SPRING_DATASOURCE_URL` (how each service reaches PostgreSQL). The
-gateway keeps talking to every service directly, so your browser, Swagger and
-curl always reach the services; only the links *between* them break.
+backend), `WAREHOUSE_URL` (how the backend reaches warehouse-service for stock
+commands, backend 3.22.0+) and `SPRING_DATASOURCE_URL` (how each service reaches
+PostgreSQL). The gateway keeps talking to every service directly, so your
+browser, Swagger and curl always reach the services; only the links *between*
+them break.
 
 ## Topology
 
@@ -51,6 +53,7 @@ flowchart LR
         WB[warehouse-to-backend<br/>:14001]
         PB[payment-to-backend<br/>:24001]
         NB[notification-to-backend<br/>:34001]
+        BW[backend-to-warehouse<br/>:14005]
         BD[backend-to-postgres<br/>:15432]
         WD[warehouse-to-postgres<br/>:25432]
         PD[payment-to-postgres<br/>:35432]
@@ -59,6 +62,7 @@ flowchart LR
     W --> WB --> B
     P --> PB --> B
     N --> NB --> B
+    B --> BW --> W
     B --> BD --> DB[(postgres:5432)]
     W --> WD --> DB
     P --> PD --> DB
@@ -71,6 +75,7 @@ flowchart LR
 | `warehouse-to-backend` | `toxiproxy:14001` | `backend:4001` | warehouse-service `BACKEND_BASE_URL` |
 | `payment-to-backend` | `toxiproxy:24001` | `backend:4001` | payment-service `BACKEND_BASE_URL` |
 | `notification-to-backend` | `toxiproxy:34001` | `backend:4001` | notification-service `BACKEND_BASE_URL` |
+| `backend-to-warehouse` | `toxiproxy:14005` | `warehouse-service:4003` | backend `WAREHOUSE_URL` (stock commands; backend 3.22.0+, older backends never call warehouse) |
 | `backend-to-postgres` | `toxiproxy:15432` | `postgres:5432` | backend `SPRING_DATASOURCE_URL` |
 | `warehouse-to-postgres` | `toxiproxy:25432` | `postgres:5432` | warehouse-service `SPRING_DATASOURCE_URL` |
 | `payment-to-postgres` | `toxiproxy:35432` | `postgres:5432` | payment-service `SPRING_DATASOURCE_URL` |
@@ -101,14 +106,15 @@ Look at what is broken at any time:
 ```text
 $ scripts/chaos status
 Toxiproxy 2.13.0 on http://127.0.0.1:8474
-PROXY                      LISTEN            UPSTREAM        STATE     FAULTS
-backend-to-postgres        toxiproxy:15432   postgres:5432   up        -
-notification-to-backend    toxiproxy:34001   backend:4001    up        -
-notification-to-postgres   toxiproxy:45432   postgres:5432   up        -
-payment-to-backend         toxiproxy:24001   backend:4001    up        backend-slow: latency latency=5000 jitter=0
-payment-to-postgres        toxiproxy:35432   postgres:5432   up        -
-warehouse-to-backend       toxiproxy:14001   backend:4001    DISABLED  -
-warehouse-to-postgres      toxiproxy:25432   postgres:5432   up        -
+PROXY                      LISTEN            UPSTREAM               STATE     FAULTS
+backend-to-postgres        toxiproxy:15432   postgres:5432          up        -
+backend-to-warehouse       toxiproxy:14005   warehouse-service:4003 up        -
+notification-to-backend    toxiproxy:34001   backend:4001           up        -
+notification-to-postgres   toxiproxy:45432   postgres:5432          up        -
+payment-to-backend         toxiproxy:24001   backend:4001           up        backend-slow: latency latency=5000 jitter=0
+payment-to-postgres        toxiproxy:35432   postgres:5432          up        -
+warehouse-to-backend       toxiproxy:14001   backend:4001           DISABLED  -
+warehouse-to-postgres      toxiproxy:25432   postgres:5432          up        -
 2 fault(s) active. Remove them with: scripts/chaos heal
 ```
 
@@ -154,7 +160,8 @@ file too, or `--remove-orphans` removes it as well.)
 
 Targets: `warehouse`, `payment`, `notification` (the `-service` suffix is
 optional), `backend` for the `postgres-*` scenarios, or nothing for all of
-them.
+them. The `warehouse-*` scenarios take no target: only the backend calls
+warehouse-service.
 
 | Scenario | Toxiproxy change | What you observe |
 | --- | --- | --- |
@@ -164,10 +171,13 @@ them.
 | `bandwidth [KB/s] [target]` | `bandwidth` toxic (default 8 KB/s) on the answers of `<target>-to-backend` | Small answers are fine, big ones (an order list, the JWKS on a cold start) crawl |
 | `postgres-stall [ms] [target]` | `timeout` toxics on both directions of `<target>-to-postgres` | Database connections stop passing data. Without `ms` they hang until `heal`; with `ms` they close after `ms`. Requests that need the database hang and fail after HikariCP's 30 s connection timeout; `/actuator/health` stops answering |
 | `postgres-down [target]` | disables `<target>-to-postgres` | Pooled connections are closed, new ones refused. Requests that need the database fail at once (warehouse-service: `500` in a few milliseconds); health turns DOWN |
-| `partition-<service>` | disables every proxy to and from the service | `partition-warehouse`, `partition-payment`, `partition-notification`: the service loses the backend and its database. `partition-backend`: no service reaches the backend and the backend loses PostgreSQL. `partition-postgres`: nobody reaches PostgreSQL |
+| `warehouse-down` | disables `backend-to-warehouse` | Backend 3.22.0+: stock commands fail at once. Checkout (`POST /api/v1/orders`) and admin stock adjust answer `503 {"message":"Inventory service unavailable"}`; product reads, the cart and admin stock reads (from the backend's projection) keep working. Older backends never call warehouse-service, so nothing changes |
+| `warehouse-slow [ms]` | `latency` toxic (default 3000 ms) on the answers of `backend-to-warehouse` | Backend 3.22.0+: checkout and adjust take `ms` longer. From 5000 ms on the backend's read timeout (`WAREHOUSE_READ_TIMEOUT`, 5 s) turns them into the same 503 |
+| `partition-<service>` | disables every proxy to and from the service | `partition-warehouse`, `partition-payment`, `partition-notification`: the service loses the backend and its database (and for warehouse, the backend loses warehouse-service). `partition-backend`: no service reaches the backend and the backend loses PostgreSQL and warehouse-service. `partition-postgres`: nobody reaches PostgreSQL |
 
 The gateway is never behind Toxiproxy, so the backend's own API keeps working
-under `backend-down` (a customer can still place and cancel orders).
+under `backend-down` (a customer can still place and cancel orders: the
+backend reaches warehouse-service through its own link, `backend-to-warehouse`).
 `partition-backend` and the `postgres-*` scenarios on the backend are the ones
 that break the storefront.
 
@@ -289,6 +299,7 @@ after `heal` it drains by itself.
 | --- | --- | --- | --- |
 | payment-service | `payment.payment_outbox` (payment results for the backend) | `sent_at IS NULL` | `payment_outbox_pending` (payment-service 1.3.0+) |
 | warehouse-service | `warehouse.notification_outbox` (customer notifications for the backend) | `sent_at IS NULL` | `warehouse_outbox_pending` (warehouse-service 1.5.0+) |
+| warehouse-service | `warehouse.stock_level_outbox` (stock levels for the backend's projection) | see Exercise 8 | `stock_outbox_pending` (warehouse-service 1.6.0+) |
 | notification-service | `notification.notification_emails` (status `QUEUED`) and its webhook deliveries (status `PENDING`) | see the SQL below | `notification_outbox_pending` (notification-service 1.0.0+) |
 
 **payment-service (works with today's images):**
@@ -511,6 +522,141 @@ feed, an outbox delivery) is logged with the same id, so `grep` finds it too.
 With the tracing overlay the same `trace_id` opens the whole call tree in
 Jaeger.
 
+### Exercise 7: checkout without the stock owner
+
+Needs backend 3.22.0 and warehouse-service 1.6.0. From these versions
+warehouse-service owns the stock ledger
+([ADR 6](ARCHITECTURE_DECISIONS.md#adr-6-warehouse-service-owns-the-stock-ledger)):
+the backend keeps only a read copy of every product's stock (the
+**projection**) and asks warehouse-service, synchronously, for every stock
+command. This is the one call the backend makes to another service, and it
+goes through its own proxy, `backend-to-warehouse`.
+
+1. Pick a product and note its stock (read from the projection):
+
+    ```bash
+    P=$(curl -s "$B/api/v1/products/search?inStock=true&sort=price_asc&size=1" -H "Authorization: Bearer $C" | jq '.content[0].id')
+    stock() { curl -s $B/api/v1/products/$P -H "Authorization: Bearer $C" | jq .stockQuantity; }
+    stock
+    ```
+
+2. Cut the backend off from the stock owner: `scripts/chaos warehouse-down`.
+3. Everything that only **reads** stock still works:
+
+    ```bash
+    curl -s -o /dev/null -w '%{http_code}\n' $B/api/v1/products/$P -H "Authorization: Bearer $C"        # 200
+    curl -s -o /dev/null -w '%{http_code}\n' $B/api/v1/admin/inventory/$P -H "Authorization: Bearer $A" # 200
+    curl -s -o /dev/null -w '%{http_code}\n' $B/api/v1/cart/items -H "Authorization: Bearer $C" \
+      -H 'Content-Type: application/json' -d "{\"productId\":$P,\"quantity\":1}"                        # 200
+    ```
+
+4. Everything that **changes** stock fails fast:
+
+    ```bash
+    curl -s -w ' %{http_code} in %{time_total}s\n' $B/api/v1/orders -H "Authorization: Bearer $C" \
+      -H 'Content-Type: application/json' -H 'X-Request-Id: lab-ex7' \
+      -d '{"street":"Main 1","city":"Warszawa","state":"M","zipCode":"00-001","country":"Poland"}'
+    curl -s -w ' %{http_code}\n' $B/api/v1/admin/inventory/$P/adjustments -H "Authorization: Bearer $A" \
+      -H 'Content-Type: application/json' \
+      -d "{\"delta\":5,\"reason\":\"Lab restock\",\"requestId\":\"$(uuidgen | tr '[:upper:]' '[:lower:]')\"}"
+    stock
+    ```
+
+    **Expected:** `{"message":"Inventory service unavailable"} 503` in a few
+    milliseconds for both, and the same stock as in step 1: the reservation
+    never reached warehouse-service, so nothing was deducted. The cart still
+    holds the product. `docker compose -p awesome-light logs backend | grep -F
+    lab-ex7` finds the backend's log lines for the failed reservation call to
+    `toxiproxy:14005` (`/internal/v1/stock/reservations`).
+5. `scripts/chaos heal` and run the same checkout again. **Expected:** `201`,
+   the order is `PENDING`, the cart is empty and `stock` is one lower.
+
+**Slow variant: an answer that gets lost.**
+
+1. Put the product back in the cart (step 3), then `scripts/chaos warehouse-slow 3000`.
+   Checkout answers `201` after about 3 s: slow, but inside the backend's
+   5 s read timeout (`WAREHOUSE_READ_TIMEOUT`).
+2. Put it in the cart again, then `scripts/chaos warehouse-slow 7000`. Checkout
+   answers `503 Inventory service unavailable` after about 5 s. But the
+   request *did* reach warehouse-service: only its answer was delayed. The
+   reservation was booked and the stock deducted, and `stock` shows it,
+   because warehouse-service pushes stock levels to the projection through
+   the other link, `warehouse-to-backend`, which works:
+
+    ```bash
+    stock                                                                   # one lower, without an order
+    psql "select status, count(*) from warehouse.stock_reservations group by status"   # one PENDING_CONFIRMATION
+    ```
+
+3. `scripts/chaos heal`. Nobody confirms the reservation, so warehouse-service's
+   reaper releases it once it is older than `WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT`
+   (2 minutes; the reaper runs every 30 s). Before releasing, it asks the
+   backend whether an order holds the reservation, and there is none. Within
+   about 2.5 minutes:
+
+    ```bash
+    stock                                                                   # back to the old value
+    curl -s "$B/api/v1/admin/inventory/$P/movements?size=1" -H "Authorization: Bearer $A" \
+      | jq '.content[0] | {type, delta, actor, reason}'   # ORDER_RESTORED, system, "Reservation expired unconfirmed"
+    ```
+
+    A timeout does not tell the caller whether the other side did the work.
+    The reaper is the compensation that makes "maybe" safe.
+
+### Exercise 8: the stock projection catches up
+
+Needs backend 3.22.0 and warehouse-service 1.6.0. Every change to the stock
+ledger also writes a row to warehouse-service's `stock_level_outbox`, in the
+same transaction. A dispatcher pushes it to the backend's projection right
+after the commit and retries every 5 s (`WAREHOUSE_STOCK_PUSH_RETRY_INTERVAL`).
+The gauge `stock_outbox_pending` counts the rows that wait.
+
+Most stock changes start at the backend, which updates its projection from
+warehouse-service's answer at once. A purchase receipt starts at
+warehouse-service, so the backend learns about it only from the push.
+
+1. Prepare a submitted purchase order for the product of Exercise 7 (`$P`, `stock`):
+
+    ```bash
+    S=$(curl -s $B/api/v1/admin/suppliers -H "Authorization: Bearer $A" | jq '.[0].id')
+    PO=$(curl -s $B/api/v1/admin/purchase-orders -H "Authorization: Bearer $A" -H 'Content-Type: application/json' \
+      -d "{\"supplierId\":$S,\"lines\":[{\"productId\":$P,\"quantity\":5,\"unitCost\":1.00}]}" | jq .id)
+    curl -s -X POST $B/api/v1/admin/purchase-orders/$PO/submit -H "Authorization: Bearer $A" | jq .status   # SUBMITTED
+    pending() { docker compose -p awesome-light exec -T gateway curl -s http://warehouse-service:4003/actuator/prometheus | grep '^stock_outbox_pending'; }
+    stock; pending                                                           # stock_outbox_pending 0.0
+    ```
+
+2. Cut warehouse-service off from the backend: `scripts/chaos backend-down warehouse`.
+3. Receive the goods. warehouse-service books them in its own ledger and does
+   not need the backend for that:
+
+    ```bash
+    curl -s $B/api/v1/admin/purchase-orders/$PO/receipts -H "Authorization: Bearer $A" -H 'Content-Type: application/json' \
+      -d "{\"requestId\":\"$(uuidgen | tr '[:upper:]' '[:lower:]')\",\"lines\":[{\"productId\":$P,\"quantity\":5}]}" | jq .status   # RECEIVED
+    ```
+
+4. Compare the two views of the same stock:
+
+    ```bash
+    pending                                                                  # 1.0 or more, and it stays
+    stock                                                                    # unchanged: the projection has not heard
+    curl -s "$B/api/v1/admin/inventory/$P/movements?size=1" -H "Authorization: Bearer $A" \
+      | jq '.content[0] | {type, delta, quantityAfter}'                     # PURCHASE_RECEIVED, +5
+    ```
+
+    The movement list is read from warehouse-service's ledger (through
+    `backend-to-warehouse`, which works), the stock quantity from the
+    backend's projection. During the outage they disagree: that is eventual
+    consistency, visible with two curls.
+5. `scripts/chaos heal`. **Expected:** within about 5 s `stock` is 5 higher and
+   `pending` is back to `0.0`. The push carries a per-product `ledgerVersion`,
+   so a late or repeated push never moves the projection backwards.
+
+Variant: cancel a `PENDING` order during `backend-down warehouse`. The backend
+records the cancellation at once, but the stock comes back only after `heal`:
+warehouse-service learns about the cancel from the event feed (Exercise 3),
+writes `ORDER_RESTORED` and pushes the new level.
+
 ## With tracing and monitoring
 
 The overlays combine:
@@ -552,6 +698,11 @@ monitoring overlays, then starts lightweight + chaos with the published images
 in its own Compose project and ports (so it runs beside your stack), runs every
 scenario with an assertion a student could make with curl (the warehouse 503,
 a delayed or failing link, a database health check going DOWN, the feed cursor
-standing still during a partition, the payment outbox growing and draining),
-heals and checks recovery, adds and removes the tracing overlay and tears the
-stack down with `scripts/chaos down`.
+standing still during a partition, the payment outbox growing and draining,
+the `backend-to-warehouse` link refusing and delaying), heals and checks
+recovery, adds and removes the tracing overlay and tears the stack down with
+`scripts/chaos down`. With backend 3.22.0+ it also runs Exercise 7 (checkout
+and adjust 503, reads and cart 200, stock deducted once after `heal`) and
+Exercise 8 (`stock_outbox_pending` grows, the projection catches up); set
+`CHAOS_VERIFY_STOCK_LEDGER=true` to force them for a candidate image without a
+version tag.

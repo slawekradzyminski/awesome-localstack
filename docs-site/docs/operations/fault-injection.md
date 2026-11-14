@@ -8,7 +8,7 @@ that loses the race against an expiring reservation.
 
 It is a local overlay (`docker-compose.chaos.yml`) for the lightweight and the
 full profile, driven by one command, `scripts/chaos` (bash, curl and Docker;
-nothing to install). The full guide with every scenario and six guided
+nothing to install). The full guide with every scenario and eight guided
 exercises is the reference page
 [Fault-injection lab](../reference/FAULT_INJECTION_LAB.md).
 
@@ -42,11 +42,16 @@ flowchart LR
     W -->|warehouse-to-postgres :25432| T2
     P -->|payment-to-postgres :35432| T2
     T2 --> DB[(postgres)]
+    B -->|backend-to-warehouse :14005| T3{{toxiproxy}}
+    T3 --> W
 ```
 
 notification-service gets `notification-to-backend` (`:34001`) and
-`notification-to-postgres` (`:45432`) the same way.
-The overlay changes nothing but `BACKEND_BASE_URL` and `SPRING_DATASOURCE_URL`.
+`notification-to-postgres` (`:45432`) the same way. `backend-to-warehouse`
+carries the backend's stock commands to warehouse-service, the stock owner
+from backend 3.22.0 and warehouse-service 1.6.0 (older backends never use it).
+The overlay changes nothing but `BACKEND_BASE_URL`, `WAREHOUSE_URL` and
+`SPRING_DATASOURCE_URL`.
 
 ## Scenarios
 
@@ -58,10 +63,13 @@ The overlay changes nothing but `BACKEND_BASE_URL` and `SPRING_DATASOURCE_URL`.
 | `bandwidth [KB/s] [target]` | Backend answers to the target trickle (8 KB/s) |
 | `postgres-stall [ms] [target]` | The target's database connections stop passing data |
 | `postgres-down [target]` | The target's database connections are closed and refused |
-| `partition-<service>` | `warehouse`, `payment`, `notification`: the service loses the backend and its database; `backend`: nobody reaches the backend and it loses PostgreSQL; `postgres`: nobody reaches PostgreSQL |
+| `warehouse-down` | The backend gets *connection refused* from warehouse-service: checkout and admin stock adjust answer `503 Inventory service unavailable`, reads and the cart keep working (backend 3.22.0+) |
+| `warehouse-slow [ms]` | Every warehouse-service answer to the backend is `ms` late (3000); from 5000 the backend's 5 s read timeout turns it into the 503 |
+| `partition-<service>` | `warehouse`, `payment`, `notification`: the service loses the backend and its database (and the backend loses warehouse-service); `backend`: nobody reaches the backend and it loses PostgreSQL and warehouse-service; `postgres`: nobody reaches PostgreSQL |
 
 Targets are `warehouse`, `payment`, `notification` (and `backend` for the
-`postgres-*` scenarios); without one the scenario hits all of them.
+`postgres-*` scenarios); without one the scenario hits all of them. The
+`warehouse-*` scenarios take no target: only the backend calls warehouse-service.
 
 ## Guided exercises
 
@@ -77,7 +85,14 @@ walks through, with exact commands and the expected observations:
 4. a slow payment against an expiring order reservation: 409 on capture,
    payment `VOIDED`;
 5. a stalled PostgreSQL: request timeouts and HikariCP errors;
-6. finding all of it with `X-Request-Id`.
+6. finding all of it with `X-Request-Id`;
+7. checkout without the stock owner (`warehouse-down`): checkout and admin
+   adjust answer 503, reads and the cart keep working, and checkout works again
+   after `heal`; with `warehouse-slow 7000` a lost answer leaves an orphaned
+   reservation that the reaper releases, so the stock comes back;
+8. the stock projection catching up (`backend-down warehouse`): a purchase
+   receipt grows `stock_outbox_pending`, the projection lags the ledger, and
+   both agree again after `heal`.
 
 ## Combining overlays
 
@@ -90,4 +105,5 @@ Traces show a late span under `backend-slow` and an error span under
 shows the latency and the outbox gauges.
 
 `scripts/verify-chaos-overlay.sh` checks every overlay combination with
-`docker compose config` and runs all scenarios against the published images.
+`docker compose config` and runs all scenarios against the published images
+(exercises 7 and 8 only with backend 3.22.0 or later).

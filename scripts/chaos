@@ -35,9 +35,11 @@ Examples:
   scripts/chaos backend-down warehouse      warehouse-service cannot reach the backend
   scripts/chaos backend-slow 5000 payment   payment-service waits 5 s for every backend answer
   scripts/chaos postgres-stall              every service's database connections hang
+  scripts/chaos warehouse-down              the backend cannot reach warehouse-service (checkout 503)
   scripts/chaos heal
 
 Targets: warehouse, payment, notification (backend for the postgres-* scenarios); default all.
+The warehouse-* scenarios take no target: only the backend calls warehouse-service.
 Environment: TOXIPROXY_PORT (default 8474), COMPOSE_PROJECT_NAME, CHAOS_EXTRA_FILES (extra -f files for up).
 Guide: docs/FAULT_INJECTION_LAB.md
 EOF
@@ -55,10 +57,17 @@ ${BOLD}Scenarios${OFF} (value and target are optional; target defaults to all)
   postgres-stall [ms] [target]    the target's database connections stop passing data; with ms they close
                                   after ms, without it they hang until heal (target may be backend)
   postgres-down [target]          the target's database connections are closed and refused
-  partition-warehouse             warehouse-service loses the backend and its database
+  warehouse-down                  the backend gets "connection refused" from warehouse-service:
+                                  checkout and admin stock adjust answer 503, reads and the cart work
+                                  (backend 3.22.0+, warehouse-service 1.6.0+)
+  warehouse-slow [ms]             every warehouse-service answer to the backend arrives ms later
+                                  (default 3000); from 5000 on the backend's read timeout turns it into 503
+  partition-warehouse             warehouse-service loses the backend and its database,
+                                  and the backend loses warehouse-service
   partition-payment               payment-service loses the backend and its database
   partition-notification          notification-service loses the backend and its database
   partition-backend               nobody reaches the backend, the backend loses PostgreSQL
+                                  and warehouse-service
                                   (the gateway still reaches the backend directly)
   partition-postgres              nobody reaches PostgreSQL (same as postgres-down)
 
@@ -270,6 +279,9 @@ parse_args() {
 }
 
 no_value() { [ -z "$VALUE" ] || die "$1 takes no value (got $VALUE)"; }
+no_target() {
+  [ -z "$TARGET" ] || die "$1 takes no target (got $TARGET)" "Only the backend calls warehouse-service, so the link is always backend-to-warehouse."
+}
 
 percent_fraction() {  # 30 -> 0.15 (half of the percentage, as a 0-1 fraction)
   awk -v p="$1" 'BEGIN { printf "%.4f", p / 200 }'
@@ -320,6 +332,14 @@ run_scenario() {
       else
         applied "database connections stall and close after ${timeout} ms for: $(echo $links | sed 's/-to-postgres//g')"
       fi ;;
+    warehouse-down)
+      parse_args "$@"; no_value "$scenario"; no_target "$scenario"
+      set_enabled backend-to-warehouse false
+      applied "warehouse-service unreachable for the backend (stock commands answer 503)" ;;
+    warehouse-slow)
+      parse_args "$@"; no_target "$scenario"; local wms="${VALUE:-3000}"
+      add_toxic backend-to-warehouse warehouse-slow latency downstream 1 "{\"latency\":$wms,\"jitter\":0}"
+      applied "warehouse-service answers to the backend delayed by ${wms} ms" ;;
     postgres-down)
       parse_args "$@"; no_value "$scenario"
       links="$(postgres_links "$TARGET")"
@@ -372,7 +392,7 @@ status() {
   version="$(json_field "$(api GET /version)" version)"
   names="$(proxy_names)"
   say "${BOLD}Toxiproxy $version${OFF} on $API"
-  printf "${BOLD}%-26s %-17s %-15s %-9s %s${OFF}\n" PROXY LISTEN UPSTREAM STATE FAULTS
+  printf "${BOLD}%-26s %-17s %-22s %-9s %s${OFF}\n" PROXY LISTEN UPSTREAM STATE FAULTS
   for name in $names; do
     json="$(api GET "/proxies/$name")"
     enabled="$(json_field "$json" enabled)"
@@ -380,7 +400,7 @@ status() {
     upstream="$(json_field "$json" upstream)"
     if [ "$enabled" = true ]; then state="$GREEN$(printf '%-9s' up)$OFF"; else state="$RED$(printf '%-9s' DISABLED)$OFF"; faults=$((faults + 1)); fi
     toxics="$(printf '%s' "$json" | sed -E 's/.*"toxics":\[//' | grep -oE '\{[^{}]*\{[^{}]*\}[^{}]*\}' || true)"
-    printf '%-26s %-17s %-15s %s ' "$name" "$listen" "$upstream" "$state"
+    printf '%-26s %-17s %-22s %s ' "$name" "$listen" "$upstream" "$state"
     if [ -z "$toxics" ]; then
       printf '%s-%s\n' "$DIM" "$OFF"
     else
@@ -388,7 +408,7 @@ status() {
       while IFS= read -r toxic; do
         [ -n "$toxic" ] || continue
         faults=$((faults + 1))
-        $first || printf '%-26s %-17s %-15s %-9s ' "" "" "" ""
+        $first || printf '%-26s %-17s %-22s %-9s ' "" "" "" ""
         printf '%s%s%s\n' "$YELLOW" "$(describe_toxic "$toxic")" "$OFF"
         first=false
       done <<< "$toxics"
