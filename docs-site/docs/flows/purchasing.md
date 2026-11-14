@@ -1,7 +1,8 @@
 # Purchasing and suppliers
 
 warehouse-service lets an admin buy stock from suppliers. Receiving goods
-raises stock in the backend through the internal receipts API. UI page:
+raises stock in warehouse-service's own stock ledger (it owns stock since 1.6.0);
+the backend's copy catches up a few seconds later. UI page:
 `/admin/purchasing`. All endpoints require `ROLE_ADMIN`.
 
 ## Endpoints
@@ -36,9 +37,10 @@ stateDiagram-v2
 - Receiving more than is outstanding for a line is `409`.
 - A repeated `requestId` with the same lines replays the previous result; the
   same `requestId` with different lines is `409`.
-- Stock rises in the backend with `PURCHASE_RECEIVED` movements
-  (`POST /internal/v1/inventory/receipts`, itself idempotent per request id). A
-  0 → n change triggers back-in-stock emails for wishlists.
+- Stock rises in warehouse-service's ledger with `PURCHASE_RECEIVED` movements, in
+  the same transaction as the receipt. The new level reaches the backend's stock
+  copy through the stock-level outbox (`POST /internal/v1/inventory/levels`); a
+  0 → n change there triggers back-in-stock emails for wishlists.
 
 ```mermaid
 sequenceDiagram
@@ -46,10 +48,9 @@ sequenceDiagram
     participant W as warehouse-service
     participant B as Backend
     A->>W: Receipt (requestId)
-    Note over W: Check quantities
-    W->>B: Add stock
-    B-->>W: Movement ids
+    Note over W: Check quantities, add stock to the ledger
     W-->>A: Updated order
+    W->>B: Push stock level (outbox, retried)
 ```
 
 ## Reorder suggestions

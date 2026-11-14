@@ -78,7 +78,8 @@ traffic capture and the public OpenAPI document. When
 | `POST /internal/v1/orders/{id}/refunds` | Book the refund of a return | `InternalOrderDto`; idempotent per `requestId`; 409 unless `DELIVERED` or when refunds would exceed the total |
 | `POST /internal/v1/orders/{id}/warehouse-cancel` | Cancel an order whose shipment the warehouse cancels | `InternalOrderDto`; 409 unless the order is `PAID` and `fulfilmentState` is `AWAITING_PICK` or `PICKED` |
 | `GET /internal/v1/products?ids=1,2` (or no `ids` for all) | Product snapshots | `List<InternalProductDto>` |
-| `POST /internal/v1/inventory/receipts` | Add stock for a purchase receipt or a resellable return | `{movementIds: [..]}`; idempotent per `requestId` |
+| `POST /internal/v1/inventory/receipts` | Removed in backend 3.22.0 (410 Gone): receipts are local ledger writes in warehouse-service 1.6.0 | see [INVENTORY_OWNERSHIP_CONTRACT.md](INVENTORY_OWNERSHIP_CONTRACT.md) |
+| `POST /internal/v1/inventory/levels` | Stock-level push into the backend's projection (backend 3.22.0) | `{applied, ignored}` |
 | `POST /internal/v1/notifications` | Email a customer; the backend renders the text | 202; a repeated `requestId` sends nothing |
 | `GET /internal/v1/jwks.json` | Access-token verification keys | JSON Web Key Set |
 | `GET /internal/v1/events?after=&limit=&types=order.cancelled` | Domain event feed (backend 3.16.0; also accepts the payment and, from 3.21.0, the notification token) | `{events, nextCursor, hasMore}`; see [EVENT_FEED.md](EVENT_FEED.md) |

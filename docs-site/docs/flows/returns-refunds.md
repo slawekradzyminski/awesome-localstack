@@ -71,9 +71,9 @@ sequenceDiagram
 
 Step by step:
 
-1. **Receive** — warehouse-service restocks resellable items with
-   `POST /internal/v1/inventory/receipts` (`RETURN_RESTOCKED`, `requestId`
-   derived from `"return-" + id`).
+1. **Receive** — warehouse-service restocks resellable items in its own stock
+   ledger (`RETURN_RESTOCKED`, `requestId` derived from `"return-" + id`); the
+   backend's stock copy follows through the stock-level push.
 2. **Refund** — it books the refund with `POST /internal/v1/orders/{id}/refunds`
    (`requestId` derived from `"refund-" + id`), then marks the return
    `REFUNDED` and queues a `RETURN_UPDATED` email.
