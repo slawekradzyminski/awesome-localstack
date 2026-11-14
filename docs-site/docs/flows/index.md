@@ -9,13 +9,15 @@ diagram of who calls whom. Paths are gateway paths.
 | Catalog, product search, facets, reviews, wishlist | backend | [Catalog and search](catalog-search.md) |
 | Cart, coupons, gift cards, loyalty points | backend | [Cart, coupons, gift cards, loyalty](cart.md) |
 | Checkout, VAT, tenders, `amountDue`, idempotency | backend | [Checkout, VAT and tenders](checkout.md) |
+| Stock reservations that expire, the reservation saga | backend + payment-service + notification-service | [Stock reservations](reservations.md) |
 | Card payments, 3-D Secure, settlement, voids, refunds | payment-service + backend | [Card payments](payments.md) |
-| Queue → pick → pack → ship → deliver | warehouse-service + backend | [Warehouse fulfilment](fulfilment.md) |
+| Queue → pick → pack → ship → deliver, split shipments | warehouse-service + backend | [Warehouse fulfilment](fulfilment.md) |
 | Simulated carrier, public tracking | warehouse-service | [Carrier tracking](tracking.md) |
 | Returns (RMA), refunds and their split | warehouse-service + backend + payment-service | [Returns and refunds](returns-refunds.md) |
 | Suppliers, purchase orders, reorder suggestions | warehouse-service | [Purchasing and suppliers](purchasing.md) |
-| Customer emails | backend + consumer | [Emails](emails.md) |
-| Signed HTTP callbacks for order events | backend | [User webhooks](webhooks.md) |
+| Customer emails | backend (account) + notification-service (commerce) + consumer | [Emails](emails.md) |
+| Signed HTTP callbacks for order events | notification-service | [User webhooks](webhooks.md) |
+| Webhooks and commerce emails from the event feed | notification-service + backend | [Notifications](notifications.md) |
 | Display currencies | backend + frontend | [Currencies](currencies.md) |
 | Order, payment, shipment, return state machines | all | [State machines](state-machines.md) |
 

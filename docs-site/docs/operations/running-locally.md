@@ -24,6 +24,8 @@ and is gone after the stack is recreated.
 | `http://localhost:8081/v3/api-docs` | Backend OpenAPI |
 | `http://localhost:8081/warehouse/v3/api-docs` | warehouse-service OpenAPI |
 | `http://localhost:8081/payment/v3/api-docs` | payment-service OpenAPI |
+| `http://localhost:8081/notification/v3/api-docs` | notification-service OpenAPI |
+| `http://localhost:8081/api/v1/local/notifications/outbox` | Commerce emails (lightweight profile) |
 | `http://localhost:8081/api/v1/graphiql` | GraphiQL |
 | `http://localhost:8081/api/v1/tracking/{number}` | Public parcel tracking |
 | `http://localhost:8081/api/v1/local/email/outbox` | Emails (local outbox, Bearer token required) |
@@ -115,4 +117,5 @@ Each application repository can run next to a local PostgreSQL on
 `localhost:5432` with its `local` Spring profile (`./mvnw spring-boot:run
 -Dspring-boot.run.profiles=local`): backend on 4001, warehouse-service on 4003
 (token `local-warehouse-token`), payment-service on 4004 (token
-`local-payment-token`, secret `local-payment-webhook-secret`).
+`local-payment-token`, secret `local-payment-webhook-secret`), notification-service
+on 4005 (token `local-notification-token`, needs backend 3.21.0).

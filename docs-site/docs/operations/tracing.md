@@ -139,7 +139,7 @@ in-memory storage) and turns OpenTelemetry export on in the Spring services.
 
 !!! warning "Image versions"
     Spans are exported from **backend 3.21.0, warehouse-service 1.5.0,
-    payment-service 1.3.0** (and notification-service 1.0.0) on. Older images
+    payment-service 1.3.0 and notification-service 1.0.0** on. Older images
     ignore the `TRACING_*` variables: Jaeger starts, but stays empty.
 
 | Variable (set by the overlay) | Value |

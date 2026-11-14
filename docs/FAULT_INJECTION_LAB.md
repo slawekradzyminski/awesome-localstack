@@ -8,7 +8,7 @@ full profile, with one command line tool and no extra installs.
 
 | Item | Value |
 | --- | --- |
-| Overlay | `docker-compose.chaos.yml` (+ `docker-compose.chaos-notification.yml` once the profile runs notification-service) |
+| Overlay | `docker-compose.chaos.yml` |
 | Proxy definitions | `chaos/toxiproxy.json` |
 | Command line | `scripts/chaos` (bash, curl and Docker; macOS and Linux) or the `make chaos-*` targets |
 | Toxiproxy API | `http://127.0.0.1:8474` (loopback only; `TOXIPROXY_PORT` moves it) |
@@ -76,13 +76,9 @@ flowchart LR
 | `payment-to-postgres` | `toxiproxy:35432` | `postgres:5432` | payment-service `SPRING_DATASOURCE_URL` |
 | `notification-to-postgres` | `toxiproxy:45432` | `postgres:5432` | notification-service `SPRING_DATASOURCE_URL` |
 
-**notification-service.** The two `notification-*` proxies always exist.
-notification-service itself joins the base profiles with notification-service
-1.0.0; until then nothing uses those proxies and the `notification` target
-changes nothing. Compose rejects overrides of a service the profile does not
-define, so the notification-service overrides live in their own file,
-`docker-compose.chaos-notification.yml`, which `scripts/chaos up` adds by itself
-as soon as the profile has the service.
+**notification-service.** Both base profiles run notification-service
+(1.0.0), so `docker-compose.chaos.yml` re-points it like the other services and
+the `notification` target works in every scenario.
 
 ## Quick start
 

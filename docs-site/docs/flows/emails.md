@@ -1,8 +1,21 @@
 # Emails
 
-The **backend renders every customer email** (subject and body). Other
-services only ask for an email by template name and properties; the JMS
-consumer only delivers what it receives.
+Two services render customer emails. The **backend** keeps the account emails
+(password reset, `POST /api/v1/email`). From backend 3.21.0 the **commerce
+emails** (payment, shipping, returns, loyalty, gift cards, back in stock) are
+rendered and sent by **notification-service**: the backend records a
+`notification.requested` event instead (`NOTIFICATIONS_DELIVERY=feed`, set in
+every profile that runs notification-service). Other services only ask for an
+email by template name and properties; the JMS consumer only delivers what it
+receives, from either sender.
+
+| Email | Rendered by | Readable through |
+| --- | --- | --- |
+| `PASSWORD_RESET_*`, `GENERIC` | backend | `GET /api/v1/users/me/email-events`, `/api/v1/local/email/outbox` |
+| every other template below | notification-service (backend 3.21.0+) | `GET /api/v1/notifications/emails`, `/api/v1/local/notifications/outbox` |
+
+With an older backend, or on the l20 compatibility stack (`email` delivery),
+the backend sends all of them as before.
 
 ## Pipeline
 
@@ -14,14 +27,19 @@ flowchart TB
     E --> T{Transport}
     T -- jms --> Q[ActiveMQ] --> C[consumer] --> M[Mailpit]
     T -- local-outbox --> O[Local outbox endpoint]
+    R -. commerce templates, 3.21.0 .-> F[(event feed:<br/>notification.requested)]
+    F --> N[notification-service renders]
+    N --> NE[(notification_emails)]
+    NE -- jms --> Q
+    NE -- local-outbox --> NO[GET /api/v1/local/notifications/outbox]
 ```
 
 | Profile | Transport | Where to read the email |
 | --- | --- | --- |
-| lightweight (`local`) | in-memory local outbox | `GET /api/v1/local/email/outbox` (clear with `DELETE`) |
-| full (`docker,demo`) | Artemis → consumer → Mailpit | `http://localhost:8025` |
-| production `awesome.byst.re` | Artemis → consumer → Mailpit (private) | users see statuses through `GET /api/v1/users/me/email-events` |
-| sandbox `aitesters.byst.re` | local outbox | `GET /api/v1/local/email/outbox` with a token and the configured secondary access key |
+| lightweight (`local`) | in-memory local outboxes | `GET /api/v1/local/email/outbox` (account, clear with `DELETE`), `GET /api/v1/local/notifications/outbox` (commerce) |
+| full (`docker,demo`) | Artemis → consumer → Mailpit, from both senders | `http://localhost:8025` |
+| production `awesome.byst.re` | Artemis → consumer → Mailpit (private), from both senders | users see statuses through `GET /api/v1/users/me/email-events` (account) and `GET /api/v1/notifications/emails` (commerce) |
+| sandbox `aitesters.byst.re` | local outboxes | `GET /api/v1/local/email/outbox` and `GET /api/v1/local/notifications/outbox` with a token and the configured secondary access key |
 
 ## Templates
 

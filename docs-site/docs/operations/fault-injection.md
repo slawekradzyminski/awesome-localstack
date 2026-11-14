@@ -45,8 +45,7 @@ flowchart LR
 ```
 
 notification-service gets `notification-to-backend` (`:34001`) and
-`notification-to-postgres` (`:45432`) once the profiles run it
-(notification-service 1.0.0); `scripts/chaos up` adds its overrides by itself.
+`notification-to-postgres` (`:45432`) the same way.
 The overlay changes nothing but `BACKEND_BASE_URL` and `SPRING_DATASOURCE_URL`.
 
 ## Scenarios

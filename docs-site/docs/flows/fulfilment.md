@@ -1,6 +1,7 @@
 # Warehouse fulfilment
 
-warehouse-service turns **paid** orders into parcels. The backend does not
+warehouse-service turns **paid** orders into parcels (from 1.5.0 possibly
+several per order, see [Split shipments](#split-shipments)). The backend does not
 store shipments; it mirrors the progress in `orders.fulfilment_state`, which
 drives the cancellation rules the customer sees.
 
@@ -147,3 +148,40 @@ Backend `fulfilmentState`:
   one email per `requestId`.
 
 Contract: [Warehouse service contract](../reference/WAREHOUSE_SERVICE_CONTRACT.md).
+
+## Split shipments
+
+warehouse-service 1.5.0 runs **several warehouse locations**: `KRK` "Krakow
+Central" (priority 1) and `GDN` "Gdansk North" (priority 2). A product is
+stocked by category (`PRIMARY` or `BACKUP` per location); the demo seed makes a
+mixed cart split.
+
+```mermaid
+flowchart LR
+    O[Paid order 42<br/>phone + book] --> A{Allocate lines}
+    A -->|one active location<br/>stocks every line| P1[1 parcel]
+    A -->|otherwise: highest-priority<br/>active location per line| P2[Parcel 1/2 KRK<br/>Parcel 2/2 GDN]
+    A -->|no active location<br/>for a category| X[409, nothing created]
+```
+
+- `POST /api/v1/warehouse/shipments {orderId}` still answers `201` with the
+  first parcel, now with `parcelCount`.
+- Customers read every parcel with `GET /api/v1/orders/{id}/shipments`
+  (`locationCode`, `locationName`, `parcelIndex`, `parcelCount`, `lines[]`);
+  `GET /api/v1/orders/{id}/shipment` keeps its shape for the first parcel.
+- Admin: `GET /api/v1/warehouse/locations`, `PUT /api/v1/warehouse/locations/{code}`
+  `{active}`, `POST /api/v1/warehouse/shipments/{id}/reallocate`
+  `{targetLocation?}` (only `AWAITING_PICK` parcels), `POST
+  /api/v1/warehouse/shipments/{id}/short-pick` `{productId, missingQuantity}`
+  and `GET /api/v1/warehouse/reconciliation`.
+
+The backend still sees **one** `fulfilmentState`. warehouse-service mirrors
+`max(last mirrored, aggregate)`, where the aggregate is `AWAITING_PICK` while
+every parcel awaits pick and otherwise `max(PICKED, min over non-cancelled
+parcels)`: the first pick makes the order `PICKED` (the customer can no longer
+cancel), and the order is `SHIPPED` only when every parcel shipped. The rule
+and why the backend keeps one state are in
+[ADR 2](../reference/ARCHITECTURE_DECISIONS.md#adr-2-backend-keeps-a-fulfilment-read-model).
+Test ideas: deactivate `GDN` and release a mixed order (one parcel, or `409`
+for a category only `GDN` stocks); short-pick a line and watch a second parcel
+appear; compare `GET /api/v1/warehouse/reconciliation` before and after.

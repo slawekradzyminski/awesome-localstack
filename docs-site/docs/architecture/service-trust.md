@@ -1,6 +1,6 @@
 # Service-to-service trust
 
-Three services cooperate on one order. They trust each other through
+Four services cooperate on one order. They trust each other through
 **service tokens**, **HMAC signatures** and **idempotency keys**, never through
 user JWTs.
 
@@ -8,11 +8,12 @@ user JWTs.
 flowchart LR
     W[warehouse-service] -- "X-Service-Token: WAREHOUSE_SERVICE_TOKEN<br/>(calls and event feed polls)" --> I["backend /internal/v1"]
     P[payment-service] -- "X-Service-Token: PAYMENT_SERVICE_TOKEN<br/>(calls and event feed polls)<br/>X-Payment-Signature (HMAC) on results" --> I
-    B[backend] -- "X-Webhook-Signature (HMAC, per subscription)" --> U[customer webhook URL]
+    N[notification-service] -- "X-Service-Token: NOTIFICATION_SERVICE_TOKEN<br/>(event feed polls, webhook export)" --> I
+    N -- "X-Webhook-Signature (HMAC, per subscription)" --> U[customer webhook URL]
 ```
 
-The backend calls neither service (since backend 3.16.0): both poll its event
-feed instead. payment-service has no internal API of its own any more.
+The backend calls none of the services (since backend 3.16.0; notification-service
+from 3.21.0): they poll its event feed instead. payment-service has no internal API of its own any more.
 
 ## Internal API (`/internal/v1` on the backend)
 
@@ -25,15 +26,19 @@ feed instead. payment-service has no internal API of its own any more.
 | --- | --- | --- | --- |
 | warehouse | `internal.service-tokens.warehouse` (alias `warehouse.service-token`) | `WAREHOUSE_SERVICE_TOKEN` | `local-warehouse-token` |
 | payment | `internal.service-tokens.payment` | `PAYMENT_SERVICE_TOKEN` | `local-payment-token` |
+| notification (3.21.0) | `internal.service-tokens.notification` | `NOTIFICATION_SERVICE_TOKEN` | `local-notification-token` |
 
 The Compose files set their own development defaults
 (`local-warehouse-service-token-change-me`,
-`local-payment-service-token-change-me`) on both sides; production takes the
+`local-payment-service-token-change-me`,
+`local-notification-service-token-change-me`) on both sides; production takes the
 values from Ansible Vault.
 
 | Endpoint | Accepted callers |
 | --- | --- |
-| `GET /internal/v1/orders/{id}`, `GET /internal/v1/jwks.json`, `GET /internal/v1/events` | warehouse, payment |
+| `GET /internal/v1/jwks.json`, `GET /internal/v1/events` | warehouse, payment, notification |
+| `GET /internal/v1/orders/{id}` | warehouse, payment |
+| `GET /internal/v1/webhooks/export` | notification only |
 | `POST /internal/v1/orders/{id}/payment` | payment only |
 | everything else (`orders` queue, `fulfilment`, `refunds`, `warehouse-cancel`, `products`, `inventory/receipts`, `notifications`) | warehouse only |
 
@@ -94,7 +99,8 @@ delays the message instead of losing it.
 | `notification_outbox` | warehouse-service | backend `POST /internal/v1/notifications` | every 30 s, exponential backoff, up to 10 attempts, while the backend answers `503`; other rejections are final |
 | `payment_outbox` | payment-service | backend payment result | 30 s doubling to 30 min, at most 10 attempts, on `5xx` or connection errors; `409` to a capture voids the payment; `401`/`422` are final |
 | `email_event` + `EmailRetryJob` | backend | ActiveMQ queue `email` | every minute, backoff 1, 2, 4, 8 minutes, five attempts in total |
-| `webhook_deliveries` + `WebhookRetryJob` | backend | customer URLs | 1, 2, 4… minutes, 8 attempts, auto-disable after 20 consecutive failures |
+| `webhook_deliveries` | notification-service (backend up to 3.20.x) | customer URLs | 1, 2, 4… minutes, 8 attempts, auto-disable after 20 consecutive failures |
+| `notification_emails` | notification-service | ActiveMQ queue `email` or the local outbox | 30 s doubling to 30 min, at most 10 attempts |
 
 The outboxes share a convention (backoff, row state, metrics) but no code; see
 [ADR 3](../reference/ARCHITECTURE_DECISIONS.md#adr-3-outbox-and-feed-consumer-implementations-stay-per-service).
@@ -107,7 +113,7 @@ and the services **pull** them.
 
 | Feed | Writer | Readers | Delivery |
 | --- | --- | --- | --- |
-| `domain_events`, `GET /internal/v1/events` | backend | payment-service (`card-refund.requested`), warehouse-service (`order.cancelled`) | each consumer polls every 5 s from its own cursor; events are served after a 3 s settle delay and kept for 30 days; at-least-once, deduplicated by event `id` |
+| `domain_events`, `GET /internal/v1/events` | backend | payment-service (`card-refund.requested`), warehouse-service (`order.cancelled`), notification-service (webhook types, `notification.requested`) | each consumer polls every 5 s from its own cursor; events are served after a 3 s settle delay and kept for 30 days; at-least-once, deduplicated by event `id` |
 
 Up to backend 3.15.0 card refunds went the other way, from a backend
 `payment_refund_outbox` to `POST /internal/v1/payments/refunds` on

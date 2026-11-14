@@ -46,13 +46,15 @@ flowchart LR
     G --> W[warehouse-service]
     G --> B[backend]
     G --> P[payment-service]
+    G --> N[notification-service]
     B --> DB[(PostgreSQL)]
 ```
 
 The **gateway** sends each path to the right service. The **backend** owns
 users, products, carts and orders; **warehouse-service** ships parcels and
-handles returns; **payment-service** charges test cards. Both small services
-ask the backend for order data and report back to it. Emails, the LLM and
+handles returns; **payment-service** charges test cards;
+**notification-service** sends webhooks and commerce emails. The small services
+ask the backend for order data, report back to it and read its event feed. Emails, the LLM and
 monitoring sit behind the backend; see [Architecture](architecture/index.md).
 
 ## Where it runs

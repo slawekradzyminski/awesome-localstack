@@ -1,5 +1,12 @@
 # User webhooks
 
+!!! info "Served by notification-service"
+    From backend 3.21.0 user webhooks live in **notification-service**
+    (port 4005, OpenAPI `/notification/v3/api-docs`). The endpoints, bodies,
+    signature and limits below did not change; deliveries are built from the
+    backend's event feed, so they leave 5–8 s after the change. See
+    [Notifications](notifications.md).
+
 Any signed-in user can subscribe an HTTP URL to **their own order events**.
 Each event becomes a *delivery*: signed with HMAC, retried with backoff and
 visible in a delivery log. A built-in **inbox** lets students receive webhooks
@@ -32,11 +39,13 @@ or redeliver (20 per 15 min) calls when rate limiting is on.
 ## Events and payload
 
 Event names: `order.created`, `order.paid`, `order.cancelled`,
-`shipment.shipped`, `shipment.delivered`, `refund.booked`, `payment.failed`,
-plus `webhook.ping`. Each committed event creates one delivery per **active**
+`order.reservation-expired` (backend 3.21.0, see
+[Stock reservations](reservations.md)), `shipment.shipped`,
+`shipment.delivered`, `refund.booked`, `payment.failed`, plus `webhook.ping`. Each committed event creates one delivery per **active**
 subscription of the order's owner that lists the event. The internal
-`card-refund.requested` event is not offered: only payment-service reads it,
-from the [event feed](../reference/EVENT_FEED.md).
+`card-refund.requested` and `notification.requested` events are not offered:
+only payment-service and notification-service read them, from the
+[event feed](../reference/EVENT_FEED.md).
 
 ```json
 {"id":"6a1f0f57-0f7c-4bb4-8a43-2f9d8f7e8c11","type":"order.created","createdAt":"2026-11-10T20:40:33.120Z","data":{"orderId":42,"status":"PENDING","totalAmount":40.00}}

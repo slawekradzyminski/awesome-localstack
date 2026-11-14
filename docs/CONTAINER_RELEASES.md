@@ -132,6 +132,63 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
+## Distributed lab release (pending)
+
+Not released yet: the LocalStack side of the November 2026 distributed-systems
+lab ([DISTRIBUTED_LAB_CONTRACTS.md](DISTRIBUTED_LAB_CONTRACTS.md)) is wired
+ahead of the images. The release train ships it as one set:
+
+| Image | Adds |
+| --- | --- |
+| backend 3.21.0 | Reservation expiry, `notification.requested`, the `NOTIFICATION` caller, webhook export, `webhooks.enabled`, tracing, `spanId` (Flyway V23, V24, maybe V25) |
+| warehouse-service 1.5.0 | Warehouse locations and split shipments (Flyway V6), tracing, outbox gauge |
+| payment-service 1.3.0 | Reservation guard, tracing, outbox gauge |
+| notification-service 1.0.0 | **New service** (first release, `slawekradzyminski/notification-service`, default branch `master`) |
+| frontend 3.15.0 | Reservation countdown, parcels, notification-service API snapshot |
+
+LocalStack changes already on the branch:
+
+- `notification-service` in the lightweight (160 MiB, `local-outbox`), full
+  (`jms` to ActiveMQ) and server profiles, plus `aitesters-notification-service`
+  (`local-outbox`); every backend next to one gets `NOTIFICATION_SERVICE_TOKEN`,
+  `NOTIFICATIONS_DELIVERY=feed` and `WEBHOOKS_ENABLED=false`. The l20
+  compatibility stack (`docker-compose.compatibility.yml`) is unchanged and
+  backend-only.
+- `postgres/service-roles.sh` prepares the `notification` role and schema.
+- Gateways: webhook, webhook-inbox, admin-webhook, notification-email,
+  local notification outbox and `/notification/v3/api-docs` locations to
+  port 4005 on every host; `^/api/v1/orders/\d+/shipments$` to warehouse-service.
+- Ansible: `.env.notification`, `.env.aitesters-notification`, eight new Vault
+  keys with asserts, an image gate, role isolation, direct-route, heap, scrape
+  and probe checks, aitesters reset, upgrade stop list and deployment silence
+  ([ANSIBLE.md](ANSIBLE.md#notification-service-secrets-and-image-gate)).
+- Prometheus job `spring_notification_micrometer`, public probe of
+  `/notification/v3/api-docs`, `CriticalContainerMissing` for the service.
+- The chaos and tracing overlays cover notification-service directly
+  (`docker-compose.chaos-notification.yml` and
+  `docker-compose.tracing-notification.yml` were folded in).
+
+Until notification-service 1.0.0 is published the server profile carries
+`slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST`
+and the local profiles the bare `1.0.0` tag. `scripts/verify-release-images.py`,
+`scripts/verify-image-pins.py` and the Ansible image gate fail with an explicit
+placeholder message, and CI's `runDocker`, `verifyLightweight` and
+`verifyMonitoringOverlay` cannot pull the image. `scripts/release-train.py pin`
+treats the placeholder as a first pin: it replaces the placeholder and the bare
+tags in every Compose file and the compatibility-set row with the published
+`tag@sha256`. Bump backend, warehouse-service, payment-service and frontend in
+the same train (the other images stay at their current pins until then).
+
+Upgrade: new Vault keys first, then `scripts/release-train.py deploy --yes`
+(backend version change: quiesced upgrade with a pre-deploy backup).
+notification-service imports the backend's webhook subscriptions and inboxes on
+its first start. Rollback: re-pin backend 3.20.1, warehouse-service 1.4.1,
+payment-service 1.2.1 and frontend 3.14.0, remove both notification-services
+and set the backends back to `NOTIFICATIONS_DELIVERY=email` and webhooks on;
+whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
+so keep the pre-deploy backup. Subscriptions created after the move exist only
+in notification-service.
+
 ## Release train: backend 3.20.1 — 13 November 2026
 
 Restores the public traffic endpoints on awesome.byst.re for the AI Testers API course (owner's decision: this is a
@@ -949,6 +1006,7 @@ Release train: backend 3.20.1, released 13 November 2026:
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5` |
 | Payment service | `slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91` |
+| Notification service | `slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST` (not published yet; see [Distributed lab release](#distributed-lab-release-pending)) |
 
 ## Backend 3.9.1 traffic preview patch
 
@@ -1095,14 +1153,16 @@ Rollback backend reference: `slawekradzyminski/backend:3.7.16@sha256:71cd8913a27
 
 ## LocalStack compatibility gate
 
-The production compatibility set is the six first-party services above
+The production compatibility set is the seven first-party services above
 (`PRODUCTION_SERVICES` in `scripts/verify-release-images.py`).
-`payment-service` is listed but not yet published: the server profile carries
-the `PENDING_PAYMENT_SERVICE_DIGEST` placeholder, the verification scripts
-report it explicitly, and the server deployment refuses to run (see
-`docs/ANSIBLE.md`). When pinning it, use the same reference in the lightweight,
-full and server profiles (`payment-service` and `aitesters-payment-service`)
-and replace the table row above with the immutable reference.
+`notification-service` is listed but not yet published: the server profile
+carries the `@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST` placeholder (any
+`PENDING_<SERVICE>_DIGEST` is recognised), the verification scripts report it
+explicitly, and the server deployment refuses to run (see `docs/ANSIBLE.md`).
+`scripts/release-train.py pin` uses the same reference in the lightweight, full
+and server profiles (`notification-service` and
+`aitesters-notification-service`) and replaces the table row above with the
+immutable reference.
 The main and `aitesters` variants do not have separate application release
 lines: `aitesters-backend` must use the exact current backend reference and
 `aitesters-frontend` must use the exact current frontend reference. Their

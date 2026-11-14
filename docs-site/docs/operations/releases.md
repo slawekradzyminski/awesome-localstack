@@ -8,6 +8,7 @@
 | `vite-react-frontend` | `slawekradzyminski/frontend` | Unit tests, production build, browser tests, Docker smoke |
 | `warehouse-service` | `slawekradzyminski/warehouse-service` | Maven tests, GraalVM native build, container smoke |
 | `payment-service` | `slawekradzyminski/payment-service` | Maven tests, GraalVM native build, container smoke |
+| `notification-service` | `slawekradzyminski/notification-service` (first release 1.0.0 pending) | Maven tests, GraalVM native build, native smoke |
 | `jms-email-consumer` | `slawekradzyminski/consumer` | Maven tests, Artemis → Mailpit integration smoke |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | API contract tests, container smoke |
 
@@ -31,7 +32,10 @@ flowchart TB
 ### Release train
 
 `scripts/release-train.py` runs the sequence for backend, warehouse-service,
-payment-service and frontend (`--with-consumer` adds the consumer). Each step
+payment-service, notification-service and frontend (`--with-consumer` adds the
+consumer). An image whose first release is not published yet is pinned in the
+server profile as `tag@sha256:PENDING_<SERVICE>_DIGEST` (bare tag in the local
+profiles); `pin` replaces it like any other pin. Each step
 recomputes the release set from GitHub and the pinned Compose files, so it can
 be rerun after a fix; `--dry-run` performs only reads and prints every action.
 
@@ -64,7 +68,7 @@ Vault keys go in before the deploy; backend migrations use
 | Script | Guarantees |
 | --- | --- |
 | `scripts/verify-image-pins.py` | Every remotely pulled image in every profile, CI workflow, the root `Dockerfile`, `docs-site/Dockerfile` and the restore tooling is pinned by digest; locally built `:local` images are exempt |
-| `scripts/verify-release-images.py` | The six first-party images form one compatibility set across profiles; the sandbox reuses the same images; env-file isolation; no backend sets `PAYMENT_BASE_URL` (removed in backend 3.16.0); gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
+| `scripts/verify-release-images.py` | The seven first-party images (with notification-service) form one compatibility set across profiles; a `PENDING_*_DIGEST` placeholder always fails; the sandbox reuses the same images; env-file isolation; no backend sets `PAYMENT_BASE_URL` (removed in backend 3.16.0); gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
 | `scripts/verify-java-security.py` | The frozen Java certificate blocklist is mounted in every JVM container |
 | `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties: preparation (docs build, pulls, Compose validation) before the quiesce, rescue restart of the stopped backends |
 | `scripts/verify-asset-mirror.py` | Runs the deploy's asset mirror against a fixture git repository: files the repository tracked and deleted are pruned; untracked manual files, rendered secrets and `app_dir` runtime files are kept (CI job `verifyAnsible`, with `ansible-playbook --syntax-check` of every playbook) |

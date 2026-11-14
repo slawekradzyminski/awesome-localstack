@@ -10,9 +10,10 @@
 | `gateway` | `nginx:1.31.3-trixie` | host `8081` (local), `127.0.0.1:8080` (server) | Single entry point. Serves `/images/` and `/branding/` itself, proxies everything else; see [Gateway routing](gateway.md) |
 | `edge` | `nginx:1.31.3-trixie` | host network `:80` (server only) | Receives traffic from the hosting provider's HTTPS proxy, trusts `X-Forwarded-For` only from that provider's range, forwards to the gateway |
 | `frontend` | `slawekradzyminski/frontend` | internal `80` | React single-page app (shop, admin, warehouse, LLM, traffic monitor) served by nginx |
-| `backend` | `slawekradzyminski/backend` | internal `4001`; gRPC `9091` on host loopback when enabled | Spring Boot (GraalVM native). Users and JWT issuance, products, inventory, cart, coupons, gift cards, loyalty, VAT, currencies, orders, reviews, wishlist, emails, webhooks, LLM proxy, GraphQL, gRPC, traffic monitor |
-| `warehouse-service` | `slawekradzyminski/warehouse-service` | internal `4003` | Shipments (pick, pack, ship, deliver), simulated carrier tracking, returns (RMA), suppliers, purchase orders, reorder suggestions; cancels shipments from the backend's event feed |
+| `backend` | `slawekradzyminski/backend` | internal `4001`; gRPC `9091` on host loopback when enabled | Spring Boot (GraalVM native). Users and JWT issuance, products, inventory, cart, coupons, gift cards, loyalty, VAT, currencies, orders (with stock reservations that expire), reviews, wishlist, account emails, LLM proxy, GraphQL, gRPC, traffic monitor, the event feed |
+| `warehouse-service` | `slawekradzyminski/warehouse-service` | internal `4003` | Warehouse locations and split shipments (one parcel per location, 1.5.0), shipments (pick, pack, ship, deliver), simulated carrier tracking, returns (RMA), suppliers, purchase orders, reorder suggestions; cancels shipments from the backend's event feed |
 | `payment-service` | `slawekradzyminski/payment-service` | internal `4004` | Fake card provider: test cards, 3-D Secure, asynchronous settlement, signed result notifications, card refunds read from the backend's event feed |
+| `notification-service` | `slawekradzyminski/notification-service` | internal `4005` | User webhooks and inboxes, commerce emails (payment, shipping, loyalty, gift card) built from the backend's event feed; JMS to the `email` queue (full, stable server) or a local outbox (lightweight, sandbox) |
 | `docs` | built locally from `docs-site/` | internal `80` | This wiki, served at `/docs/` through the gateway |
 | `consumer` | `slawekradzyminski/consumer` | host `4002` (full), internal (server) | JMS email consumer: reads the `email` queue and delivers the already rendered email over SMTP |
 
@@ -20,8 +21,8 @@
 
 | Service | Image | Port | Profiles | What it does |
 | --- | --- | --- | --- | --- |
-| `postgres` | `postgres:16.14-bookworm` | host `5432` (full), internal (lightweight, server) | all | Database `testdb`; schemas `public` (backend), `warehouse`, `payment` |
-| `postgres-roles` | `postgres:16.14-bookworm` | — | all | One-shot: creates or updates the `warehouse` and `payment` roles before those services start (`postgres/service-roles.sh`) |
+| `postgres` | `postgres:16.14-bookworm` | host `5432` (full), internal (lightweight, server) | all | Database `testdb`; schemas `public` (backend), `warehouse`, `payment`, `notification` |
+| `postgres-roles` | `postgres:16.14-bookworm` | — | all | One-shot: creates or updates the `warehouse`, `payment` and `notification` roles before those services start (`postgres/service-roles.sh`) |
 | `activemq` | `apache/artemis:2.55.0` | host `61616`, `8161`, `5672` (full), internal (server) | full, server | Message broker for outgoing emails (queue `email`) |
 | `mailpit` | `axllent/mailpit:v1.30.0` | host `8025` UI, `1025` SMTP (full); `127.0.0.1:8025` (server) | full, server | Fake SMTP inbox |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | host `11434` (lightweight), internal (server) | lightweight, server, model-mock override | Deterministic Ollama-compatible LLM mock |
@@ -36,8 +37,8 @@
 
 The server runs a second, fully separate copy of the application for
 `aitesters.byst.re`: `aitesters-backend`, `aitesters-frontend`,
-`aitesters-warehouse-service`, `aitesters-payment-service` and
-`aitesters-postgres` (with its own `aitesters-postgres-roles` one-shot). It has
+`aitesters-warehouse-service`, `aitesters-payment-service`,
+`aitesters-notification-service` and `aitesters-postgres` (with its own `aitesters-postgres-roles` one-shot). It has
 its own signing key, service tokens, webhook secret and database, so a token
 from one site never works on the other. A systemd timer recreates the sandbox
 from a fresh database volume every night.
@@ -53,6 +54,7 @@ are deliberately overcommitted (see [Ansible: memory budget](../reference/ANSIBL
 | aitesters-backend | 448m | native, `-Xmx256m` |
 | warehouse-service, aitesters-warehouse-service | 160m each | native, `-Xmx64m` |
 | payment-service, aitesters-payment-service | 160m each | native, `-Xmx64m` |
+| notification-service, aitesters-notification-service | 160m each | native, `-Xmx64m` |
 | consumer | 160m | native, `-Xmx64m` |
 | postgres / aitesters-postgres | 512m / 160m | |
 | activemq | 768m | JVM |

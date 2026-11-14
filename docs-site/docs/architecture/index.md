@@ -2,8 +2,9 @@
 
 The platform is a set of containers orchestrated by Docker Compose. One nginx
 **gateway** is the only entry point for browsers and test tools; behind it, a
-Spring Boot **backend** owns users, the catalog, carts and orders, while two
-smaller services own **warehouse fulfilment** and **card payments**.
+Spring Boot **backend** owns users, the catalog, carts and orders, while three
+smaller services own **warehouse fulfilment**, **card payments** and
+**notifications** (user webhooks and commerce emails).
 
 ```mermaid
 flowchart TB
@@ -12,16 +13,19 @@ flowchart TB
     G --> B[backend]
     G --> W[warehouse-service]
     G --> P[payment-service]
+    G --> N[notification-service]
     G --> D[docs wiki]
     B --> DB[(PostgreSQL)]
     W --> DB
     P --> DB
+    N --> DB
     B --> MQ[ActiveMQ] --> C[email consumer] --> M[Mailpit]
+    N --> MQ
 ```
 
 warehouse-service and payment-service also call the backend's internal API
-(order data, fulfilment, payment results) and poll its **event feed**; the
-backend never calls them. See [Service integration](#service-integration) below
+(order data, fulfilment, payment results), and all three services poll its
+**event feed**; the backend never calls them. See [Service integration](#service-integration) below
 and [Service-to-service trust](service-trust.md).
 Every request carries an `X-Request-Id` and a W3C `traceparent` from the
 gateway through the services, the event feed and the outboxes; see
@@ -43,6 +47,7 @@ domain events in the same transaction and **pulled** by the services from
 flowchart TB
     W[warehouse-service]
     P[payment-service]
+    N[notification-service]
     subgraph B[backend]
         direction LR
         I["internal API<br/>/internal/v1"] -->|"same transaction"| F[("event feed<br/>domain_events")]
@@ -51,6 +56,7 @@ flowchart TB
     P -->|"order data,<br/>signed payment results"| I
     W -.->|"polls order.cancelled"| F
     P -.->|"polls card-refund.requested"| F
+    N -.->|"polls webhook types,<br/>notification.requested"| F
 ```
 
 Solid arrows are calls made when needed, dotted arrows are polls every 5 s
@@ -66,11 +72,11 @@ contract is in [Event feed](../reference/EVENT_FEED.md).
 - **The backend issues identity.** It signs RS256 access tokens; the other
   services verify them with the backend's public key set (JWKS) and hold no
   signing secret. See [Authentication](auth.md).
-- **Services own their data.** warehouse-service and payment-service share the
+- **Services own their data.** warehouse-, payment- and notification-service share the
   PostgreSQL server but each uses its own schema and its own database role,
   which cannot read the backend's tables. See [Data and databases](data.md).
-- **Dependencies point to the backend.** warehouse-service and
-  payment-service depend on the backend, never the other way round; the
+- **Dependencies point to the backend.** warehouse-, payment- and
+  notification-service depend on the backend, never the other way round; the
   backend learns nothing from them except through calls they make. See
   [ADR 1](../reference/ARCHITECTURE_DECISIONS.md#adr-1-internal-integration-via-a-pull-event-feed).
 - **Service calls are authenticated and idempotent.** `/internal/v1` calls

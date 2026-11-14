@@ -81,7 +81,7 @@ traffic capture and the public OpenAPI document. When
 | `POST /internal/v1/inventory/receipts` | Add stock for a purchase receipt or a resellable return | `{movementIds: [..]}`; idempotent per `requestId` |
 | `POST /internal/v1/notifications` | Email a customer; the backend renders the text | 202; a repeated `requestId` sends nothing |
 | `GET /internal/v1/jwks.json` | Access-token verification keys | JSON Web Key Set |
-| `GET /internal/v1/events?after=&limit=&types=order.cancelled` | Domain event feed (backend 3.16.0; also accepts the payment token) | `{events, nextCursor, hasMore}`; see [EVENT_FEED.md](EVENT_FEED.md) |
+| `GET /internal/v1/events?after=&limit=&types=order.cancelled` | Domain event feed (backend 3.16.0; also accepts the payment and, from 3.21.0, the notification token) | `{events, nextCursor, hasMore}`; see [EVENT_FEED.md](EVENT_FEED.md) |
 
 ```text
 InternalOrderDto { id, username, status, fulfilmentState, subtotalAmount,

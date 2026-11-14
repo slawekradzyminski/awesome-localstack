@@ -1,7 +1,7 @@
 # Architecture decisions
 
-Decisions that shape how the backend, warehouse-service and payment-service
-work together. Each record states the context, the decision and what follows
+Decisions that shape how the backend, warehouse-service, payment-service and
+notification-service work together. Each record states the context, the decision and what follows
 from it. A superseded decision stays in this file with its status changed.
 
 | ADR | Decision | Status | Since |
@@ -10,6 +10,7 @@ from it. A superseded decision stays in this file with its status changed.
 | [2](#adr-2-backend-keeps-a-fulfilment-read-model) | Backend keeps a fulfilment read model | Accepted | backend 3.11.0, warehouse-service 1.0.0 |
 | [3](#adr-3-outbox-and-feed-consumer-implementations-stay-per-service) | Outbox and feed consumer implementations stay per service | Accepted | warehouse-service 1.0.0, payment-service 1.0.0 |
 | [4](#adr-4-database-per-service-on-one-postgresql-server) | Database per service on one PostgreSQL server | Accepted | backend 3.12.0, warehouse-service 1.0.0 |
+| [5](#adr-5-notifications-move-out-of-the-backend) | Notifications move out of the backend | Accepted | backend 3.21.0, notification-service 1.0.0 |
 
 ## ADR 1: Internal integration via a pull event feed
 
@@ -98,6 +99,18 @@ updates synchronously with `PUT /internal/v1/orders/{id}/fulfilment`.
 - **Consistency is restored automatically.** The feed delivers
   `order.cancelled` to warehouse-service within seconds, and the reconciler
   (every 10 minutes) cancels or adopts shipments the feed did not cover.
+- **Split shipments keep one state (warehouse-service 1.5.0).** An order can
+  ship as several parcels from different warehouse locations, but the backend
+  still sees one forward-only `fulfilmentState`. warehouse-service mirrors the
+  aggregate `max(last mirrored, aggregate)`, where the aggregate is
+  `AWAITING_PICK` while every parcel awaits pick and otherwise
+  `max(PICKED, min over the non-cancelled parcels)`. So the first pick moves
+  the order to `PICKED` (from then on the customer can no longer cancel), and
+  the order is `SHIPPED` or `DELIVERED` only when every parcel is. The backend
+  is unchanged and the cancel/ship race still has one decider: the first
+  parcel's pick takes the order row lock exactly like a single shipment's.
+  `GET /api/v1/warehouse/reconciliation` lists orders whose parcels disagree
+  with the backend's state.
 
 ### Consequences
 
@@ -106,6 +119,8 @@ updates synchronously with `PUT /internal/v1/orders/{id}/fulfilment`.
   cancellation) are part of the warehouse contract.
 - The synchronous PUT means a pick, pack or ship needs the backend to be up;
   warehouse-service answers 503 otherwise.
+- With split shipments the backend's state is a summary: per-parcel progress
+  (`GET /api/v1/orders/{id}/shipments`) is read from warehouse-service.
 
 ## ADR 3: Outbox and feed consumer implementations stay per service
 
@@ -113,10 +128,11 @@ updates synchronously with `PUT /internal/v1/orders/{id}/fulfilment`.
 
 ### Context
 
-The backend (`email_event`, `webhook_deliveries`), warehouse-service
-(`notification_outbox`) and payment-service (`payment_outbox`) each have a
-transactional outbox, and from ADR 1 warehouse-service and payment-service
-each have an event feed consumer. The code is similar, so a shared library was
+The backend (`email_event`, `webhook_deliveries` until 3.20.x), warehouse-service
+(`notification_outbox`), payment-service (`payment_outbox`) and
+notification-service (`notification_emails`, `webhook_deliveries`) each have a
+transactional outbox, and from ADR 1 the three services each have an event
+feed consumer. The code is similar, so a shared library was
 considered.
 
 ### Decision
@@ -145,7 +161,7 @@ service's own tests.
 | Retryable | Only "receiver unavailable" answers are retried (warehouse notifications: 503; payment results: any 5xx and I/O errors); every other rejection is final at once and handled by the service (for example a 409 to a capture voids the payment) |
 | Row state | `attempts`, `next_attempt_at`, `sent_at`, `last_error`. A row is pending while `sent_at` is null and `attempts` is below the maximum, sent once `sent_at` is set, and given up when `attempts` reaches the maximum |
 | Payload | Stored once and resent byte for byte (and re-signed where signed) |
-| Metrics | No outbox exports a dedicated metric today; health is read from the tables and logs. A new outbox metric uses the service's Micrometer registry with the names `<service>.outbox.pending` (gauge) and `<service>.outbox.failed` (counter of rows given up), so the existing Prometheus scrape picks it up |
+| Metrics | `<service>.outbox.pending` (gauge, `<service>_outbox_pending` in Prometheus) in warehouse-service 1.5.0, payment-service 1.3.0 and notification-service 1.0.0 (webhook deliveries plus queued emails); a counter of rows given up, when added, is `<service>.outbox.failed` |
 
 The backend's own outboxes predate this convention and keep their documented
 policies (`EmailRetryJob`: backoff 1, 2, 4, 8 minutes, five attempts;
@@ -182,8 +198,8 @@ profile has to run on student laptops.
 ### Decision
 
 One PostgreSQL 16 server per site, one database, and per service a **schema**
-owned by its own **role**: `public` for the backend, `warehouse` and `payment`
-for the services. The one-shot `postgres-roles` container
+owned by its own **role**: `public` for the backend, `warehouse`, `payment`
+and `notification` for the services. The one-shot `postgres-roles` container
 (`postgres/service-roles.sh`) creates each role with
 `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION`, makes it the owner of
 its schema only and grants `CONNECT` on the database. Services connect with
@@ -207,6 +223,83 @@ its schema only and grants `CONNECT` on the database. Services connect with
   migrates several schemas).
 - Cross-schema joins are impossible by design; warehouse-service keeps
   snapshots (order id, owner, prices) instead of foreign keys.
+
+## ADR 5: Notifications move out of the backend
+
+**Status:** accepted, November 2026 (backend 3.21.0, notification-service 1.0.0).
+
+### Context
+
+Up to 3.20.x the backend rendered and sent every customer email and delivered
+user webhooks: a dispatcher, a retry job and the `webhook_deliveries` outbox
+ran inside the process that also serves orders, payments results and the
+event feed. A slow webhook receiver or a broker outage competed with checkout
+for threads and connections, and every change to a template or to the webhook
+retry policy was a backend release, with the l20 course regression run that
+goes with it. Both features only *react* to commerce events the backend
+already records in its feed (ADR 1).
+
+### Decision
+
+A new service, **notification-service** (port 4005, schema and role
+`notification`), owns user webhooks and commerce emails as an event-feed
+consumer:
+
+- The backend records `notification.requested` (template, recipient,
+  properties, `requestId`) where it used to send a commerce email, when
+  `NOTIFICATIONS_DELIVERY=feed`; default `email` keeps the old behaviour.
+- `WEBHOOKS_ENABLED=false` stops the backend's dispatcher and retry job; the
+  endpoints stay mapped but the gateway sends that traffic to
+  notification-service, which serves the **same public API**.
+- A one-time import (`GET /internal/v1/webhooks/export`, only for the
+  `NOTIFICATION` caller) moves subscriptions and inboxes with their ids and
+  secrets.
+- Account emails (password reset, `POST /api/v1/email`, email events) stay in
+  the backend: they are part of the l20 course contract and are not
+  commerce reactions.
+
+Every profile that runs notification-service sets `feed` and webhooks off; the
+l20 compatibility stack runs the backend alone with the defaults.
+
+### Consequences
+
+- The backend makes no outbound notification call; a receiver or broker outage
+  delays emails and deliveries in notification-service's outboxes
+  (`notification_outbox_pending`) without touching checkout.
+- Webhook deliveries and commerce emails leave 5–8 seconds after the change
+  (settle delay plus poll interval) instead of right after the commit. The
+  delivery body is byte-compatible, so receivers notice only the latency.
+- One more container per site: 160 MiB limit each (see the memory budget in
+  [ANSIBLE.md](ANSIBLE.md#memory-budget)) and a fourth database role per site.
+- Webhook signing secrets are encrypted with notification-service's own key
+  instead of the backend's MFA key; losing the key makes stored secrets
+  unreadable, so it lives in Vault next to the other service secrets.
+- The feed now has three consumers; a new event type needs no backend change
+  to reach a user webhook once notification-service lists it.
+
+## Reservations saga (note)
+
+Backend 3.21.0 lets a `PENDING` order's stock hold expire
+(`reservationExpiresAt`, default 30 minutes). This is a small **saga** across
+the services, coordinated by events and by the order's row lock, with no
+distributed transaction:
+
+1. Order created: stock deducted (`ORDER_DEDUCTED`), the hold starts.
+2. Either payment-service captures the card and the backend marks the order
+   `PAID`, or `ReservationExpiryJob` cancels it first (`order.cancelled` with
+   `reason = "RESERVATION_EXPIRED"` plus `order.reservation-expired`;
+   compensation: stock `ORDER_RESTORED`, coupon released, gift-card and points
+   tenders returned).
+3. The row lock on the order decides a race. A capture that arrives after the
+   expiry gets 409 and payment-service voids the payment (the existing
+   "not payable" compensation); payment-service also refuses to start a
+   payment for a snapshot whose `reservationExpiresAt` has passed.
+4. warehouse-service never sees an expired order (only `PAID` orders are
+   released); notification-service tells subscribers.
+
+There is no grace period: the fault-injection lab's
+"payment settles after the reservation expired" exercise
+([FAULT_INJECTION_LAB.md](FAULT_INJECTION_LAB.md)) shows the void.
 
 ## Follow-ups
 

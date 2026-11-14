@@ -130,6 +130,7 @@ nav:
       - Catalog and search: flows/catalog-search.md
       - Cart, coupons, gift cards, loyalty: flows/cart.md
       - Checkout, VAT and tenders: flows/checkout.md
+      - Stock reservations: flows/reservations.md
       - Card payments: flows/payments.md
       - Warehouse fulfilment: flows/fulfilment.md
       - Carrier tracking: flows/tracking.md
@@ -137,6 +138,7 @@ nav:
       - Purchasing and suppliers: flows/purchasing.md
       - Emails: flows/emails.md
       - User webhooks: flows/webhooks.md
+      - Notifications: flows/notifications.md
       - Currencies: flows/currencies.md
       - State machines: flows/state-machines.md
   - Operations:
@@ -162,6 +164,8 @@ nav:
       - Commerce features: reference/COMMERCE_FULFILMENT.md
       - Warehouse service contract: reference/WAREHOUSE_SERVICE_CONTRACT.md
       - Payment service contract: reference/PAYMENT_SERVICE_CONTRACT.md
+      - Notification service contract: reference/NOTIFICATION_SERVICE_CONTRACT.md
+      - Distributed lab contracts: reference/DISTRIBUTED_LAB_CONTRACTS.md
       - Event feed: reference/EVENT_FEED.md
       - Architecture decisions: reference/ARCHITECTURE_DECISIONS.md
       - Webhooks: reference/WEBHOOKS.md
