@@ -15,10 +15,16 @@ flowchart TB
     G --> P[payment-service]
     G --> N[notification-service]
     G --> D[docs wiki]
-    B --> DB[(PostgreSQL)]
-    W --> DB
-    P --> DB
-    N --> DB
+    subgraph PG["PostgreSQL: database testdb"]
+        PUB[(schema public)]
+        WH[(schema warehouse)]
+        PAY[(schema payment)]
+        NOT[(schema notification)]
+    end
+    B --> PUB
+    W -->|role warehouse| WH
+    P -->|role payment| PAY
+    N -->|role notification| NOT
     B --> MQ[ActiveMQ] --> C[email consumer] --> M[Mailpit]
     N --> MQ
 ```
