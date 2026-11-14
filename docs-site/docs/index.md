@@ -46,7 +46,14 @@ flowchart LR
     G --> W[warehouse-service]
     G --> B[backend]
     G --> P[payment-service]
-    B --> DB[(PostgreSQL)]
+    subgraph PG[PostgreSQL]
+        PUB[(schema public)]
+        WH[(schema warehouse)]
+        PAY[(schema payment)]
+    end
+    B --> PUB
+    W --> WH
+    P --> PAY
 ```
 
 The **gateway** sends each path to the right service. The **backend** owns
