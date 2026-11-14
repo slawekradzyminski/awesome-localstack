@@ -1,0 +1,15 @@
+# notification-service links of the fault-injection lab (docker-compose.chaos.yml).
+# Kept apart because Compose rejects overrides of a service the base profile
+# does not define, and the base profiles get notification-service with
+# notification-service 1.0.0. scripts/chaos adds this file by itself when the
+# base profile has the service; by hand:
+#
+#   docker compose -f <base> -f docker-compose.chaos.yml -f docker-compose.chaos-notification.yml up -d
+services:
+  notification-service:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:45432/testdb?currentSchema=notification
+      BACKEND_BASE_URL: http://toxiproxy:34001
+    depends_on:
+      toxiproxy:
+        condition: service_healthy

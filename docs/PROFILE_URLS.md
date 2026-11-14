@@ -83,6 +83,20 @@ flowchart TB
     GR --> I[InfluxDB 8086<br/>k6 results]
 ```
 
+Opt-in fault-injection lab (`-f docker-compose.chaos.yml` or `scripts/chaos up`,
+either local profile; see [FAULT_INJECTION_LAB.md](FAULT_INJECTION_LAB.md)) and
+tracing overlay (`-f docker-compose.tracing.yml` or `make tracing-up`):
+
+```mermaid
+flowchart LR
+    W[warehouse-service] --> T[Toxiproxy<br/>API 127.0.0.1:8474]
+    P[payment-service] --> T
+    T --> B[backend]
+    T --> DB[(postgres)]
+    B --> T
+    S[backend, warehouse,<br/>payment] -->|OTLP 4318| J[Jaeger<br/>UI 127.0.0.1:16686]
+```
+
 ### Server
 
 `awesome.byst.re`:
@@ -146,6 +160,8 @@ Recommended app URLs:
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
+- Toxiproxy API (with the [fault-injection lab](FAULT_INJECTION_LAB.md), `scripts/chaos up`): `http://127.0.0.1:8474`
+- Jaeger UI (with the tracing overlay, `make tracing-up`): `http://127.0.0.1:16686`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -198,6 +214,8 @@ Recommended app URLs:
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - sign in API: `http://localhost:8081/api/v1/users/signin`
+- Toxiproxy API (with the [fault-injection lab](FAULT_INJECTION_LAB.md), `scripts/chaos up`): `http://127.0.0.1:8474`
+- Jaeger UI (with the tracing overlay, `make tracing-up`): `http://127.0.0.1:16686`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:

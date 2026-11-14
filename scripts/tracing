@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Jaeger tracing overlay (docker-compose.tracing.yml) on a local profile.
+#
+#   scripts/tracing up [full|lightweight]     add Jaeger and turn tracing on (make tracing-up)
+#   scripts/tracing down [full|lightweight]   turn tracing off and remove Jaeger (make tracing-down)
+#
+# Default profile: the one that runs, else lightweight. The fault-injection lab
+# (docker-compose.chaos.yml) and the monitoring overlay are kept when they run.
+# Environment: JAEGER_UI_PORT (default 16686), COMPOSE_PROJECT_NAME.
+# Docs: docs-site/docs/operations/tracing.md
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+die() { printf 'error: %s\n' "$1" >&2; shift; for line in "$@"; do printf '       %s\n' "$line" >&2; done; exit 1; }
+
+command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 \
+  || die "Docker is not running." "Start Docker Desktop (or the Docker daemon) and try again."
+
+action="${1:-}"
+profile="${2:-}"
+case "$action" in up|down) ;; *) die "usage: scripts/tracing up|down [full|lightweight]" ;; esac
+
+project_of() {
+  if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then echo "$COMPOSE_PROJECT_NAME"; return; fi
+  case "$1" in full) echo awesome-full-native ;; *) echo awesome-light ;; esac
+}
+running() {
+  [ -n "$(docker ps -q --filter "label=com.docker.compose.project=$1" --filter "label=com.docker.compose.service=$2")" ]
+}
+if [ -z "$profile" ]; then
+  if running "$(project_of full)" backend; then profile=full; else profile=lightweight; fi
+fi
+case "$profile" in
+  full) base=docker-compose.yml ;;
+  lightweight|light) base=lightweight-docker-compose.yml ;;
+  *) die "unknown profile '$profile'" "Use: full or lightweight." ;;
+esac
+project="$(project_of "$profile")"
+
+notification=false
+(cd "$ROOT" && docker compose -f "$base" config --services | grep -qx notification-service) && notification=true
+
+files=(-f "$base")
+if running "$project" toxiproxy; then
+  files+=(-f docker-compose.chaos.yml)
+  $notification && files+=(-f docker-compose.chaos-notification.yml)
+fi
+running "$project" prometheus && files+=(-f docker-compose.monitoring.yml)
+if [ "$action" = up ]; then
+  files+=(-f docker-compose.tracing.yml)
+  $notification && files+=(-f docker-compose.tracing-notification.yml)
+fi
+for extra in ${CHAOS_EXTRA_FILES:-}; do files+=(-f "$extra"); done
+
+echo "docker compose ${files[*]} up -d"
+(cd "$ROOT" && docker compose "${files[@]}" up -d)
+if [ "$action" = up ]; then
+  echo "Jaeger UI: http://127.0.0.1:${JAEGER_UI_PORT:-16686}"
+  echo "Spans are exported from backend 3.21.0, warehouse-service 1.5.0 and payment-service 1.3.0 on."
+else
+  jaeger="$(docker ps -aq --filter "label=com.docker.compose.project=$project" --filter label=com.docker.compose.service=jaeger)"
+  [ -z "$jaeger" ] || docker rm -f $jaeger >/dev/null
+  echo "Tracing off; Jaeger removed."
+fi

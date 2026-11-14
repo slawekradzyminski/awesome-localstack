@@ -1,0 +1,72 @@
+# Fault-injection lab: Toxiproxy between the services and their dependencies.
+# Add it after a local base profile (the simplest way is scripts/chaos):
+#
+#   scripts/chaos up lightweight          # or: make chaos-up
+#   docker compose -f lightweight-docker-compose.yml -f docker-compose.chaos.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.chaos.yml up -d
+#
+# One proxy per link (chaos/toxiproxy.json), so a scenario can break one
+# service's view of the backend or of PostgreSQL without touching the others.
+# The services need no change: only BACKEND_BASE_URL and SPRING_DATASOURCE_URL
+# are re-pointed. The gateway still talks to every service directly.
+#
+#   warehouse-service ─ toxiproxy:14001 ─┐            backend ─ toxiproxy:15432 ─┐
+#   payment-service ── toxiproxy:24001 ──┼─ backend   warehouse ─ toxiproxy:25432 ┼─ postgres
+#   notification ───── toxiproxy:34001 ──┘            payment ─── toxiproxy:35432 ┤
+#                                                     notification ─ toxiproxy:45432 ┘
+#
+# notification-service is not part of the base profiles yet. Its proxies
+# exist already; its two overrides live in docker-compose.chaos-notification.yml,
+# which scripts/chaos adds by itself once the base profile runs the service.
+#
+# The Toxiproxy API is published on 127.0.0.1 only (TOXIPROXY_PORT, default
+# 8474). Docs: docs/FAULT_INJECTION_LAB.md.
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.13.0@sha256:5d3dae09bc185dcc5ff6cf43abf6062a4a720aff0c4306a471e773acdcd107aa
+    restart: unless-stopped
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    environment:
+      LOG_LEVEL: warn
+    volumes:
+      - ./chaos/toxiproxy.json:/config/toxiproxy.json:ro
+    ports:
+      - "127.0.0.1:${TOXIPROXY_PORT:-8474}:8474"
+    mem_limit: 32m
+    healthcheck:
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 2s
+    networks:
+      - my-private-ntwk
+
+  backend:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:15432/testdb
+      # Reservation expiry (backend 3.21.0+): shorten it for the expiry exercises,
+      # e.g. ORDERS_RESERVATION_TTL=PT2M scripts/chaos up lightweight.
+      ORDERS_RESERVATION_TTL: ${ORDERS_RESERVATION_TTL:-PT30M}
+    depends_on:
+      toxiproxy:
+        condition: service_healthy
+
+  warehouse-service:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:25432/testdb?currentSchema=warehouse
+      BACKEND_BASE_URL: http://toxiproxy:14001
+    depends_on:
+      toxiproxy:
+        condition: service_healthy
+
+  payment-service:
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:35432/testdb?currentSchema=payment
+      BACKEND_BASE_URL: http://toxiproxy:24001
+      # Simulated provider delay for PROCESSING cards (4000 0000 0000 0077);
+      # lengthen it for the "payment settles after the reservation expired" exercise.
+      PAYMENT_SETTLEMENT_DELAY: ${PAYMENT_SETTLEMENT_DELAY:-PT10S}
+    depends_on:
+      toxiproxy:
+        condition: service_healthy

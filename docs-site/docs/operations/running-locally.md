@@ -67,6 +67,15 @@ and stop with the same `-f` files and `down`.
 Use `docker compose -f docker-compose.yml -f docker-compose.model-mock.yml up -d`
 on machines without Docker Model Runner.
 
+## Fault injection and tracing (opt-in, either profile)
+
+| Command | What | URL |
+| --- | --- | --- |
+| `scripts/chaos up` (`make chaos-up`) | [Fault-injection lab](fault-injection.md): Toxiproxy between the services, `scripts/chaos <scenario>` | Toxiproxy API `http://127.0.0.1:8474` |
+| `make tracing-up` | [Jaeger](tracing.md#jaeger-traces) with OTLP export from the Spring services | `http://127.0.0.1:16686` |
+
+`scripts/chaos up lightweight tracing monitoring` starts all three overlays.
+
 ## Demo users
 
 | Username | Password | Role | Where |

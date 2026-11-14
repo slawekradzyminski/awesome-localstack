@@ -13,6 +13,8 @@ the other.
 | model-mock | `docker-compose.yml` + `docker-compose.model-mock.yml` | `awesome-full-native` | Full profile with `ollama-mock` instead of Docker Model Runner (CI) |
 | grpc | base file + `docker-compose.grpc.yml` | base project | Publishes the backend's native gRPC listener on `127.0.0.1:9091` |
 | monitoring | base file + `docker-compose.monitoring.yml` | base project | Prometheus, Grafana, InfluxDB, cAdvisor, Node Exporter for k6 trainings (lightweight or full) |
+| chaos | base file + `docker-compose.chaos.yml` | base project | [Fault-injection lab](../operations/fault-injection.md): Toxiproxy between the services, the backend and PostgreSQL (`scripts/chaos`) |
+| tracing | base file + `docker-compose.tracing.yml` | base project | Jaeger with OTLP export from the Spring services ([Tracing a request](../operations/tracing.md#jaeger-traces)) |
 | compatibility | `docker-compose.compatibility.yml` | its own | Runs the `ai-testers-api` course suite against two disposable backends on `127.0.0.1:14001` / `14002` |
 
 ## What differs between the main profiles
