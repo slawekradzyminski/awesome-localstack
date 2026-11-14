@@ -20,6 +20,10 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ["docker", "compose", "-f", str(ROOT / "docker-compose.compatibility.yml")]
 TARGETS = ("http://127.0.0.1:14001", "http://127.0.0.1:14002")
+# warehouse-service owns the stock ledger (backend 3.22.0+): each backend has its
+# own, reachable only inside the stack. COMPAT_WAREHOUSE_IMAGE replaces its image
+# the way COMPAT_BACKEND_IMAGE replaces the backends'.
+WAREHOUSES = ("warehouse-service", "admin-warehouse-service")
 # These are disposable local fixtures, never credentials from a participant checkout.
 FIXTURE = dict(username="slaweczek", password="slaweczek", email="slaweczek@gmail.com",
                firstName="Slawek", lastName="Slaweczek", roles=["ROLE_CLIENT"])
@@ -69,6 +73,22 @@ def wait_and_seed(target):
     for product in json.loads(products):
         request(target + "/api/v1/products/" + str(product["id"]),
                 {"price": 10}, method="PUT", token=token)
+
+
+def wait_for_warehouses():
+    """Block until every warehouse-service reports healthy (its Docker healthcheck)."""
+    deadline = time.monotonic() + 240
+    states = {}
+    while time.monotonic() < deadline:
+        rows = [json.loads(line) for line in
+                output(COMPOSE + ["ps", "--all", "--format", "json", *WAREHOUSES]).splitlines() if line]
+        states = {row["Service"]: (row.get("State"), row.get("Health")) for row in rows}
+        if any(state in ("exited", "dead") for state, _ in states.values()):
+            raise RuntimeError(f"warehouse-service stopped: {states}")
+        if set(states) == set(WAREHOUSES) and all(health == "healthy" for _, health in states.values()):
+            return
+        time.sleep(2)
+    raise RuntimeError(f"warehouse-service did not become healthy: {states}")
 
 
 def source_digest(lesson):
@@ -160,6 +180,8 @@ def main():
     report_dir.mkdir(parents=True, exist_ok=False)
     revision = output(["git", "-C", str(args.course_repo), "rev-parse", args.ref + "^{commit}"])
     summary = {"course_revision": revision, "targets": TARGETS, "lessons": [],
+               "candidate_images": {name: os.environ.get(name) for name in
+                                    ("COMPAT_BACKEND_IMAGE", "COMPAT_WAREHOUSE_IMAGE")},
                "graphql_preview_checks": args.graphql_preview,
                "grpc_preview_checks": args.grpc_preview,
                "fixture_product_price": "10.00",
@@ -211,6 +233,9 @@ def main():
                     run(COMPOSE + ["up", "-d", "--force-recreate"], stdout=log, stderr=subprocess.STDOUT)
                     for target in TARGETS:
                         wait_and_seed(target)
+                    # Stock commands go to warehouse-service (backend 3.22.0+):
+                    # never start the lesson before both are healthy.
+                    wait_for_warehouses()
                     run(["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"],
                         cwd=lesson, env=env, stdout=log, stderr=subprocess.STDOUT)
                 before = source_digest(lesson)

@@ -26,8 +26,75 @@ x-backend: &backend
     SECURITY_RATE_LIMIT_QR_USER_CAPACITY: "12000"
     SECURITY_RATE_LIMIT_OLLAMA_USER_CAPACITY: "4000"
     SECURITY_RATE_LIMIT_OLLAMA_IP_CAPACITY: "4000"
+    # warehouse-service owns the stock ledger (backend 3.22.0+): each backend calls
+    # its own warehouse with the backend token and accepts its calls with the
+    # warehouse token. Older backends ignore WAREHOUSE_URL and BACKEND_SERVICE_TOKEN.
+    WAREHOUSE_URL: http://warehouse-service:4003
+    WAREHOUSE_SERVICE_TOKEN: compat-warehouse-service-token
+    BACKEND_SERVICE_TOKEN: compat-backend-service-token
   command: ["-Xmx512m"]
   mem_limit: 768m
+  # Same probe as the image's own HEALTHCHECK: warehouse-service waits for it.
+  healthcheck:
+    test:
+      - CMD
+      - bash
+      - -ec
+      - >-
+        exec 3<>/dev/tcp/127.0.0.1/4001;
+        printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+        read -r _ status _ <&3;
+        test "$$status" = 200
+    interval: 5s
+    timeout: 5s
+    retries: 60
+    start_period: 10s
+
+x-warehouse: &warehouse
+  # The stock owner next to each backend (schema and role `warehouse` in that
+  # backend's database), prepared by the matching *-postgres-roles one-shot.
+  image: ${COMPAT_WAREHOUSE_IMAGE:-slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e}
+  environment: &warehouse-environment
+    SPRING_PROFILES_ACTIVE: docker
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
+    SPRING_DATASOURCE_USERNAME: warehouse
+    SPRING_DATASOURCE_PASSWORD: compat-warehouse-db-password
+    BACKEND_BASE_URL: http://backend:4001
+    WAREHOUSE_SERVICE_TOKEN: compat-warehouse-service-token
+    BACKEND_SERVICE_TOKEN: compat-backend-service-token
+  command: ["-Xmx64m"]
+  mem_limit: 160m
+  healthcheck:
+    test:
+      - CMD
+      - bash
+      - -ec
+      - >-
+        exec 3<>/dev/tcp/127.0.0.1/4003;
+        printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+        read -r _ status _ <&3;
+        test "$$status" = 200
+    interval: 5s
+    timeout: 5s
+    retries: 60
+    start_period: 10s
+
+x-postgres-roles: &postgres-roles
+  # One-shot: the same postgres/service-roles.sh as every other profile.
+  image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+  entrypoint: ["bash", "/scripts/service-roles.sh"]
+  restart: "no"
+  environment: &postgres-roles-environment
+    PGHOST: postgres
+    PGDATABASE: testdb
+    PGUSER: postgres
+    PGPASSWORD: postgres
+    WAREHOUSE_DB_PASSWORD: compat-warehouse-db-password
+    PAYMENT_DB_PASSWORD: compat-payment-db-password
+    NOTIFICATION_DB_PASSWORD: compat-notification-db-password
+  volumes:
+    - ./postgres:/scripts:ro
+  mem_limit: 64m
 
 x-postgres: &postgres
   # Disposable tmpfs database per backend, so each compatibility run starts clean.
@@ -59,6 +126,20 @@ services:
       - "127.0.0.1:14001:4001"
   postgres:
     <<: *postgres
+  postgres-roles:
+    <<: *postgres-roles
+    depends_on:
+      postgres:
+        condition: service_healthy
+  # No backend depends_on warehouse: warehouse-service needs the backend's JWKS to
+  # start, so it waits for a healthy backend instead.
+  warehouse-service:
+    <<: *warehouse
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
   admin-backend:
     <<: *backend
     depends_on:
@@ -70,6 +151,7 @@ services:
       <<: *backend-environment
       SPRING_PROFILES_ACTIVE: local
       SPRING_DATASOURCE_URL: jdbc:postgresql://admin-postgres:5432/testdb
+      WAREHOUSE_URL: http://admin-warehouse-service:4003
       APP_TRAFFIC_OBFUSCATE_AUTHORIZATION: "true"
       APP_TRAFFIC_OBFUSCATE_EMAILS: "true"
       APP_TRAFFIC_OBFUSCATE_SENSITIVE_BODY_FIELDS: "true"
@@ -77,6 +159,25 @@ services:
       - "127.0.0.1:14002:4001"
   admin-postgres:
     <<: *postgres
+  admin-postgres-roles:
+    <<: *postgres-roles
+    environment:
+      <<: *postgres-roles-environment
+      PGHOST: admin-postgres
+    depends_on:
+      admin-postgres:
+        condition: service_healthy
+  admin-warehouse-service:
+    <<: *warehouse
+    environment:
+      <<: *warehouse-environment
+      SPRING_DATASOURCE_URL: jdbc:postgresql://admin-postgres:5432/testdb?currentSchema=warehouse
+      BACKEND_BASE_URL: http://admin-backend:4001
+    depends_on:
+      admin-backend:
+        condition: service_healthy
+      admin-postgres-roles:
+        condition: service_completed_successfully
   ollama-mock:
     image: slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e
     volumes:
