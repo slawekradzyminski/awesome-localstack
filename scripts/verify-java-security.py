@@ -10,7 +10,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE_IMAGES = (
     'slawekradzyminski/backend:', 'slawekradzyminski/consumer:', 'slawekradzyminski/warehouse-service:',
-    'slawekradzyminski/payment-service:',
+    'slawekradzyminski/payment-service:', 'slawekradzyminski/notification-service:',
 )
 
 

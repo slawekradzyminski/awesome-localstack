@@ -37,7 +37,8 @@ def main():
                     "intersect(backend_upgrade_deployed_services.stdout_lines)",
                     "      - backend\n", "      - aitesters-backend", "      - warehouse-service",
                     "      - aitesters-warehouse-service", "      - payment-service",
-                    "      - aitesters-payment-service",
+                    "      - aitesters-payment-service", "      - notification-service",
+                    "      - aitesters-notification-service",
                     "'backend' in backend_upgrade_quiesced_services",
                     "'ps', '--quiet'", "backend_upgrade_stopped_containers:", "'stop'",
                     "awesome-postgres-backup backend-upgrade-quiesced"])

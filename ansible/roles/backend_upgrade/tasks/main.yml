@@ -34,7 +34,7 @@
   register: backend_upgrade_deployed_services
   changed_when: false
 
-- name: Select the old backend instances and their warehouse- and payment-services
+- name: Select the old backend instances and their warehouse-, payment- and notification-services
   ansible.builtin.set_fact:
     backend_upgrade_quiesced_services: >-
       {{ backend_upgrade_stop_services
@@ -47,6 +47,8 @@
       - aitesters-warehouse-service
       - payment-service
       - aitesters-payment-service
+      - notification-service
+      - aitesters-notification-service
 
 # An empty service list would make `docker compose stop` stop the whole stack.
 - name: Refuse to quiesce without a backend service
@@ -71,7 +73,7 @@
   ansible.builtin.set_fact:
     backend_upgrade_stopped_containers: "{{ backend_upgrade_running_containers.stdout_lines }}"
 
-- name: Stop both old backend instances and their warehouse- and payment-services before applying incompatible migrations
+- name: Stop both old backend instances and their warehouse-, payment- and notification-services before applying incompatible migrations
   ansible.builtin.command:
     argv: >-
       {{ ['docker', 'compose', '-f', app_compose_file, 'stop', '--timeout', '60']

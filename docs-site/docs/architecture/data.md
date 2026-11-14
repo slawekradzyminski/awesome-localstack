@@ -1,6 +1,6 @@
 # Data and databases
 
-All three Spring services use **one PostgreSQL 16 server** and one database,
+All four Spring services use **one PostgreSQL 16 server** and one database,
 but each owns a separate **schema** and connects as its own **role** (why:
 [ADR 4](../reference/ARCHITECTURE_DECISIONS.md#adr-4-database-per-service-on-one-postgresql-server)).
 
@@ -9,16 +9,18 @@ flowchart TB
     B[backend] --> PUB[(schema public)]
     W[warehouse-service] --> WH[(schema warehouse)]
     P[payment-service] --> PAY[(schema payment)]
+    N[notification-service] --> NOT[(schema notification)]
 ```
 
 ## Roles and isolation
 
 The one-shot `postgres-roles` container runs `postgres/service-roles.sh`
-before every warehouse-service and payment-service start. For each of
-`warehouse` and `payment` it:
+before every warehouse-, payment- and notification-service start. For each of
+`warehouse`, `payment` and `notification` it:
 
 1. creates the role if missing, sets `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION`
-   and the password from `WAREHOUSE_DB_PASSWORD` / `PAYMENT_DB_PASSWORD`;
+   and the password from `WAREHOUSE_DB_PASSWORD` / `PAYMENT_DB_PASSWORD` /
+   `NOTIFICATION_DB_PASSWORD`;
 2. grants `CONNECT` on the database;
 3. creates the schema with that role as owner, and transfers ownership of any
    tables, views and sequences left in it by an earlier superuser-owned
@@ -35,6 +37,12 @@ role checks exactly that after every deploy. The services connect with
 | backend | `public` schema | `V1` baseline … `V7` commerce, `V8` order fulfilment state, `V9` email retry and order refunds, `V10` commerce foundation, `V11` payments, `V12` loyalty and gift cards, `V13` VAT and currency, `V14` webhooks, `V15` product search indexes, `V16` domain event feed (`domain_events`, `card_refund_requests`; drops `payment_refund_outbox`) |
 | warehouse-service | `warehouse` | `V1` schema, `V2` notification outbox and order locks, `V3` shipment tracking (`shipments.simulated`, `tracking_events`), `V4` event feed consumer (`event_cursors`, `processed_events`) |
 | payment-service | `payment` | `V1` baseline, `V2` order payment locks, `V3` event feed consumer (`event_cursors`, `processed_events`) |
+| notification-service | `notification` | webhook subscriptions, deliveries and inboxes (imported once from the backend), `notification_emails`, event feed consumer (`event_cursors`, `processed_events`) |
+
+Backend 3.21.0 adds `V23` (`orders.reservation_expires_at`), `V24`
+(`domain_events.span_id`) and possibly `V25` (notification split);
+warehouse-service 1.5.0 adds `V6` (warehouse locations, `location_products`,
+one shipment per order and location, `shipment_lines`).
 
 ## Main tables
 
@@ -76,7 +84,7 @@ role checks exactly that after every deploy. The services connect with
 
 ## Connection pools
 
-warehouse-service and payment-service use Hikari with `maximum-pool-size: 3`,
+warehouse-, payment- and notification-service use Hikari with `maximum-pool-size: 3`,
 `minimum-idle: 1` and a 2-minute idle timeout. The lightweight PostgreSQL runs
 with `max_connections=40` and `shared_buffers=32MB` inside a 256 MiB limit.
 

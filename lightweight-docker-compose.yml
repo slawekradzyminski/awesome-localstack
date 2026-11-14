@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.20.1@sha256:a47d14898c727aa64374efeb405ac1aea95fe0d047cfbf3b160ea89f46a4de52
+    image: slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73
     restart: always
     expose:
       - "4001"
@@ -17,8 +17,8 @@ services:
       PASSWORD_RESET_FRONTEND_BASE_URL: http://localhost:8081/reset
       SWAGGER_UI_OAUTH2_REDIRECT_URL: http://localhost:8081/swagger-ui/oauth2-redirect.html
       APP_CORS_ALLOWED_ORIGIN_PATTERNS: http://localhost:8081,http://127.0.0.1:8081,http://host.docker.internal:8081
-      # warehouse-service and payment-service verify access tokens with the backend
-      # JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
+      # warehouse-, payment- and notification-service verify access tokens with the
+      # backend JWKS (/internal/v1/jwks.json) and call the internal API with their service tokens.
       # RS256 signing key (base64 PKCS#8); empty means an ephemeral key per backend start.
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
@@ -27,6 +27,13 @@ services:
       # result notifications with the webhook secret. The backend never calls it.
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+      # notification-service (backend 3.21.0+) reads the event feed and the one-time
+      # webhook export with its own token, sends the commerce emails and owns user
+      # webhooks: the backend records notification.requested feed events instead of
+      # sending those emails and runs no webhook dispatcher of its own.
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATIONS_DELIVERY: feed
+      WEBHOOKS_ENABLED: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,7 +55,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.4.1@sha256:ffb3f679e922d7e4fcd1f513a9530816a6d8efd9aa40edfa36d215d2c5ea91c5
+    image: slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e
     restart: always
     expose:
       - "4003"
@@ -86,7 +93,7 @@ services:
       - my-private-ntwk
 
   payment-service:
-    image: slawekradzyminski/payment-service:1.2.1@sha256:1b6a265827b426b5a45aec901361672428a84841f45529a1b2b966d0c0f97e91
+    image: slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8
     restart: always
     expose:
       - "4004"
@@ -124,10 +131,54 @@ services:
     networks:
       - my-private-ntwk
 
+  notification-service:
+    # TODO(release train): notification-service 1.0.0 is not published yet. Pin the
+    # published tag@sha256 here, in docker-compose.yml and (replacing the
+    # PENDING_NOTIFICATION_SERVICE_DIGEST placeholder) in docker-compose.server.yml.
+    image: slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52
+    restart: always
+    expose:
+      - "4005"
+    hostname: notification-service
+    environment:
+      # Shares the backend database (schema notification). No broker in this
+      # profile: commerce emails stay in memory, readable through
+      # GET /api/v1/local/notifications/outbox like the backend's local outbox.
+      SPRING_PROFILES_ACTIVE: docker,demo
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=notification
+      SPRING_DATASOURCE_USERNAME: notification
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      BACKEND_BASE_URL: http://backend:4001
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      NOTIFICATION_EMAIL_TRANSPORT: local-outbox
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres-roles:
+        condition: service_completed_successfully
+    mem_limit: 160m
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4005;
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          read -r _ status _ <&3;
+          test "$$status" = 200
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks:
+      - my-private-ntwk
+
   postgres-roles:
-    # One-shot: gives warehouse-service and payment-service their own roles, each
-    # limited to its own schema (postgres/service-roles.sh). Runs before every
-    # warehouse-service and payment-service start.
+    # One-shot: gives warehouse-service, payment-service and notification-service
+    # their own roles, each limited to its own schema (postgres/service-roles.sh).
+    # Runs before every warehouse-, payment- and notification-service start.
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     entrypoint: ["bash", "/scripts/service-roles.sh"]
     restart: "no"
@@ -138,6 +189,7 @@ services:
       PGPASSWORD: postgres
       WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD:-local-warehouse-db-password}
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-local-payment-db-password}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-local-notification-db-password}
     volumes:
       - ./postgres:/scripts:ro
     depends_on:
@@ -149,7 +201,8 @@ services:
 
   postgres:
     # Disposable tmpfs Postgres for the backend (testdb), warehouse-service (schema
-    # warehouse) and payment-service (schema payment).
+    # warehouse), payment-service (schema payment) and notification-service (schema
+    # notification).
     image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     restart: always
     environment:
@@ -183,7 +236,7 @@ services:
       - my-private-ntwk
 
   frontend:
-    image: slawekradzyminski/frontend:3.14.0@sha256:48ebc560e9fc247fe7b4a43249eba25b61a131f8e98b5da29da883d3baa689ea
+    image: slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325
     restart: always
     expose:
       - "80"

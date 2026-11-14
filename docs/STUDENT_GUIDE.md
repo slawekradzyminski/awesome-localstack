@@ -10,8 +10,10 @@ Its goal is to give you a fast local environment with:
 - backend (REST, GraphQL, authentication)
 - warehouse-service (shipments, tracking, returns, suppliers and purchase orders)
 - payment-service (card payments with test cards)
-- PostgreSQL shared by the backend, warehouse-service and payment-service
-- a gateway that serves the frontend, the three APIs and the static product images
+- notification-service (user webhooks and the customer's commerce emails)
+- PostgreSQL shared by the backend, warehouse-service, payment-service and
+  notification-service
+- a gateway that serves the frontend, the four APIs and the static product images
 - a mocked LLM
 
 The lightweight profile uses `ollama-mock` and expects the `qwen3.5:2b` request model.
@@ -28,10 +30,12 @@ Use that URL for:
 - backend API (`/api/v1/...`)
 - warehouse API (shipments, tracking, returns, suppliers, purchase orders), routed by the gateway
 - payment API (`/api/v1/payments`), routed by the gateway
+- notification API (`/api/v1/webhooks`, `/api/v1/webhook-inboxes`,
+  `/api/v1/notifications/emails`), routed by the gateway
 - Swagger UI and the OpenAPI documents
 - product images
 
-Do not think in terms of “frontend on one port and backend on another port” for normal usage. The gateway on `8081` is the intended entrypoint; the backend, warehouse-service and payment-service are not published on host ports.
+Do not think in terms of “frontend on one port and backend on another port” for normal usage. The gateway on `8081` is the intended entrypoint; the backend, warehouse-service, payment-service and notification-service are not published on host ports.
 
 Only one other host port is published:
 
@@ -48,17 +52,21 @@ flowchart TB
     G --> B[Backend]
     G --> W[warehouse-service]
     G --> PS[payment-service]
+    G --> NS[notification-service]
     B --> P[(PostgreSQL)]
     W --> P
     PS --> P
+    NS --> P
     B --> O[Ollama Mock<br/>localhost:11434]
 ```
 
 The gateway sends fulfilment paths (`/api/v1/warehouse/...`, returns, suppliers,
 purchase orders, order shipments and tracking) to warehouse-service, payment
 paths (`/api/v1/payments`, `/api/v1/admin/payments`,
-`/api/v1/orders/{id}/payments`) to payment-service and everything else under
-`/api/v1/` to the backend. All three services accept the same JWT from
+`/api/v1/orders/{id}/payments`) to payment-service, webhook and notification
+paths (`/api/v1/webhooks`, `/api/v1/webhook-inboxes`, `/api/v1/notifications/`,
+`/api/v1/local/notifications/`) to notification-service and everything else
+under `/api/v1/` to the backend. All four services accept the same JWT from
 `POST /api/v1/users/signin`.
 
 ## Start The Profile
@@ -89,13 +97,14 @@ Long-running services, expected state `Up`:
 - `frontend`
 - `gateway`
 - `ollama-mock`
-- `postgres` (`healthy`, shared by the backend, warehouse-service and payment-service)
+- `postgres` (`healthy`, shared by the backend and the three services)
 - `warehouse-service` (`healthy`, fulfilment, tracking, returns and purchasing)
 - `payment-service` (`healthy`, card payments)
+- `notification-service` (`healthy`, webhooks and commerce emails)
 
 One-shot setup container, expected state `Exited (0)`:
 
-- `postgres-roles` creates the warehouse and payment database roles
+- `postgres-roles` creates the warehouse, payment and notification database roles
 
 `Exited (0)` is correct for it. Without `-a`, `docker compose ps` hides it.
 
@@ -121,6 +130,9 @@ Useful lightweight URLs:
 - backend OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - payment OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
+- notification OpenAPI JSON: `http://localhost:8081/notification/v3/api-docs`
+- your commerce emails (signed in): `http://localhost:8081/api/v1/notifications/emails`
+- commerce emails of everyone, as sent (lightweight only): `http://localhost:8081/api/v1/local/notifications/outbox`
 - GraphiQL: `http://localhost:8081/api/v1/graphiql`
 - sample image through gateway: `http://localhost:8081/images/iphone.png`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
@@ -174,7 +186,8 @@ Important:
 - Swagger requests should go to `http://localhost:8081/...`
 - The "Select a definition" dropdown (top right) switches between the backend
   API, "Warehouse service" (shipments, tracking, returns, suppliers, purchase
-  orders) and "Payment service" (card payments).
+  orders) and "Payment service" (card payments). The notification-service
+  document is at `/notification/v3/api-docs`.
   All use the same bearer token from `POST /api/v1/users/signin`; authorize
   again after switching definitions. The warehouse endpoints need the
   `warehouse` or `admin` user, or a client token for your own returns.
@@ -187,11 +200,12 @@ Run:
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/warehouse/v3/api-docs
 curl -i http://localhost:8081/payment/v3/api-docs
+curl -i http://localhost:8081/notification/v3/api-docs
 ```
 
 Expected:
 
-- HTTP `200` for all three
+- HTTP `200` for all four
 
 ### 4. API Sign-In Works
 
@@ -248,6 +262,7 @@ curl -i http://localhost:8081/login
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/warehouse/v3/api-docs
 curl -i http://localhost:8081/payment/v3/api-docs
+curl -i http://localhost:8081/notification/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
@@ -270,7 +285,7 @@ What to do:
 
 ```bash
 docker compose -f lightweight-docker-compose.yml ps -a
-docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service gateway
+docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service notification-service gateway
 ```
 
 ### A Container Keeps Restarting
@@ -280,7 +295,7 @@ Desktop at least 4 GB, then run:
 
 ```bash
 docker compose -f lightweight-docker-compose.yml up -d
-docker compose -f lightweight-docker-compose.yml logs -f postgres-roles warehouse-service payment-service
+docker compose -f lightweight-docker-compose.yml logs -f postgres-roles warehouse-service payment-service notification-service
 ```
 
 ### `port is already allocated`
@@ -359,7 +374,7 @@ docker compose -f lightweight-docker-compose.yml up -d
 Backend, warehouse-service, payment-service and gateway:
 
 ```bash
-docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service gateway
+docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service notification-service gateway
 ```
 
 All lightweight services:
@@ -406,13 +421,28 @@ currencies and webhooks.
   `GET /api/v1/currencies` and `GET /api/v1/currencies/convert` (admins change
   rates under `/api/v1/admin/vat-rates` and `/api/v1/admin/currencies`).
 - **Webhooks and the inbox:** subscribe to order and shipment events under
-  `/api/v1/webhooks`. Without a public receiver, create a built-in inbox,
-  subscribe with its `inbox://<token>` URL, send
-  `POST /api/v1/webhooks/{id}/test` and read the signed request back through
-  the API. Details: [WEBHOOKS.md](WEBHOOKS.md).
+  `/api/v1/webhooks` (served by notification-service from backend 3.21.0).
+  Without a public receiver, create a built-in inbox, subscribe with its
+  `inbox://<token>` URL, send `POST /api/v1/webhooks/{id}/test` and read the
+  signed request back through the API. Deliveries arrive 5–8 seconds after the
+  change (they come from the event feed). Details: [WEBHOOKS.md](WEBHOOKS.md).
+- **Stock reservations with a time limit (backend 3.21.0):** a new order holds
+  its stock until `reservationExpiresAt` (30 minutes); unpaid orders are then
+  cancelled with reason `RESERVATION_EXPIRED` and the stock returns. Admins can
+  expire a hold at once with
+  `POST /api/v1/admin/orders/{id}/expire-reservation`.
+- **Split shipments (warehouse-service 1.5.0):** an order whose products are
+  stocked in different warehouses ships as several parcels;
+  `GET /api/v1/orders/{id}/shipments` lists them with `locationCode` and
+  `parcelIndex`.
+- **Commerce emails (notification-service 1.0.0):**
+  `GET /api/v1/notifications/emails` lists your payment, shipping, loyalty and
+  gift card emails; account emails (password reset) stay in the backend.
 
 These features need backend 3.15.0, warehouse-service 1.2.0, payment-service
-1.0.0 and frontend 3.12.0 (see
+1.0.0 and frontend 3.12.0; the reservation, parcel and notification items need
+backend 3.21.0, warehouse-service 1.5.0, notification-service 1.0.0 and
+frontend 3.15.0 (see
 [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)).
 
 ## Performance Testing With k6 (Monitoring Overlay)
@@ -443,6 +473,26 @@ docker compose -f lightweight-docker-compose.yml -f docker-compose.monitoring.ym
 
 The overlay keeps k6 results in the `influxdb-storage` volume; add `--volumes`
 to `down` to discard them.
+
+## Fault Injection (Chaos Lab)
+
+To see how the services behave when a link between them breaks, start the same
+profile with the fault-injection lab. Nothing to install; one command line tool
+drives it:
+
+```bash
+scripts/chaos up                     # or: make chaos-up
+scripts/chaos list                   # what you can break
+scripts/chaos backend-down warehouse # warehouse-service loses the backend
+scripts/chaos status                 # what is broken now
+scripts/chaos heal                   # everything back to normal
+```
+
+The guided exercises (a warehouse 503, an outbox backlog that drains, an
+event-feed consumer resuming from its cursor, a payment losing the race against
+an expiring reservation, a stalled database) are in the
+[fault-injection lab guide](FAULT_INJECTION_LAB.md). Add Jaeger traces with
+`scripts/chaos up lightweight tracing` (UI `http://127.0.0.1:16686`).
 
 ## Stop The Profile
 

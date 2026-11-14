@@ -75,6 +75,22 @@
       the image from the payment-service repository and pin its tag@sha256
       reference before deploying (docs/CONTAINER_RELEASES.md).
 
+- name: Require a published notification-service image before deploying
+  ansible.builtin.assert:
+    that:
+      - >-
+        notification_service_allow_unpinned_image | bool
+        or ((lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['notification-service'].image is search('@sha256:[0-9a-f]{64}$')
+            and (lookup('ansible.builtin.file', repo_root ~ '/' ~ app_compose_src) | from_yaml)
+            .services['aitesters-notification-service'].image is search('@sha256:[0-9a-f]{64}$'))
+    quiet: true
+    fail_msg: >-
+      docker-compose.server.yml does not pin a published notification-service image
+      (still the PENDING_NOTIFICATION_SERVICE_DIGEST placeholder or a bare tag).
+      Publish notification-service 1.0.0 from its repository and pin its tag@sha256
+      reference before deploying (docs/CONTAINER_RELEASES.md).
+
 - name: Require a dedicated warehouse service token
   ansible.builtin.assert:
     that:
@@ -133,6 +149,45 @@
       tokens) and payment_postgres_password and aitesters_payment_postgres_password
       (at least 16 characters each, distinct from every other database password)
       in Ansible Vault.
+  no_log: true
+
+- name: Require dedicated notification-service tokens, encryption keys and database passwords
+  ansible.builtin.assert:
+    that:
+      - (notification_service_token | default('', true) | string | length) >= 32
+      - (aitesters_notification_service_token | default('', true) | string | length) >= 32
+      # Every service token and webhook secret is distinct (see the payment assert).
+      - >-
+        [notification_service_token, aitesters_notification_service_token,
+         payment_service_token, aitesters_payment_service_token,
+         payment_webhook_secret, aitesters_payment_webhook_secret,
+         warehouse_service_token, aitesters_warehouse_service_token]
+        | unique | length == 8
+      - (notification_postgres_password | default('', true) | string | length) >= 16
+      - (aitesters_notification_postgres_password | default('', true) | string | length) >= 16
+      - >-
+        [postgres_password, aitesters_postgres_password,
+         warehouse_postgres_password, aitesters_warehouse_postgres_password,
+         payment_postgres_password, aitesters_payment_postgres_password,
+         notification_postgres_password, aitesters_notification_postgres_password]
+        | unique | length == 8
+      # Key that encrypts the stored webhook signing secrets (the backend used its
+      # MFA key; the notification-service gets its own, one per site).
+      - (notification_webhook_secret_encryption_password | default('', true) | string | length) >= 32
+      - (aitesters_notification_webhook_secret_encryption_password | default('', true) | string | length) >= 32
+      - notification_webhook_secret_encryption_password != aitesters_notification_webhook_secret_encryption_password
+      - notification_webhook_secret_encryption_salt | default('', true) | string is match('^([0-9a-fA-F]{2}){16,}$')
+      - aitesters_notification_webhook_secret_encryption_salt | default('', true) | string is match('^([0-9a-fA-F]{2}){16,}$')
+    quiet: true
+    fail_msg: >-
+      Configure notification_service_token and aitesters_notification_service_token
+      (at least 32 characters each, distinct from each other and from every payment
+      and warehouse token or secret), notification_postgres_password and
+      aitesters_notification_postgres_password (at least 16 characters each,
+      distinct from every other database password), and per-site
+      notification_webhook_secret_encryption_password (at least 32 characters) and
+      notification_webhook_secret_encryption_salt (at least 16 bytes in hex) plus their
+      aitesters_ variants in Ansible Vault.
   no_log: true
 
 - name: Require distinct RS256 signing keys for both backends
@@ -305,6 +360,15 @@
     mode: "0600"
   no_log: true
 
+- name: Render the notification-service runtime environment
+  ansible.builtin.template:
+    src: env.notification.j2
+    dest: "{{ app_dir }}/.env.notification"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
 - name: Render the aitesters service and database runtime environments
   ansible.builtin.template:
     src: "{{ item.src }}"
@@ -317,6 +381,8 @@
       dest: .env.aitesters-warehouse
     - src: env.aitesters-payment.j2
       dest: .env.aitesters-payment
+    - src: env.aitesters-notification.j2
+      dest: .env.aitesters-notification
     - src: env.aitesters-postgres.j2
       dest: .env.aitesters-postgres
     - src: env.postgres-roles.j2

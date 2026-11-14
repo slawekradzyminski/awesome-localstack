@@ -16,7 +16,7 @@ the server.
 | `make ansible-verify` | Only the health checks |
 | `make ansible-cleanup` | Checksum- and retention-guarded container and image cleanup |
 | `make ansible-reset-demo-state` | **Destructive**: delete the PostgreSQL volume and Mailpit state, redeploy |
-| `make ansible-reset-aitesters-state` | Recreate the sandbox database, backend, warehouse-service and payment-service |
+| `make ansible-reset-aitesters-state` | Recreate the sandbox database, backend, warehouse-, payment- and notification-service |
 | `make ansible-ssh`, `make ansible-tunnel-prometheus`, `make ansible-tunnel-mailpit` | Shell and SSH tunnels (Prometheus `:9090`, Mailpit `:8025`) |
 | `make ansible-edit-vault` | Edit the encrypted Vault |
 
@@ -47,7 +47,7 @@ mirrors the `nginx`, `prometheus`, `alertmanager`, `postgres`, `docs`,
 has since deleted is deleted on the server; files git never tracked there,
 such as manual backups, and the rendered `alertmanager/secrets` are kept and
 listed as `untracked files on the server (kept)`); renders
-`.env.runtime`, `.env.warehouse`, `.env.payment` and the `.env.aitesters*`
+`.env.runtime`, `.env.warehouse`, `.env.payment`, `.env.notification` and the `.env.aitesters*`
 files from Vault; runs `docker compose config --quiet`; pulls missing images;
 and builds the docs image with `mkdocs build --strict`. Only then does the
 optional quiesce stop the backends, and `converge.yml` runs
@@ -67,6 +67,9 @@ verification is part of the playbook, not a follow-up.
 | `payment_service_token`, `aitesters_payment_service_token` | payment ↔ backend internal APIs |
 | `payment_webhook_secret`, `aitesters_payment_webhook_secret` | payment result HMAC |
 | `payment_postgres_password`, `aitesters_payment_postgres_password` | `payment` database roles |
+| `notification_service_token`, `aitesters_notification_service_token` | notification → backend internal API (event feed, webhook export) |
+| `notification_postgres_password`, `aitesters_notification_postgres_password` | `notification` database roles |
+| `notification_webhook_secret_encryption_password` / `_salt` and their `aitesters_` variants | encryption of the webhook secrets notification-service stores |
 | `aitesters_postgres_password` | sandbox PostgreSQL |
 | `app_mfa_encryption_password`, `app_mfa_encryption_salt` | TOTP secret and webhook secret encryption |
 | `app_bootstrap_admin_*` | the production admin account |
@@ -81,13 +84,15 @@ The `app` role refuses to deploy when a required key is missing, too short or
 reused where it must be distinct (for example the two signing keys). Each
 service receives only its own secrets: warehouse-service gets
 `.env.warehouse` (service token, database password), payment-service gets
-`.env.payment` (service token, webhook secret, database password).
+`.env.payment` (service token, webhook secret, database password),
+notification-service gets `.env.notification` (service token, database
+password, broker credentials, webhook secret encryption key).
 
 ## Image gates
 
 - Every remotely pulled image is pinned as `tag@sha256:<digest>`.
 - The app role stops if `docker-compose.server.yml` does not pin a **published**
-  warehouse-service or payment-service image (the server cannot build GraalVM
+  warehouse-, payment- or notification-service image (the server cannot build GraalVM
   native images).
 - The only locally built image on the server is the small `docs` wiki
   (`awesome-localstack/docs:local`), built from the deployed `docs-site/`
@@ -100,19 +105,20 @@ After every deploy and on `make ansible-verify`:
 - every Compose service is running and one-shots exited `0`;
 - every running container uses exactly the image its Compose reference
   resolves to;
-- the `warehouse` and `payment` roles cannot read backend tables;
+- the `warehouse`, `payment` and `notification` roles cannot read backend tables or each other's schemas;
 - PostgreSQL accepts the Vault password;
 - a JMS contract email travels Artemis → consumer → Mailpit;
 - direct routes (`http://warehouse-service:4003/...`, `http://payment-service:4004/...`,
+  `http://notification-service:4005/...`,
   `http://docs/docs/`) answer from inside the gateway container;
-- Prometheus targets are healthy, rules and Alertmanager are loaded, all six
+- Prometheus targets are healthy, rules and Alertmanager are loaded, all seven
   public HTTPS probes succeed;
 - `awesome-watchdog.timer` is active and a watchdog dry run exits `0`; its
   output and the readable OOM sources (`awesome-watchdog diagnose`) are printed;
 - native-image heaps are bounded;
 - gateway routes answer as expected on both hosts, for example `/login` 200,
   `/v3/api-docs` 200, `/warehouse/v3/api-docs` 200, `/payment/v3/api-docs` 200,
-  `/docs/` 200, `/api/v1/tracking/VERIFY-UNKNOWN-TRACKING` 404,
+  `/notification/v3/api-docs` 200, `/docs/` 200, `/api/v1/tracking/VERIFY-UNKNOWN-TRACKING` 404,
   `/internal/v1/orders/1` 404, `/mailpit/` 404;
 - the bootstrap admin can sign in and the catalog is present; the sandbox
   admin can sign in, traffic diagnostics and the outbox access key work;

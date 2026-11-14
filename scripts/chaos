@@ -1,0 +1,416 @@
+#!/usr/bin/env bash
+# Fault-injection lab: one command for Toxiproxy (docker-compose.chaos.yml).
+# Needs only bash (3.2 is fine), curl and Docker. Run `scripts/chaos help`.
+# Full guide: docs/FAULT_INJECTION_LAB.md
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PORT="${TOXIPROXY_PORT:-8474}"
+API="http://127.0.0.1:${PORT}"
+SERVICES="warehouse payment notification"
+DB_CLIENTS="backend warehouse payment notification"
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+else
+  BOLD=""; RED=""; GREEN=""; YELLOW=""; DIM=""; OFF=""
+fi
+
+die() { printf '%serror:%s %s\n' "$RED" "$OFF" "$1" >&2; shift; for line in "$@"; do printf '       %s\n' "$line" >&2; done; exit 1; }
+say() { printf '%s\n' "$*"; }
+
+usage() {
+  cat <<EOF
+${BOLD}scripts/chaos${OFF} - break the links between the services on purpose (Toxiproxy)
+
+  scripts/chaos up [full|lightweight] [tracing] [monitoring]
+                               start the profile with the lab (default: the running profile, else lightweight)
+  scripts/chaos down           stop the whole stack started with the lab
+  scripts/chaos list           scenarios with one-line descriptions
+  scripts/chaos status         proxies and active faults
+  scripts/chaos reset          remove every fault (alias: heal)
+  scripts/chaos <scenario> [value] [target]
+
+Examples:
+  scripts/chaos backend-down warehouse      warehouse-service cannot reach the backend
+  scripts/chaos backend-slow 5000 payment   payment-service waits 5 s for every backend answer
+  scripts/chaos postgres-stall              every service's database connections hang
+  scripts/chaos heal
+
+Targets: warehouse, payment, notification (backend for the postgres-* scenarios); default all.
+Environment: TOXIPROXY_PORT (default 8474), COMPOSE_PROJECT_NAME, CHAOS_EXTRA_FILES (extra -f files for up).
+Guide: docs/FAULT_INJECTION_LAB.md
+EOF
+}
+
+list() {
+  cat <<EOF
+${BOLD}Scenarios${OFF} (value and target are optional; target defaults to all)
+
+  backend-down [target]           target service gets "connection refused" from the backend
+  backend-slow [ms] [target]      every backend answer to the target arrives ms later (default 3000)
+  backend-flaky [percent] [target] percent of the target's backend connections fail (default 30):
+                                  half are reset at once, half hang 5 s and then close
+  bandwidth [KB/s] [target]       backend answers to the target trickle at KB/s (default 8)
+  postgres-stall [ms] [target]    the target's database connections stop passing data; with ms they close
+                                  after ms, without it they hang until heal (target may be backend)
+  postgres-down [target]          the target's database connections are closed and refused
+  partition-warehouse             warehouse-service loses the backend and its database
+  partition-payment               payment-service loses the backend and its database
+  partition-notification          notification-service loses the backend and its database
+  partition-backend               nobody reaches the backend, the backend loses PostgreSQL
+                                  (the gateway still reaches the backend directly)
+  partition-postgres              nobody reaches PostgreSQL (same as postgres-down)
+
+  reset | heal                    remove every fault
+EOF
+}
+
+# --- Docker / Compose helpers -------------------------------------------------
+
+require_docker() {
+  command -v docker >/dev/null 2>&1 || die "docker is not installed or not on PATH."
+  docker info >/dev/null 2>&1 || die "Docker is not running." "Start Docker Desktop (or the Docker daemon) and try again."
+}
+
+profile_file() {
+  case "$1" in
+    full) echo docker-compose.yml ;;
+    lightweight|light) echo lightweight-docker-compose.yml ;;
+    *) die "unknown profile '$1'" "Use: full or lightweight." ;;
+  esac
+}
+
+project_of() {  # profile -> Compose project name
+  if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then echo "$COMPOSE_PROJECT_NAME"; return; fi
+  case "$1" in full) echo awesome-full-native ;; *) echo awesome-light ;; esac
+}
+
+running() {  # project service -> true when a container of that service runs
+  [ -n "$(docker ps -q --filter "label=com.docker.compose.project=$1" --filter "label=com.docker.compose.service=$2")" ]
+}
+
+running_profile() {
+  if running "$(project_of full)" backend; then echo full
+  elif running "$(project_of lightweight)" backend; then echo lightweight
+  else echo lightweight
+  fi
+}
+
+up() {
+  require_docker
+  local profile="" tracing=false monitoring=false arg
+  for arg in "$@"; do
+    case "$arg" in
+      full|lightweight|light) profile="$arg" ;;
+      tracing) tracing=true ;;
+      monitoring) monitoring=true ;;
+      *) die "unknown option '$arg' for up" "Usage: scripts/chaos up [full|lightweight] [tracing] [monitoring]" ;;
+    esac
+  done
+  [ -n "$profile" ] || profile="$(running_profile)"
+  local base project
+  base="$(profile_file "$profile")"
+  project="$(project_of "$profile")"
+  # Keep overlays that already run in this project.
+  running "$project" jaeger && tracing=true
+  running "$project" prometheus && monitoring=true
+
+  local files=(-f "$base" -f docker-compose.chaos.yml)
+  $monitoring && files+=(-f docker-compose.monitoring.yml)
+  $tracing && files+=(-f docker-compose.tracing.yml)
+  local extra
+  for extra in ${CHAOS_EXTRA_FILES:-}; do files+=(-f "$extra"); done
+
+  say "${BOLD}Starting the $profile profile with the fault-injection lab${OFF}"
+  say "${DIM}docker compose ${files[*]} up -d${OFF}"
+  (cd "$ROOT" && docker compose "${files[@]}" up -d)
+
+  printf 'Waiting for Toxiproxy'
+  local i
+  for i in $(seq 1 60); do
+    curl -sf --max-time 2 "$API/version" >/dev/null 2>&1 && break
+    printf '.'; sleep 2
+  done
+  say ""
+  curl -sf --max-time 2 "$API/version" >/dev/null 2>&1 \
+    || die "Toxiproxy did not answer on $API." "Logs: docker compose -p $project logs toxiproxy"
+
+  printf 'Waiting for the services to become healthy'
+  local states=""
+  for i in $(seq 1 100); do
+    states="$(cd "$ROOT" && docker compose "${files[@]}" ps --format '{{.Service}}={{.Health}}' 2>/dev/null || true)"
+    if ! printf '%s\n' "$states" | grep -Eq '=(starting|unhealthy)$'; then break; fi
+    printf '.'; sleep 3
+  done
+  say ""
+  if printf '%s\n' "$states" | grep -Eq '=(starting|unhealthy)$'; then
+    say "${YELLOW}Still not healthy:${OFF} $(printf '%s\n' "$states" | grep -E '=(starting|unhealthy)$' | tr '\n' ' ')"
+    say "Check: docker compose -p $project ps"
+  fi
+  status
+  say ""
+  say "App: http://localhost:8081   Toxiproxy API: $API"
+  $tracing && say "Jaeger: http://127.0.0.1:${JAEGER_UI_PORT:-16686}"
+  say "Next: ${BOLD}scripts/chaos list${OFF}, then e.g. ${BOLD}scripts/chaos backend-down warehouse${OFF}"
+}
+
+down() {
+  require_docker
+  local project
+  if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
+    project="$COMPOSE_PROJECT_NAME"
+  else
+    project="$(docker ps --filter label=com.docker.compose.service=toxiproxy \
+      --format '{{.Label "com.docker.compose.project"}}' | sort -u)"
+    [ -n "$project" ] || die "no stack with the fault-injection lab is running." \
+      "Nothing to stop. (A stack without the lab: docker compose -f <profile file> down)"
+    [ "$(printf '%s\n' "$project" | wc -l | tr -d ' ')" = 1 ] \
+      || die "several stacks run the lab: $(printf '%s ' $project)" "Choose one: COMPOSE_PROJECT_NAME=<name> scripts/chaos down"
+  fi
+  say "${BOLD}Stopping $project${OFF} (volumes are kept)"
+  docker compose -p "$project" down --remove-orphans
+}
+
+# --- Toxiproxy API ------------------------------------------------------------
+
+require_api() {
+  if curl -sf --max-time 3 "$API/version" >/dev/null 2>&1; then return; fi
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if [ -n "$(docker ps -q --filter label=com.docker.compose.service=toxiproxy)" ]; then
+      die "Toxiproxy runs but does not answer on $API." \
+        "Was the lab started with another TOXIPROXY_PORT? Use the same value here." \
+        "Ports: docker ps --filter label=com.docker.compose.service=toxiproxy"
+    fi
+    if [ -n "$(docker ps -q --filter label=com.docker.compose.service=backend)" ]; then
+      die "the stack runs without the fault-injection lab." \
+        "Add the lab (the services restart through the proxies):" \
+        "  scripts/chaos up        (or: make chaos-up)"
+    fi
+    die "no stack is running." "Start one with the lab:  scripts/chaos up lightweight   (or: make chaos-up)"
+  fi
+  die "Toxiproxy is not reachable on $API and Docker is not running." \
+    "Start Docker, then: scripts/chaos up lightweight   (or: make chaos-up)"
+}
+
+api() {  # METHOD PATH [JSON] -> body on stdout; dies on HTTP errors
+  local method="$1" path="$2" data="${3:-}" out code
+  out="$(mktemp)"
+  if [ -n "$data" ]; then
+    code="$(curl -s -o "$out" -w '%{http_code}' -X "$method" -H 'Content-Type: application/json' -d "$data" "$API$path")" || code=000
+  else
+    code="$(curl -s -o "$out" -w '%{http_code}' -X "$method" "$API$path")" || code=000
+  fi
+  case "$code" in
+    2*) cat "$out"; rm -f "$out" ;;
+    *) local body; body="$(cat "$out")"; rm -f "$out"; die "Toxiproxy $method $path answered $code" "$body" ;;
+  esac
+}
+
+proxy_names() {
+  api GET /proxies | grep -oE '"[a-z]+-to-[a-z]+":\{' | sed -E 's/^"([^"]+)".*/\1/' | sort
+}
+
+set_enabled() {  # proxy true|false
+  api PATCH "/proxies/$1" "{\"enabled\":$2}" >/dev/null
+}
+
+add_toxic() {  # proxy name type stream toxicity attributes-json
+  curl -s -o /dev/null -X DELETE "$API/proxies/$1/toxics/$2" || true
+  api POST "/proxies/$1/toxics" \
+    "{\"name\":\"$2\",\"type\":\"$3\",\"stream\":\"$4\",\"toxicity\":$5,\"attributes\":$6}" >/dev/null
+}
+
+# --- Targets ------------------------------------------------------------------
+
+normalise_target() {
+  case "$1" in
+    ""|all) echo all ;;
+    warehouse|warehouse-service) echo warehouse ;;
+    payment|payment-service) echo payment ;;
+    notification|notification-service|notifications) echo notification ;;
+    backend) echo backend ;;
+    *) die "unknown target '$1'" "Targets: warehouse, payment, notification, backend (postgres-* only), all" ;;
+  esac
+}
+
+backend_links() {  # target -> proxy names to the backend
+  local t
+  t="$(normalise_target "$1")"
+  case "$t" in
+    all) for s in $SERVICES; do echo "$s-to-backend"; done ;;
+    backend) die "backend is the upstream of this scenario." "Choose who loses the backend: warehouse, payment, notification or all." ;;
+    *) echo "$t-to-backend" ;;
+  esac
+}
+
+postgres_links() {
+  local t
+  t="$(normalise_target "$1")"
+  case "$t" in
+    all) for s in $DB_CLIENTS; do echo "$s-to-postgres"; done ;;
+    *) echo "$t-to-postgres" ;;
+  esac
+}
+
+# Splits "[value] [target]" in any order into VALUE and TARGET.
+parse_args() {
+  VALUE=""; TARGET=""
+  local arg
+  for arg in "$@"; do
+    if printf '%s' "$arg" | grep -Eq '^[0-9]+$'; then
+      [ -z "$VALUE" ] || die "two numbers given: $VALUE and $arg"
+      VALUE="$arg"
+    else
+      [ -z "$TARGET" ] || die "two targets given: $TARGET and $arg"
+      TARGET="$arg"
+    fi
+  done
+  normalise_target "$TARGET" >/dev/null
+}
+
+no_value() { [ -z "$VALUE" ] || die "$1 takes no value (got $VALUE)"; }
+
+percent_fraction() {  # 30 -> 0.15 (half of the percentage, as a 0-1 fraction)
+  awk -v p="$1" 'BEGIN { printf "%.4f", p / 200 }'
+}
+
+applied() { say "${GREEN}✓${OFF} $1"; say "${DIM}  undo: scripts/chaos heal   ·   inspect: scripts/chaos status${OFF}"; }
+
+# --- Scenarios ------------------------------------------------------------------
+
+run_scenario() {
+  local scenario="$1"; shift
+  local link links
+  case "$scenario" in
+    backend-down)
+      parse_args "$@"; no_value "$scenario"
+      links="$(backend_links "$TARGET")"
+      for link in $links; do set_enabled "$link" false; done
+      applied "backend unreachable for: $(echo $links | sed 's/-to-backend//g')" ;;
+    backend-slow)
+      parse_args "$@"; local ms="${VALUE:-3000}"
+      links="$(backend_links "$TARGET")"
+      for link in $links; do add_toxic "$link" backend-slow latency downstream 1 "{\"latency\":$ms,\"jitter\":0}"; done
+      applied "backend answers delayed by ${ms} ms for: $(echo $links | sed 's/-to-backend//g')" ;;
+    backend-flaky)
+      parse_args "$@"; local pct="${VALUE:-30}" frac
+      [ "$pct" -ge 1 ] && [ "$pct" -le 100 ] || die "percent must be 1-100 (got $pct)"
+      frac="$(percent_fraction "$pct")"
+      links="$(backend_links "$TARGET")"
+      for link in $links; do
+        add_toxic "$link" backend-flaky-reset reset_peer downstream "$frac" '{"timeout":0}'
+        add_toxic "$link" backend-flaky-timeout timeout downstream "$frac" '{"timeout":5000}'
+      done
+      applied "about ${pct}% of backend connections fail for: $(echo $links | sed 's/-to-backend//g')" ;;
+    bandwidth)
+      parse_args "$@"; local rate="${VALUE:-8}"
+      links="$(backend_links "$TARGET")"
+      for link in $links; do add_toxic "$link" bandwidth bandwidth downstream 1 "{\"rate\":$rate}"; done
+      applied "backend answers limited to ${rate} KB/s for: $(echo $links | sed 's/-to-backend//g')" ;;
+    postgres-stall)
+      parse_args "$@"; local timeout="${VALUE:-0}"
+      links="$(postgres_links "$TARGET")"
+      for link in $links; do
+        add_toxic "$link" postgres-stall-up timeout upstream 1 "{\"timeout\":$timeout}"
+        add_toxic "$link" postgres-stall-down timeout downstream 1 "{\"timeout\":$timeout}"
+      done
+      if [ "$timeout" = 0 ]; then
+        applied "database connections hang (until heal) for: $(echo $links | sed 's/-to-postgres//g')"
+      else
+        applied "database connections stall and close after ${timeout} ms for: $(echo $links | sed 's/-to-postgres//g')"
+      fi ;;
+    postgres-down)
+      parse_args "$@"; no_value "$scenario"
+      links="$(postgres_links "$TARGET")"
+      for link in $links; do set_enabled "$link" false; done
+      applied "PostgreSQL unreachable for: $(echo $links | sed 's/-to-postgres//g')" ;;
+    partition-*)
+      [ $# -eq 0 ] || die "$scenario takes no value or target"
+      local who="${scenario#partition-}" matched=""
+      case "$who" in
+        warehouse-service) who=warehouse ;; payment-service) who=payment ;; notification-service) who=notification ;;
+      esac
+      for link in $(proxy_names); do
+        case "$link" in
+          "$who"-to-*|*-to-"$who") set_enabled "$link" false; matched="$matched $link" ;;
+        esac
+      done
+      [ -n "$matched" ] || die "unknown partition '$scenario'" \
+        "Use partition-warehouse, partition-payment, partition-notification, partition-backend or partition-postgres."
+      applied "$who partitioned; disabled:$matched" ;;
+    *)
+      die "unknown command or scenario '$scenario'" "List scenarios: scripts/chaos list   ·   help: scripts/chaos help" ;;
+  esac
+}
+
+reset() {
+  api POST /reset >/dev/null
+  say "${GREEN}✓${OFF} every proxy enabled, every fault removed"
+}
+
+# --- Status ---------------------------------------------------------------------
+
+json_field() {  # json key -> value (string or scalar) of the first match
+  printf '%s' "$1" | grep -oE "\"$2\": *(\"[^\"]*\"|[^,}]*)" | head -1 | sed -E "s/^\"$2\": *//; s/^\"//; s/\"$//"
+}
+
+describe_toxic() {  # toxic object json -> one-line description
+  local t="$1" name type stream toxicity attrs pct
+  name="$(json_field "$t" name)"; type="$(json_field "$t" type)"
+  stream="$(json_field "$t" stream)"; toxicity="$(json_field "$t" toxicity)"
+  attrs="$(printf '%s' "$t" | grep -oE '"attributes":\{[^}]*\}' | sed -E 's/^"attributes":\{//; s/\}$//; s/"//g; s/:/=/g; s/,/ /g')"
+  pct="$(awk -v x="$toxicity" 'BEGIN { printf "%g", x * 100 }')"
+  printf '%s: %s %s' "$name" "$type" "$attrs"
+  [ "$stream" = downstream ] || printf ' (%s)' "$stream"
+  [ "$pct" = 100 ] || printf ' [%s%% of connections]' "$pct"
+}
+
+status() {
+  require_api
+  local version names name json enabled listen upstream state toxics toxic first faults=0
+  version="$(json_field "$(api GET /version)" version)"
+  names="$(proxy_names)"
+  say "${BOLD}Toxiproxy $version${OFF} on $API"
+  printf "${BOLD}%-26s %-17s %-15s %-9s %s${OFF}\n" PROXY LISTEN UPSTREAM STATE FAULTS
+  for name in $names; do
+    json="$(api GET "/proxies/$name")"
+    enabled="$(json_field "$json" enabled)"
+    listen="toxiproxy:$(json_field "$json" listen | sed -E 's/.*://')"
+    upstream="$(json_field "$json" upstream)"
+    if [ "$enabled" = true ]; then state="$GREEN$(printf '%-9s' up)$OFF"; else state="$RED$(printf '%-9s' DISABLED)$OFF"; faults=$((faults + 1)); fi
+    toxics="$(printf '%s' "$json" | sed -E 's/.*"toxics":\[//' | grep -oE '\{[^{}]*\{[^{}]*\}[^{}]*\}' || true)"
+    printf '%-26s %-17s %-15s %s ' "$name" "$listen" "$upstream" "$state"
+    if [ -z "$toxics" ]; then
+      printf '%s-%s\n' "$DIM" "$OFF"
+    else
+      first=true
+      while IFS= read -r toxic; do
+        [ -n "$toxic" ] || continue
+        faults=$((faults + 1))
+        $first || printf '%-26s %-17s %-15s %-9s ' "" "" "" ""
+        printf '%s%s%s\n' "$YELLOW" "$(describe_toxic "$toxic")" "$OFF"
+        first=false
+      done <<< "$toxics"
+    fi
+  done
+  if [ "$faults" = 0 ]; then
+    say "${GREEN}No faults active.${OFF}"
+  else
+    say "${YELLOW}$faults fault(s) active.${OFF} Remove them with: scripts/chaos heal"
+  fi
+}
+
+# --- Main -----------------------------------------------------------------------
+
+command="${1:-help}"
+[ $# -gt 0 ] && shift
+case "$command" in
+  help|-h|--help) usage ;;
+  list|scenarios) list ;;
+  up) up "$@" ;;
+  down) down ;;
+  status|st) status ;;
+  reset|heal) require_api; reset ;;
+  *) require_api; run_scenario "$command" "$@" ;;
+esac

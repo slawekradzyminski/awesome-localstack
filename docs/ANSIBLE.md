@@ -283,19 +283,20 @@ The role checks:
 - private Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and
   Alertmanager endpoints are reachable
 - all expected Prometheus scrape jobs are healthy
-- all six public Blackbox probes (four `awesome.byst.re`, two
+- all seven public Blackbox probes (five `awesome.byst.re`, two
   `aitesters.byst.re` routes) currently succeed
 - the emergency swap file and swappiness when `swap_enabled` is true
 - every GraalVM native service runs with its expected `-Xmx` argument:
   `backend` `-Xmx384m`, `aitesters-backend` `-Xmx256m`, and `-Xmx64m` for
   `consumer`, `warehouse-service`, `aitesters-warehouse-service`,
-  `payment-service` and `aitesters-payment-service`
-- the `warehouse` and `payment` database roles of both databases own their
-  schema, cannot read `public.orders` or `public.app_user`, cannot create in
-  `public` and cannot use each other's schema
-- the direct warehouse-service and payment-service health and OpenAPI routes,
-  `/warehouse/v3/api-docs` and `/payment/v3/api-docs` through the gateway (both
-  hosts), and `/api/v1/tracking/<unknown>` answering `404` from
+  `payment-service`, `aitesters-payment-service`, `notification-service` and
+  `aitesters-notification-service`
+- the `warehouse`, `payment` and `notification` database roles of both
+  databases own their schema, cannot read `public.orders` or `public.app_user`,
+  cannot create in `public` and cannot use each other's schemas
+- the direct warehouse-, payment- and notification-service health and OpenAPI
+  routes, `/warehouse/v3/api-docs`, `/payment/v3/api-docs` and
+  `/notification/v3/api-docs` through the gateway (both hosts), and `/api/v1/tracking/<unknown>` answering `404` from
   warehouse-service
 - `awesome-watchdog.timer` is active and `awesome-watchdog run --dry-run`
   exits 0; the dry run and `awesome-watchdog diagnose` (readable OOM sources)
@@ -381,6 +382,12 @@ The local production Vault file stores values such as:
 - `payment_service_token`, `aitesters_payment_service_token`
 - `payment_webhook_secret`, `aitesters_payment_webhook_secret`
 - `payment_postgres_password`, `aitesters_payment_postgres_password`
+- `notification_service_token`, `aitesters_notification_service_token`
+- `notification_postgres_password`, `aitesters_notification_postgres_password`
+- `notification_webhook_secret_encryption_password`,
+  `notification_webhook_secret_encryption_salt`,
+  `aitesters_notification_webhook_secret_encryption_password`,
+  `aitesters_notification_webhook_secret_encryption_salt`
 
 `APP_BOOTSTRAP_PRODUCTS_ENABLED` is tracked in `production/main.yml` rather than Vault so a clean reset recreates the public-safe catalog automatically.
 
@@ -506,8 +513,62 @@ Compose file carries the placeholder
 so the gate fails on purpose; set `payment_service_allow_unpinned_image=true`
 only for a deliberately pre-loaded image. Verification adds the
 `spring_payment_micrometer` scrape job, the public probe of
-`https://awesome.byst.re/payment/v3/api-docs` (four public probes in total) and
-the `-Xmx64m` heap of both payment-services.
+`https://awesome.byst.re/payment/v3/api-docs` and the `-Xmx64m` heap of both
+payment-services.
+
+## notification-service secrets and image gate
+
+notification-service 1.0.0 (backend 3.21.0) needs eight Vault values (see
+`vault.yml.example`):
+
+| Key | Rule | Reaches |
+| --- | --- | --- |
+| `notification_service_token` | at least 32 characters (`openssl rand -hex 32`) | `.env.runtime` (backend) and `.env.notification` |
+| `aitesters_notification_service_token` | at least 32 characters | `.env.aitesters` and `.env.aitesters-notification` |
+| `notification_postgres_password` | at least 16 characters | `.env.notification`, `.env.postgres-roles` |
+| `aitesters_notification_postgres_password` | at least 16 characters | `.env.aitesters-notification`, `.env.aitesters-postgres-roles` |
+| `notification_webhook_secret_encryption_password` | at least 32 characters | `.env.notification` (`WEBHOOKS_SECRET_ENCRYPTION_PASSWORD`) |
+| `notification_webhook_secret_encryption_salt` | at least 16 bytes in hex (`openssl rand -hex 16`) | `.env.notification` (`WEBHOOKS_SECRET_ENCRYPTION_SALT`) |
+| `aitesters_notification_webhook_secret_encryption_password` | at least 32 characters, different from the stable one | `.env.aitesters-notification` |
+| `aitesters_notification_webhook_secret_encryption_salt` | at least 16 bytes in hex | `.env.aitesters-notification` |
+
+The `app` role refuses to deploy unless the two notification tokens differ from
+each other and from every payment and warehouse token or webhook secret, and
+the eight database passwords (superusers, warehouse, payment and notification
+roles of both databases) are all distinct. The encryption key protects the
+webhook signing secrets notification-service stores; changing it later makes
+the stored secrets unreadable, so set it once.
+
+`.env.notification` (root-owned, mode 0600) contains only
+`NOTIFICATION_SERVICE_TOKEN`, `SPRING_DATASOURCE_PASSWORD`, the broker
+credentials (`SPRING_ARTEMIS_USER`/`_PASSWORD` from `artemis_username` and
+`artemis_password`: the stable site sends commerce emails to the `email` queue)
+and the encryption key. `.env.aitesters-notification` holds the sandbox token,
+role password and encryption key plus `LOCAL_EMAIL_OUTBOX_ACCESS_KEY`
+(`local_email_outbox_access_key`): the sandbox keeps commerce emails in the
+local outbox, like aitesters-backend. Both backends get their site's
+`NOTIFICATION_SERVICE_TOKEN`; Compose sets `NOTIFICATIONS_DELIVERY=feed` and
+`WEBHOOKS_ENABLED=false` on both.
+
+The `postgres-roles` one-shots prepare the `notification` role and schema next
+to `warehouse` and `payment`. The nightly aitesters reset and
+`make ansible-reset-aitesters-state` also recreate
+`aitesters-notification-service`, and the coordinated backend upgrade stops
+both notification-services with the backends. Verification checks the role
+isolation of `notification` (and that `warehouse` and `payment` cannot use its
+schema), the direct routes `http://notification-service:4005` and
+`http://aitesters-notification-service:4005`, `/notification/v3/api-docs`
+through both gateway hosts, the `spring_notification_micrometer` scrape job,
+the public probe of `https://awesome.byst.re/notification/v3/api-docs` (seven
+public probes in total) and the `-Xmx64m` heap of both notification-services.
+`CriticalContainerMissing` covers `notification-service`.
+
+Deployment fails unless `notification-service` and
+`aitesters-notification-service` use a published `tag@sha256`. Until
+notification-service 1.0.0 is published the server Compose file carries
+`slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST`,
+so the gate fails on purpose; set `notification_service_allow_unpinned_image=true`
+only for a deliberately pre-loaded image.
 
 ## Memory budget
 
@@ -528,6 +589,15 @@ warehouse-services, which measure 58 to 66 MiB each). Their limits add
 and record them in `docs/CONTAINER_RELEASES.md`; if available memory drops
 below 1.5 GiB, lower a limit (the `ContainerMemoryNearLimit` warnings show
 which) before adding further services.
+
+The distributed-lab release adds two more 160 MiB containers,
+`notification-service` and `aitesters-notification-service` (GraalVM native,
+`-Xmx64m`; 57 MiB measured on the lightweight profile, 14 November 2026). The
+long-running limits now add up to **5,664 MiB (about 5.5 GiB)**: +320 MiB over
+the 5,344 MiB before it. The expected extra working set is about 120 MiB, which
+leaves roughly 2.4 GiB available. Measure `MemAvailable` and both
+notification-services' working sets after the first deploy and record them in
+`docs/CONTAINER_RELEASES.md`.
 
 ## Documentation wiki image
 

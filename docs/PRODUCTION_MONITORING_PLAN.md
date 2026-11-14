@@ -608,6 +608,7 @@ The critical-service list should include at least:
 - `consumer`;
 - `warehouse-service`;
 - `payment-service`;
+- `notification-service`;
 - `gateway`;
 - `edge`;
 - `postgres`;
@@ -747,6 +748,7 @@ The on-VPS Blackbox Exporter monitors:
 - `https://awesome.byst.re/v3/api-docs`;
 - `https://awesome.byst.re/warehouse/v3/api-docs`;
 - `https://awesome.byst.re/payment/v3/api-docs`;
+- `https://awesome.byst.re/notification/v3/api-docs` (distributed-lab release);
 - `https://aitesters.byst.re/login` and `https://aitesters.byst.re/v3/api-docs`
   (added in lean phase B).
 
@@ -754,7 +756,9 @@ payment-service is also scraped as `spring_payment_micrometer` and has its own
 `CriticalContainerMissing` rule; the deployment silence covers its scrape
 target while the stack converges. The two payment-services add up to 320 MiB of
 container limits (about 120 MiB expected working set); see the memory budget
-in [ANSIBLE.md](ANSIBLE.md#memory-budget).
+in [ANSIBLE.md](ANSIBLE.md#memory-budget). notification-service follows the
+same pattern (`spring_notification_micrometer`, its own `CriticalContainerMissing`
+rule, deployment silence, two 160 MiB containers).
 
 The VPS should eventually send a heartbeat every minute to a separate external
 endpoint. Missing heartbeats for five minutes must generate an off-server

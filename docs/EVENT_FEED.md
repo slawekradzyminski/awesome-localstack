@@ -1,9 +1,10 @@
 # Event feed
 
 From backend 3.16.0 the backend never calls warehouse-service or
-payment-service. Both services learn about commerce events by polling a
-durable **pull feed** on the backend's internal API. Dependencies point one
-way only: warehouse-service → backend and payment-service → backend. The
+payment-service, and from 3.21.0 it never calls notification-service either.
+The services learn about commerce events by polling a durable **pull feed** on
+the backend's internal API. Dependencies point one way only: warehouse-service
+→ backend, payment-service → backend and notification-service → backend. The
 decision is recorded in
 [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md#adr-1-internal-integration-via-a-pull-event-feed).
 
@@ -12,6 +13,8 @@ decision is recorded in
 | backend 3.16.0 | Records every domain event in `domain_events` (Flyway V16) and serves the feed |
 | payment-service 1.1.0 | Consumes `card-refund.requested` (Flyway V3: cursor and processed events) |
 | warehouse-service 1.3.0 | Consumes `order.cancelled` (Flyway V4: cursor and processed events) |
+| backend 3.21.0 | Adds `order.reservation-expired` and the internal `notification.requested`, accepts the `NOTIFICATION` service token, and stores `span_id` (Flyway V24) so every event carries `spanId` |
+| notification-service 1.0.0 | Consumes every webhook-eligible type and `notification.requested` |
 
 ## Producer: the backend
 
@@ -28,7 +31,8 @@ domain_events (sequence BIGSERIAL PK, event_id UUID UNIQUE, type, order_id,
 ### Request
 
 `GET /internal/v1/events?after={sequence}&limit={n}&types={wire names}` with
-`X-Service-Token` set to the warehouse **or** the payment service token. Like
+`X-Service-Token` set to the warehouse, the payment **or** (backend 3.21.0) the
+notification service token. Like
 every internal endpoint it is not routed by the gateway (`/internal/` is 404 on
 every host) and is absent from the public OpenAPI document.
 
@@ -41,12 +45,16 @@ every host) and is absent from the public OpenAPI document.
 ### Response
 
 ```text
-200 { events: [ { sequence, id, type, occurredAt, orderId, username, data } ],
+200 { events: [ { sequence, id, type, occurredAt, orderId, username,
+                  traceId, spanId, data } ],
       nextCursor, hasMore }
 ```
 
-- Events are ordered by `sequence` ascending; every event carries all seven
-  fields (nulls included). `occurredAt` is ISO-8601 UTC with millisecond
+- Events are ordered by `sequence` ascending; every event carries every field
+  (nulls included). `traceId` and, from backend 3.21.0, `spanId` identify the
+  request that recorded the event; a consumer starts a `CONSUMER` span
+  `process <type>` with that parent, so a cancellation and the refund or
+  webhook it causes are one trace (see the tracing page of the wiki). `occurredAt` is ISO-8601 UTC with millisecond
   precision. `data` is stored once with sorted keys and plain decimals, so a
   redelivered event has identical bytes.
 - `nextCursor` is the last returned sequence (or `after` for an empty page);
@@ -54,7 +62,7 @@ every host) and is absent from the public OpenAPI document.
   `types` filter excluded.
 - `hasMore` is true when more matching settled events exist.
 - 400 `{"message": ...}` for bad parameters, 401 for a missing or wrong service
-  token, 404 when neither service token is configured.
+  token, 404 when no service token is configured.
 
 ### Settle delay
 
@@ -89,11 +97,43 @@ The Compose files keep the defaults and set none of these variables.
 | Wire name | Consumer | Handling |
 | --- | --- | --- |
 | `card-refund.requested` | payment-service | Refunds the captured card payment; idempotent per `requestId`; no captured payment or an amount above what is refundable books nothing and is logged |
-| `order.cancelled` | warehouse-service | Cancels the order's shipment when it is `AWAITING_PICK` or `PICKED` (`lastActor = "system"`); later states are logged and left alone |
+| `order.cancelled` | warehouse-service | Cancels the order's shipments (every parcel from warehouse-service 1.5.0) when they are `AWAITING_PICK` or `PICKED` (`lastActor = "system"`); later states are logged and left alone |
+| `order.created`, `order.paid`, `order.cancelled`, `order.reservation-expired`, `shipment.shipped`, `shipment.delivered`, `refund.booked`, `payment.failed` | notification-service | One signed delivery per matching active user webhook subscription |
+| `notification.requested` | notification-service | Renders and sends the commerce email; idempotent per `requestId` |
 
-Every other `CommerceEvent` type (`order.created`, `order.paid`,
-`shipment.shipped`, `shipment.delivered`, `refund.booked`, `payment.failed`)
-is recorded too and can be read by a new consumer without a backend change.
+From backend 3.21.0 `order.cancelled` carries `data.reason`:
+`CUSTOMER`, `ADMIN` or `RESERVATION_EXPIRED`.
+
+### `order.reservation-expired`
+
+Stock is deducted when an order is created; that deduction is the hold, and
+from backend 3.21.0 it expires (`orders.reservation.ttl`, default `PT30M`).
+`ReservationExpiryJob` cancels each `PENDING` order past its
+`reservationExpiresAt` through the normal cancellation path (coupon released,
+stock `ORDER_RESTORED`, gift-card and points tenders returned) and records, in
+the same transaction, `order.cancelled` with `reason = "RESERVATION_EXPIRED"`
+**and** the webhook-eligible `order.reservation-expired` with
+`{orderId, expiredAt, totalAmount}`. warehouse-service sees the cancellation as
+any other; notification-service delivers both types to subscribers.
+
+### `notification.requested` is internal
+
+Where backend 3.20.x sent a customer email itself (payment received or failed,
+back in stock, the warehouse notifications of `POST /internal/v1/notifications`,
+loyalty points earned, gift card issued), backend 3.21.0 with
+`NOTIFICATIONS_DELIVERY=feed` records `notification.requested` instead:
+
+```text
+data: { requestId, template, recipientEmail, recipientName, properties{...} }
+```
+
+`template` is a commerce `EmailTemplate` (`PAYMENT_RECEIVED`, `PAYMENT_FAILED`,
+`BACK_IN_STOCK`, `ORDER_SHIPPED`, `ORDER_DELIVERED`, `RETURN_UPDATED`,
+`SHIPMENT_OUT_FOR_DELIVERY`, `SHIPMENT_DELIVERY_FAILED`,
+`LOYALTY_POINTS_EARNED`, `GIFT_CARD_ISSUED`); `requestId` is the idempotency
+key. The type never reaches user webhooks. With the default
+`NOTIFICATIONS_DELIVERY=email` (the l20 compatibility stack) the backend keeps
+sending these emails and records no such event.
 
 ### `card-refund.requested` is internal
 
@@ -108,8 +148,8 @@ see the refund as `refund.booked`.
 
 ## Consumer pattern
 
-warehouse-service and payment-service implement the same pattern
-independently (see
+warehouse-service, payment-service and notification-service implement the same
+pattern independently (see
 [ADR 3](ARCHITECTURE_DECISIONS.md#adr-3-outbox-and-feed-consumer-implementations-stay-per-service)):
 
 ```text
@@ -136,6 +176,7 @@ processed_events (event_id PK, processed_at)
 | --- | --- | --- |
 | payment-service | `PAYMENT_EVENTS_ENABLED`, `PAYMENT_EVENTS_POLL_INTERVAL` | `true`, `PT5S` |
 | warehouse-service | `WAREHOUSE_EVENTS_ENABLED`, `WAREHOUSE_EVENTS_POLL_INTERVAL` | `true`, `PT5S` |
+| notification-service | `NOTIFICATION_EVENTS_ENABLED`, `NOTIFICATION_EVENTS_POLL_INTERVAL` | `true`, `PT5S` |
 
 Against a backend older than 3.16.0 the feed request answers 404, which the
 consumers log on every run.
@@ -150,7 +191,13 @@ The feed is internal, so test it through its effects:
   customer, and within about ten seconds the shipment is `CANCELLED` with
   `lastActor = "system"`;
 - refund a return of a card-paid order and watch the payment become
-  `PARTIALLY_REFUNDED` or `REFUNDED`.
+  `PARTIALLY_REFUNDED` or `REFUNDED`;
+- subscribe a webhook inbox to `order.cancelled` and
+  `order.reservation-expired`, expire an order with
+  `POST /api/v1/admin/orders/{id}/expire-reservation` and read both deliveries
+  from the inbox about ten seconds later;
+- pay an order and find `PAYMENT_RECEIVED` in
+  `GET /api/v1/notifications/emails` (and in Mailpit on the full profile).
 
 To read the raw feed in the lightweight profile (the backend image has no
 shell tools, so the request goes from the gateway container):

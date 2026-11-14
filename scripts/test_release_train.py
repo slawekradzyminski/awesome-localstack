@@ -120,6 +120,55 @@ class PinReplacement(unittest.TestCase):
             rt.update_compat_set(self.DOC, "backend", ("3.15.0", HIST_DIGEST), ("3.17.0", NEW_DIGEST))
 
 
+class PendingFirstRelease(unittest.TestCase):
+    """notification-service before its first release: placeholder on the server, bare tag locally."""
+
+    SERVER = ("  notification-service:\n"
+              "    image: slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST\n"
+              "  aitesters-notification-service:\n"
+              "    image: slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST\n"
+              f"  payment-service:\n    image: slawekradzyminski/payment-service:1.2.1@{OLD_DIGEST}\n")
+    LOCAL = "  notification-service:\n    image: slawekradzyminski/notification-service:1.0.0\n"
+
+    def test_pending_pin_reads_the_placeholder_only(self):
+        self.assertEqual(rt.pending_pin(self.SERVER, "notification-service"), "1.0.0")
+        self.assertIsNone(rt.current_pin(self.SERVER, "notification-service"))
+        self.assertIsNone(rt.pending_pin(self.LOCAL, "notification-service"))
+        self.assertIsNone(rt.pending_pin(self.SERVER, "payment-service"))
+
+    def test_replace_pending_pins_placeholders_and_bare_tags(self):
+        text, count = rt.replace_pending(self.SERVER, "notification-service", ("1.0.0", NEW_DIGEST))
+        self.assertEqual(count, 2)
+        self.assertNotIn("PENDING", text)
+        self.assertEqual(rt.current_pin(text, "notification-service"), ("1.0.0", NEW_DIGEST))
+        self.assertIn(f"payment-service:1.2.1@{OLD_DIGEST}", text)
+        local, count = rt.replace_pending(self.LOCAL, "notification-service", ("1.0.1", NEW_DIGEST))
+        self.assertEqual((count, rt.current_pin(local, "notification-service")), (1, ("1.0.1", NEW_DIGEST)))
+
+    def test_replace_pending_never_touches_a_real_pin(self):
+        text = f"image: slawekradzyminski/notification-service:1.0.0@{OLD_DIGEST}\n"
+        self.assertEqual(rt.replace_pending(text, "notification-service", ("1.0.1", NEW_DIGEST))[1], 0)
+
+    def test_plan_pins_a_pending_image(self):
+        repo = next(r for r in rt.REPOS if r.key == "notification-service")
+        state = rt.RepoState(repo, "master", "0" * 40, "1.0.0", [], None, "1.0.0")
+        self.assertEqual(state.action, "tag, publish, pin")
+        self.assertTrue(state.releasing)
+
+    def test_compat_set_replaces_the_pending_row(self):
+        doc = ("# R\n\n## Current compatibility set\n\nWave, released 1 November 2026:\n\n"
+               "| Notification service | `slawekradzyminski/notification-service:1.0.0@sha256:"
+               "PENDING_NOTIFICATION_SERVICE_DIGEST` |\n\n## Release sequence\n\n"
+               "`slawekradzyminski/notification-service:1.0.0` history\n")
+        updated = rt.update_compat_set(doc, "notification-service", ("1.0.0", None), ("1.0.0", NEW_DIGEST),
+                                       "Release train: notification-service 1.0.0, released 20 November 2026")
+        self.assertIn(f"| `slawekradzyminski/notification-service:1.0.0@{NEW_DIGEST}` |", updated)
+        self.assertIn("Release train: notification-service 1.0.0, released 20 November 2026:\n", updated)
+        self.assertTrue(updated.endswith("`slawekradzyminski/notification-service:1.0.0` history\n"))
+        with self.assertRaises(ValueError):
+            rt.update_compat_set(updated, "notification-service", ("1.0.0", None), ("1.0.1", NEW_DIGEST))
+
+
 class ReleaseSection(unittest.TestCase):
     def released(self):
         backend = rt.REPOS[0]

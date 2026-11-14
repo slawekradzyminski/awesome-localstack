@@ -15,6 +15,7 @@ wiki: contracts, runbooks and release history.
 | [Architecture decisions](ARCHITECTURE_DECISIONS.md) | ADRs: pull event feed, fulfilment read model, per-service outboxes, one PostgreSQL server |
 | [Webhooks](WEBHOOKS.md) | Payment result signatures and user webhooks |
 | [gRPC inventory](GRPC_INVENTORY.md), [gRPC training runbook](GRPC_TRAINING_RUNBOOK.md), [Protocol testing lab](PROTOCOL_TESTING_LAB.md) | REST, GraphQL and gRPC exercises |
+| [Fault-injection lab](FAULT_INJECTION_LAB.md) | Toxiproxy overlay, `scripts/chaos`, scenarios and guided exercises |
 | [Course compatibility](COURSE_COMPATIBILITY.md) | Running the frozen course suite against disposable backends |
 | [Ansible](ANSIBLE.md), [SSH server](SSH_SERVER.md), [SSH tunnelling](SSH_TUNNELLING.md) | Production operations |
 | [Container releases](CONTAINER_RELEASES.md) | Release history and the current compatibility set |

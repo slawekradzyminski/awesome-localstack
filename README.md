@@ -1,7 +1,8 @@
 # Awesome LocalStack
 
 Docker orchestration for the training stack built from separate backend,
-frontend, warehouse-service, payment-service, JMS consumer, and model-mock repositories.
+frontend, warehouse-service, payment-service, notification-service, JMS consumer, and
+model-mock repositories.
 
 This README is organized by the three main profiles:
 
@@ -22,7 +23,7 @@ For classroom or workshop use focused on the lightweight stack, see [docs/STUDEN
 SSO, the mocked Google/GitHub social login and Keycloak (port `8082`) were removed from every profile on 2026-11-12 (backend 3.18.0 and frontend 3.13.0 have no SSO code). Sign in with the application password users below.
 
 For repository-owned image publishing and the first-party compatibility set
-(six published images; payment-service 1.0.0 joins once its digest is pinned),
+(six published images; notification-service 1.0.0 joins once its digest is pinned),
 see [docs/CONTAINER_RELEASES.md](docs/CONTAINER_RELEASES.md).
 
 For the coupon, review, wishlist, CSV, idempotent checkout and conditional
@@ -35,6 +36,12 @@ boundary (including shipment tracking) is documented in
 payments with simulated test cards are served by `payment-service`; see
 [docs/PAYMENT_SERVICE_CONTRACT.md](docs/PAYMENT_SERVICE_CONTRACT.md) and, for the
 signed payment notifications and user webhooks, [docs/WEBHOOKS.md](docs/WEBHOOKS.md).
+User webhooks and the customer's commerce emails are served by
+`notification-service` (backend 3.21.0 and later); see
+[docs/NOTIFICATION_SERVICE_CONTRACT.md](docs/NOTIFICATION_SERVICE_CONTRACT.md).
+The distributed-systems lab (stock reservations with a time limit, split
+shipments from several warehouses, fault injection and tracing) is described in
+[docs/DISTRIBUTED_LAB_CONTRACTS.md](docs/DISTRIBUTED_LAB_CONTRACTS.md).
 
 Each main compose file now has its own fixed Compose project name. That means switching between `lightweight`, `full`, and `server` should no longer produce normal orphan warnings just because the profiles define different services.
 
@@ -45,11 +52,13 @@ This does not mean the profiles can run side by side on the same machine. `light
 Use this most of the time for local work.
 
 It uses the same immutable backend, frontend, and model-mock releases as the
-reviewed server compatibility set; the backend, `warehouse-service` and
-`payment-service` are GraalVM native images. The backend (`local` profile),
-warehouse-service and payment-service (`docker,demo`) share one small tmpfs
-PostgreSQL (schemas `warehouse` and `payment`, each with its own role), so data
-resets whenever the stack is recreated.
+reviewed server compatibility set; the backend, `warehouse-service`,
+`payment-service` and `notification-service` are GraalVM native images. The
+backend (`local` profile), warehouse-service, payment-service and
+notification-service (`docker,demo`) share one small tmpfs PostgreSQL (schemas
+`warehouse`, `payment` and `notification`, each with its own role), so data
+resets whenever the stack is recreated. Commerce emails stay in
+notification-service's local outbox (`/api/v1/local/notifications/outbox`).
 
 Start it with:
 
@@ -67,6 +76,8 @@ Other useful lightweight URLs:
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
+- notification-service OpenAPI JSON: `http://localhost:8081/notification/v3/api-docs`
+- commerce email log of the signed-in user: `http://localhost:8081/api/v1/notifications/emails`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - image through gateway: `http://localhost:8081/images/iphone.png`
 - mocked LLM generate endpoint: `http://localhost:11434/api/generate`
@@ -89,6 +100,7 @@ flowchart LR
     B[Backend]
     W[Warehouse Service<br/>internal 4003, PostgreSQL]
     PS[Payment Service<br/>internal 4004, PostgreSQL]
+    NS[Notification Service<br/>internal 4005, PostgreSQL]
     O[Ollama Mock<br/>localhost:11434]
 
     U --> G
@@ -96,8 +108,10 @@ flowchart LR
     G --> B
     G -->|warehouse + tracking paths| W
     G -->|payment paths| PS
+    G -->|webhook + notification paths| NS
     W -->|/internal/v1| B
     PS -->|/internal/v1 + event feed| B
+    NS -->|event feed| B
     B --> O
 ```
 
@@ -109,6 +123,7 @@ curl -i http://localhost:8081/login
 curl -i http://localhost:8081/v3/api-docs
 curl -i http://localhost:8081/warehouse/v3/api-docs
 curl -i http://localhost:8081/payment/v3/api-docs
+curl -i http://localhost:8081/notification/v3/api-docs
 curl -i http://localhost:8081/images/iphone.png
 curl -i -X POST http://localhost:11434/api/generate \
   -H 'Content-Type: application/json' \
@@ -119,7 +134,7 @@ Expected:
 
 - long-running containers are `Up`; the one-shot `postgres-roles` shows `Exited (0)`
 - login page loads
-- Swagger and the three OpenAPI documents (backend, warehouse and payment) respond with `200`
+- Swagger and the four OpenAPI documents (backend, warehouse, payment and notification) respond with `200`
 - product image responds with `200`
 - the mocked model path responds with the same `qwen3.5:2b` default used across the migration
 - mocked LLM generate endpoint responds with `200`
@@ -127,7 +142,7 @@ Expected:
 Useful logs:
 
 ```bash
-docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service gateway
+docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service notification-service gateway
 docker compose -f lightweight-docker-compose.yml logs -f ollama-mock
 ```
 
@@ -176,11 +191,13 @@ messages before the first broker upgrade.
 
 This local full stack intentionally starts the backend with `docker,demo`, so PostgreSQL-backed demo users, products, and sample orders are available with the same seeded admin credentials as the lightweight profile.
 
-`warehouse-service` and `payment-service` run against the same PostgreSQL
-database in the `warehouse` and `payment` schemas (each with its own role,
-prepared by the one-shot `postgres-roles`); with the monitoring overlay,
-Prometheus scrapes them as `spring_warehouse_micrometer` and
-`spring_payment_micrometer`.
+`warehouse-service`, `payment-service` and `notification-service` run against
+the same PostgreSQL database in the `warehouse`, `payment` and `notification`
+schemas (each with its own role, prepared by the one-shot `postgres-roles`);
+with the monitoring overlay, Prometheus scrapes them as
+`spring_warehouse_micrometer`, `spring_payment_micrometer` and
+`spring_notification_micrometer`. notification-service sends commerce emails
+through ActiveMQ and the consumer to Mailpit, like the backend's own emails.
 
 Main app URL:
 
@@ -192,9 +209,13 @@ Other useful full-profile URLs:
 - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse-service OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
 - payment-service OpenAPI JSON: `http://localhost:8081/payment/v3/api-docs`
+- notification-service OpenAPI JSON: `http://localhost:8081/notification/v3/api-docs`
+- commerce email log of the signed-in user: `http://localhost:8081/api/v1/notifications/emails`
 - public parcel tracking: `http://localhost:8081/api/v1/tracking/{trackingNumber}`
 - Prometheus (monitoring overlay): `http://localhost:9090/graph`
 - Grafana (monitoring overlay): `http://localhost:3000/login` (`admin` / `grafana`)
+- Toxiproxy API (fault-injection lab): `http://127.0.0.1:8474`
+- Jaeger UI (tracing overlay): `http://127.0.0.1:16686`
 - ActiveMQ console: `http://localhost:8161`
 - Mailpit UI: `http://localhost:8025/`
 - consumer metrics: `http://localhost:4002/actuator/prometheus`
@@ -272,6 +293,7 @@ flowchart LR
     B[Backend]
     W[Warehouse Service<br/>internal 4003]
     PS[Payment Service<br/>internal 4004]
+    NS[Notification Service<br/>internal 4005]
     DB[(Postgres<br/>localhost:5432)]
     MQ[ActiveMQ<br/>localhost:8161 and 61616]
     C[Consumer<br/>localhost:4002]
@@ -284,10 +306,14 @@ flowchart LR
     G --> B
     G -->|warehouse + tracking paths| W
     G -->|payment paths| PS
+    G -->|webhook + notification paths| NS
     W -->|/internal/v1| B
     PS -->|/internal/v1| B
+    NS -->|event feed| B
     W -->|schema warehouse| DB
     PS -->|schema payment| DB
+    NS -->|schema notification| DB
+    NS -->|commerce emails| MQ
     B --> DB
     B --> MQ
     MQ --> C
@@ -365,6 +391,36 @@ no target rather than a DOWN one. It also accepts k6 remote write
 starts a profile with the overlay and checks the dashboards and targets; CI
 runs it for the lightweight profile.
 
+## Fault-injection lab and tracing
+
+`docker-compose.chaos.yml` puts Toxiproxy between the services, the backend and
+PostgreSQL (one proxy per link), so a class can break one link on purpose and
+watch timeouts, 503s, outbox backlogs and feed cursors. One command drives it
+(bash, curl and Docker only):
+
+```bash
+scripts/chaos up                     # running profile (else lightweight) + lab; make chaos-up
+scripts/chaos backend-down warehouse # make chaos SCENARIO=backend-down TARGET=warehouse
+scripts/chaos status                 # make chaos-status
+scripts/chaos heal                   # make chaos-reset
+scripts/chaos down                   # make chaos-down
+```
+
+`scripts/chaos list` shows every scenario (`backend-down`, `backend-slow`,
+`backend-flaky`, `bandwidth`, `postgres-stall`, `postgres-down`,
+`partition-<service>`). The Toxiproxy API listens on `127.0.0.1:8474`
+(`TOXIPROXY_PORT`). Guide and guided exercises:
+[docs/FAULT_INJECTION_LAB.md](docs/FAULT_INJECTION_LAB.md);
+`scripts/verify-chaos-overlay.sh` runs every scenario against the published
+images.
+
+`docker-compose.tracing.yml` adds Jaeger (UI `http://127.0.0.1:16686`) and
+turns OTLP export on in the Spring services: `make tracing-up` /
+`make tracing-down`, or `scripts/chaos up lightweight tracing`. Spans come from
+backend 3.21.0, warehouse-service 1.5.0, payment-service 1.3.0 and
+notification-service 1.0.0 on; see
+[Tracing a request](docs-site/docs/operations/tracing.md#jaeger-traces).
+
 ## Server Profile
 
 Use this for the deployed production-like environment.
@@ -386,7 +442,7 @@ make ansible-reset-aitesters-state
 - `make ansible-verify`: run health checks without changing deployment state
 - `make ansible-cleanup`: run the checksum- and retention-guarded container cleanup
 - `make ansible-reset-demo-state`: destructively reset Postgres and Mailpit-backed demo state, then redeploy
-- `make ansible-reset-aitesters-state`: recreate the aitesters database (fresh volume), backend, warehouse-service and payment-service and reseed local demo data
+- `make ansible-reset-aitesters-state`: recreate the aitesters database (fresh volume), backend, warehouse-, payment- and notification-service and reseed local demo data
 
 Main public URLs:
 
@@ -399,6 +455,7 @@ Other stable playground URLs:
 - OpenAPI JSON: `https://awesome.byst.re/v3/api-docs`
 - warehouse-service OpenAPI JSON: `https://awesome.byst.re/warehouse/v3/api-docs`
 - payment-service OpenAPI JSON: `https://awesome.byst.re/payment/v3/api-docs`
+- notification-service OpenAPI JSON: `https://awesome.byst.re/notification/v3/api-docs`
 - public parcel tracking: `https://awesome.byst.re/api/v1/tracking/{trackingNumber}`
 - sign in API: `https://awesome.byst.re/api/v1/users/signin`
 - image through gateway: `https://awesome.byst.re/images/iphone.png`
@@ -423,10 +480,12 @@ flowchart LR
     B[Backend]
     W[Warehouse Service<br/>internal, 160 MiB]
     PS[Payment Service<br/>internal, 160 MiB]
+    NS[Notification Service<br/>internal, 160 MiB]
     AF[Aitesters Frontend]
     AB[Aitesters Backend<br/>aitesters profile]
     AW[Aitesters Warehouse Service<br/>internal]
     APS[Aitesters Payment Service<br/>internal]
+    ANS[Aitesters Notification Service<br/>internal, local outbox]
     ADB[(aitesters-postgres<br/>internal only)]
     DB[(Postgres<br/>internal only)]
     MQ[ActiveMQ<br/>internal only]
@@ -445,19 +504,26 @@ flowchart LR
     G -->|awesome.byst.re /api| B
     G -->|awesome.byst.re warehouse paths| W
     G -->|awesome.byst.re payment paths| PS
+    G -->|awesome.byst.re webhook + notification paths| NS
     W -->|/internal/v1| B
     PS -->|/internal/v1| B
+    NS -->|event feed| B
     W -->|schema warehouse| DB
     PS -->|schema payment| DB
+    NS -->|schema notification| DB
+    NS -->|commerce emails| MQ
     G -->|aitesters.byst.re| AF
     G -->|aitesters.byst.re /api| AB
     G -->|aitesters.byst.re warehouse paths| AW
     G -->|aitesters.byst.re payment paths| APS
+    G -->|aitesters.byst.re webhook + notification paths| ANS
     AW -->|/internal/v1| AB
     APS -->|/internal/v1| AB
+    ANS -->|event feed| AB
     AB --> ADB
     AW -->|schema warehouse| ADB
     APS -->|schema payment| ADB
+    ANS -->|schema notification| ADB
     B --> DB
     B --> MQ
     MQ --> C
@@ -472,6 +538,7 @@ flowchart LR
     C --> P
     W --> P
     PS --> P
+    NS --> P
     P --> AM
     AM --> T
     WD[Host watchdog<br/>systemd timer] -->|containers, OOM,<br/>disk, backups| T
@@ -494,12 +561,19 @@ Production hardening in this profile:
 - payment-service (`4004`) is internal-only behind the gateway, receives only
   its service token, webhook secret and database password through
   `.env.payment`, and runs as a GraalVM native image within a 160 MiB limit
+- notification-service (`4005`) is internal-only behind the gateway, receives
+  only its service token, database password, broker credentials and webhook
+  secret encryption key through `.env.notification`, and runs as a GraalVM
+  native image within a 160 MiB limit; the backends run with
+  `NOTIFICATIONS_DELIVERY=feed` and `WEBHOOKS_ENABLED=false`
 - the gateway answers `/internal/` with `404`; the backend internal API is
-  reachable only from warehouse-service and payment-service on the Compose network
+  reachable only from warehouse-, payment- and notification-service on the
+  Compose network
 - Node Exporter, cAdvisor, Blackbox Exporter, Prometheus, and Alertmanager are internal-only
 - Prometheus history is persisted and bounded by 30-day and 5 GB retention limits
 - Blackbox Exporter checks the public login, backend OpenAPI,
-  warehouse-service OpenAPI and payment-service OpenAPI routes every 30 seconds,
+  warehouse-service, payment-service and notification-service OpenAPI routes
+  every 30 seconds,
   including DNS, TLS, HTTP status, and latency
 - Blackbox Exporter also probes the aitesters login and OpenAPI routes
 - Alertmanager sends only sustained critical alerts (no resolved messages,
@@ -516,9 +590,9 @@ Production hardening in this profile:
 - the deployment contains a guarded 1 GiB swap role and Prometheus swap alerts,
   but swap remains disabled on the current MIKR.US LXC host because its
   virtualization layer rejects `swapon`
-- the backends, consumer, warehouse-services and payment-services run as GraalVM native images with
+- the backends, consumer, warehouse-, payment- and notification-services run as GraalVM native images with
   explicit heap arguments and container memory limits
-- aitesters backend, frontend, warehouse-service and payment-service are
+- aitesters backend, frontend, warehouse-, payment- and notification-service are
   internal-only behind the same gateway; the sandbox has its own
   `aitesters-postgres`, signing key, service tokens and webhook secret, and the nightly reset recreates it from a fresh volume
 - both public training backends use explicitly increased IP-keyed rate-limit
@@ -550,12 +624,14 @@ curl -i https://awesome.byst.re/login
 curl -i https://awesome.byst.re/v3/api-docs
 curl -i https://awesome.byst.re/warehouse/v3/api-docs
 curl -i https://awesome.byst.re/payment/v3/api-docs
+curl -i https://awesome.byst.re/notification/v3/api-docs
 curl -i https://awesome.byst.re/images/iphone.png
 curl -i https://awesome.byst.re/mailpit/api/v1/messages
 curl -i https://aitesters.byst.re/login
 curl -i https://aitesters.byst.re/v3/api-docs
 curl -i https://aitesters.byst.re/warehouse/v3/api-docs
 curl -i https://aitesters.byst.re/payment/v3/api-docs
+curl -i https://aitesters.byst.re/notification/v3/api-docs
 curl -i https://aitesters.byst.re/images/iphone.png
 curl -i https://aitesters.byst.re/api/v1/local/email/outbox
 ```
@@ -567,12 +643,14 @@ Expected:
 - `awesome.byst.re/v3/api-docs` returns `200`
 - `awesome.byst.re/warehouse/v3/api-docs` returns `200`
 - `awesome.byst.re/payment/v3/api-docs` returns `200`
+- `awesome.byst.re/notification/v3/api-docs` returns `200`
 - `awesome.byst.re/images/iphone.png` returns `200`
 - `awesome.byst.re/mailpit/api/v1/messages` returns `404`
 - `aitesters.byst.re/login` returns `200`
 - `aitesters.byst.re/v3/api-docs` returns `200`
 - `aitesters.byst.re/warehouse/v3/api-docs` returns `200`
 - `aitesters.byst.re/payment/v3/api-docs` returns `200`
+- `aitesters.byst.re/notification/v3/api-docs` returns `200`
 - `aitesters.byst.re/images/iphone.png` returns `200`
 - `aitesters.byst.re/api/v1/local/email/outbox` returns `401` without a token
 
@@ -610,14 +688,20 @@ Across the main profiles, the gateway serves:
 - warehouse fulfilment, returns and purchasing paths under `/api/v1/...`,
   routed to warehouse-service, including shipment tracking
   (`/api/v1/orders/{id}/shipment/tracking`, public `/api/v1/tracking/{number}`)
+  and the parcels of a split order (`/api/v1/orders/{id}/shipments`)
 - card payment paths (`/api/v1/payments`, `/api/v1/admin/payments`,
   `/api/v1/orders/{id}/payments`) routed to payment-service
   (see `docs/PROFILE_URLS.md`)
+- user webhooks and inboxes (`/api/v1/webhooks`, `/api/v1/webhook-inboxes`,
+  `/api/v1/admin/webhooks`), the commerce email log
+  (`/api/v1/notifications/...`) and the local notification outbox
+  (`/api/v1/local/notifications/...`) routed to notification-service
 - Swagger UI under `/swagger-ui/...`, with a definition dropdown for the backend
   (JSON and YAML), "Warehouse service" and "Payment service"
 - OpenAPI under `/v3/api-docs`, warehouse-service OpenAPI under
-  `/warehouse/v3/api-docs` and payment-service OpenAPI under
-  `/payment/v3/api-docs`
+  `/warehouse/v3/api-docs`, payment-service OpenAPI under
+  `/payment/v3/api-docs` and notification-service OpenAPI under
+  `/notification/v3/api-docs`
 - `/internal/` always returns `404`
 - any other `/api` path outside the routed `/api/v1/...` APIs (for example
   `/api/v2/users`) returns `404` JSON `{"message":"Not found"}` instead of the SPA
@@ -633,7 +717,8 @@ Across the main profiles, the gateway serves:
 - [vite-react-frontend](https://github.com/slawekradzyminski/vite-react-frontend)
 - [jms-email-consumer](https://github.com/slawekradzyminski/jms-email-consumer)
 - [warehouse-service](https://github.com/slawekradzyminski/warehouse-service)
-- payment-service (new sibling repository; publication pending)
+- [payment-service](https://github.com/slawekradzyminski/payment-service)
+- [notification-service](https://github.com/slawekradzyminski/notification-service) (first release pending)
 - [ollama-mock](https://github.com/slawekradzyminski/ollama-mock)
 
 ## Troubleshooting

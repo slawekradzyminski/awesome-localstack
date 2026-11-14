@@ -15,7 +15,7 @@ The gateway is nginx. Two configuration files exist:
 nginx chooses an **exact** match (`location = /x`) first, then the **longest
 prefix**; a prefix marked `^~` stops the search, otherwise **regex** locations
 (`~`) are tried in order and the first match beats the prefix. That is why the
-warehouse and payment paths, which are longer prefixes or regexes, win over
+warehouse, payment and notification paths, which are longer prefixes or regexes, win over
 the generic `/api/v1/` route to the backend.
 
 ## Route table
@@ -29,13 +29,19 @@ the generic `/api/v1/` route to the backend.
 | `= /api/v1/admin/suppliers`, `/api/v1/admin/suppliers/` | exact + prefix | warehouse-service | Suppliers |
 | `= /api/v1/admin/purchase-orders`, `/api/v1/admin/purchase-orders/` | exact + prefix | warehouse-service | Purchase orders and receipts |
 | `= /api/v1/admin/inventory/reorder-suggestions` | exact | warehouse-service | Other `/api/v1/admin/inventory` paths stay on the backend |
-| <code>~ ^/api/v1/orders/\d+/(shipment&#124;shipment/tracking&#124;returns)$</code> | regex | warehouse-service | Order shipment, tracking and return creation |
+| <code>~ ^/api/v1/orders/\d+/(shipment&#124;shipments&#124;shipment/tracking&#124;returns)$</code> | regex | warehouse-service | Order shipment (first parcel), every parcel, tracking and return creation |
 | `/api/v1/tracking/` | prefix | warehouse-service | Public parcel tracking, no token |
 | `^~ /warehouse/v3/api-docs` | prefix, stops search | warehouse-service `/v3/api-docs` | Rewritten; `/warehouse` itself stays a frontend page |
 | `= /api/v1/payments`, `/api/v1/payments/` | exact + prefix | payment-service | Create, 3-D Secure, read |
 | `= /api/v1/admin/payments` | exact | payment-service | Admin payment list |
 | `~ ^/api/v1/orders/\d+/payments$` | regex | payment-service | Payments of one order |
 | `^~ /payment/v3/api-docs` | prefix, stops search | payment-service `/v3/api-docs` | Rewritten |
+| `= /api/v1/webhooks`, `/api/v1/webhooks/` | exact + prefix | notification-service | User webhook subscriptions and deliveries |
+| `= /api/v1/webhook-inboxes`, `/api/v1/webhook-inboxes/` | exact + prefix | notification-service | Built-in webhook inboxes |
+| `= /api/v1/admin/webhooks` | exact | notification-service | Every subscription (admin) |
+| `/api/v1/notifications/` | prefix | notification-service | Commerce email log (`/emails`) |
+| `/api/v1/local/notifications/` | prefix | notification-service | Local notification outbox; the backend's `/api/v1/local/email/outbox` stays on the backend |
+| `^~ /notification/v3/api-docs` | prefix, stops search | notification-service `/v3/api-docs` | Rewritten |
 | `/internal/` | prefix | — | Always `404`: the service-to-service API is never public |
 | `/api/v1/` | prefix | backend | Everything else under the API, including GraphQL (`/api/v1/graphql`) and GraphiQL |
 | `= /api`, `/api/` | exact + prefix | — | Any other `/api` path (e.g. `/api/v2/users`): `404` JSON `{"message":"Not found"}`, never the SPA |
@@ -51,12 +57,13 @@ On the server, the `aitesters.byst.re` block routes the same paths to the
 
 ## Starting without optional services
 
-warehouse-service, payment-service and docs are addressed through **variables**
+warehouse-, payment-, notification-service and docs are addressed through **variables**
 resolved at request time by Docker's DNS (`resolver 127.0.0.11`):
 
 ```nginx
 set $warehouse_upstream http://warehouse-service:4003;
 set $payment_upstream   http://payment-service:4004;
+set $notification_upstream http://notification-service:4005;
 set $docs_upstream      http://docs:80;
 
 location /api/v1/payments/ {

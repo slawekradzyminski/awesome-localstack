@@ -131,6 +131,115 @@ docker compose -p awesome-light logs --no-color | grep -F local-check-1
 Local Spring logs stay human-readable, so the `jq` filter shows only the
 gateway's JSON lines; the `grep` finds everything.
 
+## Jaeger traces
+
+Logs answer "what happened"; a trace also answers "where did the time go". The
+tracing overlay adds [Jaeger](https://www.jaegertracing.io/) (all-in-one v2,
+in-memory storage) and turns OpenTelemetry export on in the Spring services.
+
+!!! warning "Image versions"
+    Spans are exported from **backend 3.21.0, warehouse-service 1.5.0,
+    payment-service 1.3.0 and notification-service 1.0.0** on. Older images
+    ignore the `TRACING_*` variables: Jaeger starts, but stays empty.
+
+| Variable (set by the overlay) | Value |
+| --- | --- |
+| `TRACING_ENABLED` | `true` (default in the images: `false`, no export, no sampling) |
+| `TRACING_OTLP_ENDPOINT` | `http://jaeger:4318/v1/traces` (OTLP over HTTP, inside the Compose network only) |
+| `TRACING_SAMPLING_PROBABILITY` | `1.0`: every request is traced |
+
+### Start and stop
+
+```bash
+make tracing-up        # Jaeger on the running profile (else lightweight); keeps the chaos and monitoring overlays
+make tracing-down      # tracing off, Jaeger removed
+```
+
+`make tracing-up PROFILE=full` picks the profile, `scripts/tracing up|down`
+is the same without make, and `scripts/chaos up lightweight tracing` starts the
+[fault-injection lab](fault-injection.md) and Jaeger together. By hand:
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.tracing.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.chaos.yml \
+  -f docker-compose.monitoring.yml -f docker-compose.tracing.yml up -d
+```
+
+The UI is `http://127.0.0.1:16686` (loopback only; `JAEGER_UI_PORT` moves it).
+Jaeger keeps the last 20,000 traces in memory (container limit 256 MiB); they
+are gone when it restarts. The backend restarts with the overlay and gets a new
+signing key, so sign in again.
+
+### Find a trace
+
+The trace id is the middle part of `traceparent` and the `trace_id` field of
+the gateway log line; the services use the incoming `traceparent` as the
+parent of their first span, so Jaeger shows the same id.
+
+1. **Bring your own id.** Send a `traceparent` and open the trace directly:
+
+    ```bash
+    TRACE=$(openssl rand -hex 16)
+    curl -s -o /dev/null http://localhost:8081/api/v1/products \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "traceparent: 00-$TRACE-$(openssl rand -hex 8)-01" -H 'X-Request-Id: jaeger-demo-1'
+    open "http://127.0.0.1:16686/trace/$TRACE"          # xdg-open on Linux
+    ```
+
+2. **From an `X-Request-Id`.** Look the trace id up in the gateway log, then
+   paste it into the search box at the top of the Jaeger UI (or use
+   `/trace/<id>` as above):
+
+    ```bash
+    docker compose -p awesome-light logs --no-color gateway | grep -F jaeger-demo-1 \
+      | sed 's/^[^{]*//' | jq -r .trace_id
+    ```
+
+3. **By service.** *Search* → *Service* `backend` (or `warehouse-service`,
+   `payment-service`) → *Operation*, optionally *Min Duration* `1s` to find slow
+   requests, *Find Traces*.
+
+The query API (Jaeger v2, OTLP JSON) answers the same: `curl -s http://127.0.0.1:16686/api/v3/traces/$TRACE | jq '[.result.resourceSpans[].scopeSpans[].spans[]] | length'` (404 while the trace is unknown); `curl -s http://127.0.0.1:16686/api/v3/services` lists the services that sent spans.
+
+### Example: cancel → refund
+
+Cancelling a card-paid order is one HTTP request, but its work finishes seconds
+later in other services through the [event feed](../reference/EVENT_FEED.md).
+With tracing on, all of it is one trace:
+
+1. Pay an order with `4242 4242 4242 4242` (it becomes `PAID`).
+2. Cancel it with your own trace id:
+
+    ```bash
+    TRACE=$(openssl rand -hex 16)
+    curl -s -X POST http://localhost:8081/api/v1/orders/$ORDER/cancel \
+      -H "Authorization: Bearer $TOKEN" -H "traceparent: 00-$TRACE-$(openssl rand -hex 8)-01"
+    ```
+
+3. Wait about ten seconds (the consumers poll every 5 s) and open
+   `http://127.0.0.1:16686/trace/$TRACE`.
+
+Expected shape (span names can differ slightly between releases):
+
+```text
+backend            POST /api/v1/orders/{id}/cancel        server span; parent = the gateway's traceparent
+├─ backend         SQL / JPA work of the cancel           with the event rows written in the same transaction
+├─ payment-service process card-refund.requested          CONSUMER span, starts seconds later (feed poll)
+│  └─ payment-service  refund booking, outbox dispatch     a span per dispatched outbox row
+└─ warehouse-service process order.cancelled              CONSUMER span; cancels an AWAITING_PICK shipment
+```
+
+The consumer spans hang under the cancel because every feed event carries the
+`traceId` and `spanId` of the request that recorded it (`domain_events.trace_id`
+and `span_id`); outbox dispatchers continue the trace from the stored
+`traceparent`. The gap between the cancel span and the consumer spans is the
+feed polling delay. Jaeger may mark the root as having a missing parent: the
+parent is the gateway, which logs but does not export spans.
+
+With the [fault-injection lab](fault-injection.md) running, `scripts/chaos
+backend-slow 3000 payment` makes the payment-service spans that call the
+backend 3 s long, and `backend-down` turns them into error spans.
+
 ## Gateway access log fields
 
 | Field | Meaning |

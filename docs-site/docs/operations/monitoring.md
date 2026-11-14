@@ -23,8 +23,9 @@ planned phase C.
 | `spring_consumer_micrometer` | consumer |
 | `spring_warehouse_micrometer` | warehouse-service |
 | `spring_payment_micrometer` | payment-service |
+| `spring_notification_micrometer` | notification-service |
 | `node`, `cadvisor`, `alertmanager`, `blackbox` | infrastructure |
-| `public_https` | `https://awesome.byst.re/login`, `/v3/api-docs`, `/warehouse/v3/api-docs`, `/payment/v3/api-docs`, `https://aitesters.byst.re/login`, `/v3/api-docs` (DNS, TLS, status, latency) |
+| `public_https` | `https://awesome.byst.re/login`, `/v3/api-docs`, `/warehouse/v3/api-docs`, `/payment/v3/api-docs`, `/notification/v3/api-docs`, `https://aitesters.byst.re/login`, `/v3/api-docs` (DNS, TLS, status, latency) |
 
 PromQL and firing alerts: `make ansible-tunnel-prometheus`, then
 `http://localhost:9090`.
@@ -44,7 +45,7 @@ How to find everything about one request: [Tracing a request](tracing.md).
 | Group | Alerts |
 | --- | --- |
 | Host | `HostAvailableMemoryLow/Critical` (< 15 % / < 8 %), `HostAbsoluteAvailableMemoryLow/Critical` (< 600 / 300 MiB), `HostCpuSaturated`, `HostMemoryPressureWaiting(Critical)`, `HostMemoryFullStalls(Critical)`, `HostKernelOOMKill`, `HostSwapUsageHigh/Critical`, `HostSwapThrashing`, `HostRootDiskSpaceLow/Critical`, `HostRootInodesLow/Critical` |
-| Containers | `ContainerMemoryNearLimit`, `ContainerMemoryLimitCritical`, `ContainerOOMEvent`, `CriticalContainerMissing` (backend, consumer, warehouse-service, payment-service, gateway, edge, postgres, activemq) |
+| Containers | `ContainerMemoryNearLimit`, `ContainerMemoryLimitCritical`, `ContainerOOMEvent`, `CriticalContainerMissing` (backend, consumer, warehouse-service, payment-service, notification-service, gateway, edge, postgres, activemq) |
 | JVM / native | `JVMHeapUsageHigh/Critical`, `JVMGCOverheadHigh/Critical` |
 | Pipeline | `PrometheusTargetDown(Critical)`, `PrometheusRuleEvaluationFailures`, `AlertmanagerNotificationFailures` |
 | Public edge | `PublicEndpointProbeFailed(Critical)`, `PublicEndpointLatencyHigh` (> 2 s), `PublicEndpointTLSExpiringSoon/Critical` (< 21 / 7 days) |

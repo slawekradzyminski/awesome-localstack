@@ -24,6 +24,8 @@ and is gone after the stack is recreated.
 | `http://localhost:8081/v3/api-docs` | Backend OpenAPI |
 | `http://localhost:8081/warehouse/v3/api-docs` | warehouse-service OpenAPI |
 | `http://localhost:8081/payment/v3/api-docs` | payment-service OpenAPI |
+| `http://localhost:8081/notification/v3/api-docs` | notification-service OpenAPI |
+| `http://localhost:8081/api/v1/local/notifications/outbox` | Commerce emails (lightweight profile) |
 | `http://localhost:8081/api/v1/graphiql` | GraphiQL |
 | `http://localhost:8081/api/v1/tracking/{number}` | Public parcel tracking |
 | `http://localhost:8081/api/v1/local/email/outbox` | Emails (local outbox, Bearer token required) |
@@ -67,6 +69,15 @@ and stop with the same `-f` files and `down`.
 Use `docker compose -f docker-compose.yml -f docker-compose.model-mock.yml up -d`
 on machines without Docker Model Runner.
 
+## Fault injection and tracing (opt-in, either profile)
+
+| Command | What | URL |
+| --- | --- | --- |
+| `scripts/chaos up` (`make chaos-up`) | [Fault-injection lab](fault-injection.md): Toxiproxy between the services, `scripts/chaos <scenario>` | Toxiproxy API `http://127.0.0.1:8474` |
+| `make tracing-up` | [Jaeger](tracing.md#jaeger-traces) with OTLP export from the Spring services | `http://127.0.0.1:16686` |
+
+`scripts/chaos up lightweight tracing monitoring` starts all three overlays.
+
 ## Demo users
 
 | Username | Password | Role | Where |
@@ -106,4 +117,5 @@ Each application repository can run next to a local PostgreSQL on
 `localhost:5432` with its `local` Spring profile (`./mvnw spring-boot:run
 -Dspring-boot.run.profiles=local`): backend on 4001, warehouse-service on 4003
 (token `local-warehouse-token`), payment-service on 4004 (token
-`local-payment-token`, secret `local-payment-webhook-secret`).
+`local-payment-token`, secret `local-payment-webhook-secret`), notification-service
+on 4005 (token `local-notification-token`, needs backend 3.21.0).

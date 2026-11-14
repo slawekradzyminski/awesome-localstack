@@ -113,6 +113,7 @@ app_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
   PAYMENT_SERVICE_TOKEN: "{{ payment_service_token | default('', true) }}"
   PAYMENT_WEBHOOK_SECRET: "{{ payment_webhook_secret | default('', true) }}"
+  NOTIFICATION_SERVICE_TOKEN: "{{ notification_service_token | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
   APP_BOOTSTRAP_PRODUCTS_ENABLED: "true"
 
@@ -149,17 +150,45 @@ aitesters_payment_runtime_env:
   PAYMENT_WEBHOOK_SECRET: "{{ aitesters_payment_webhook_secret | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_payment_postgres_password | default('', true) }}"
 
+# notification-service receives only its service token (accepted by the backend
+# on the event feed, JWKS and webhook export internal endpoints; the backend never
+# calls notification-service), the password of its own `notification` database
+# role, the broker credentials for the `email` queue and its own key for the
+# webhook signing secrets it stores. Like the other services it verifies access
+# tokens with the backend's JWKS.
+notification_runtime_env:
+  NOTIFICATION_SERVICE_TOKEN: "{{ notification_service_token | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ notification_postgres_password | default('', true) }}"
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
+  WEBHOOKS_SECRET_ENCRYPTION_PASSWORD: "{{ notification_webhook_secret_encryption_password | default('', true) }}"
+  WEBHOOKS_SECRET_ENCRYPTION_SALT: "{{ notification_webhook_secret_encryption_salt | default('', true) }}"
+
+# The aitesters sandbox has its own notification-service with its own token,
+# `notification` role on aitesters-postgres and encryption key. It sends no real
+# email (local outbox, like aitesters-backend), so it gets the outbox access key
+# the E2E automation uses instead of broker credentials.
+aitesters_notification_runtime_env:
+  NOTIFICATION_SERVICE_TOKEN: "{{ aitesters_notification_service_token | default('', true) }}"
+  SPRING_DATASOURCE_PASSWORD: "{{ aitesters_notification_postgres_password | default('', true) }}"
+  WEBHOOKS_SECRET_ENCRYPTION_PASSWORD: "{{ aitesters_notification_webhook_secret_encryption_password | default('', true) }}"
+  WEBHOOKS_SECRET_ENCRYPTION_SALT: "{{ aitesters_notification_webhook_secret_encryption_salt | default('', true) }}"
+  LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
+
 # One-shot postgres-roles services (postgres/service-roles.sh): the superuser
-# password and the warehouse and payment role passwords for each database.
+# password and the warehouse, payment and notification role passwords for each
+# database.
 postgres_roles_env:
   PGPASSWORD: "{{ postgres_password | default('', true) }}"
   WAREHOUSE_DB_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
   PAYMENT_DB_PASSWORD: "{{ payment_postgres_password | default('', true) }}"
+  NOTIFICATION_DB_PASSWORD: "{{ notification_postgres_password | default('', true) }}"
 
 aitesters_postgres_roles_env:
   PGPASSWORD: "{{ aitesters_postgres_password | default('', true) }}"
   WAREHOUSE_DB_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
   PAYMENT_DB_PASSWORD: "{{ aitesters_payment_postgres_password | default('', true) }}"
+  NOTIFICATION_DB_PASSWORD: "{{ aitesters_notification_postgres_password | default('', true) }}"
 
 # Compose services that run once and exit; verification expects them exited 0
 # instead of running.
@@ -173,6 +202,8 @@ verify_oneshot_services:
 warehouse_service_allow_unpinned_image: false
 # The same gate for payment-service (and aitesters-payment-service).
 payment_service_allow_unpinned_image: false
+# The same gate for notification-service (and aitesters-notification-service).
+notification_service_allow_unpinned_image: false
 
 verify_urls:
   - url: http://127.0.0.1/login
@@ -184,6 +215,8 @@ verify_urls:
   - url: http://127.0.0.1/warehouse/v3/api-docs
     status_code: 200
   - url: http://127.0.0.1/payment/v3/api-docs
+    status_code: 200
+  - url: http://127.0.0.1/notification/v3/api-docs
     status_code: 200
   # Documentation wiki (docs container behind the gateway).
   - url: http://127.0.0.1/docs/

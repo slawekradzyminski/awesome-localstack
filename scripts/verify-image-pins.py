@@ -18,10 +18,16 @@ COMPOSE_PROFILES = (
     ("lightweight-docker-compose.yml",),
     ("docker-compose.yml", "docker-compose.monitoring.yml"),
     ("lightweight-docker-compose.yml", "docker-compose.monitoring.yml"),
+    # Fault-injection lab (Toxiproxy) and tracing (Jaeger) overlays.
+    ("docker-compose.yml", "docker-compose.chaos.yml", "docker-compose.tracing.yml"),
+    ("lightweight-docker-compose.yml", "docker-compose.chaos.yml", "docker-compose.tracing.yml"),
     ("docker-compose.server.yml",),
 )
-# Marker used in docker-compose.server.yml until payment-service is published.
-PENDING_DIGEST_MARKER = "PENDING_PAYMENT_SERVICE_DIGEST"
+# A first-party service whose first release is not published yet: the server
+# profile carries a `@sha256:PENDING_<SERVICE>_DIGEST` placeholder and the local
+# profiles its bare tag, until the release train pins the published digest.
+PENDING_DIGEST = re.compile(r"@sha256:PENDING_[A-Z0-9_]+_DIGEST$")
+PENDING_SERVICES = ("notification-service",)
 
 
 def resolved_services(files: tuple[str, ...]) -> dict[str, dict[str, object]]:
@@ -47,12 +53,13 @@ def main() -> int:
         for service, config in resolved_services(files).items():
             image = str(config.get("image", ""))
             local_build = bool(config.get("build")) and image.endswith(":local")
-            if PENDING_DIGEST_MARKER in image or (
-                    image.startswith("slawekradzyminski/payment-service:") and "@" not in image):
+            pending_bare_tag = any(image.startswith(f"slawekradzyminski/{name}:") and "@" not in image
+                                   for name in PENDING_SERVICES)
+            if PENDING_DIGEST.search(image) or pending_bare_tag:
                 failures.append(
-                    f"{profile} service {service} uses the pending payment-service release "
+                    f"{profile} service {service} uses an unpublished first-party release "
                     f"{image}: replace it with the published tag@sha256 manifest digest "
-                    f"(placeholder {PENDING_DIGEST_MARKER} on the server profile)"
+                    "(@sha256:PENDING_*_DIGEST placeholder on the server profile, bare tag locally)"
                 )
             elif not local_build and not PINNED_IMAGE.fullmatch(image):
                 failures.append(

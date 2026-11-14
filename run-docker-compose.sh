@@ -79,6 +79,7 @@ urls=(
     "http://localhost:8081/images/applewatch.png"
     "http://localhost:8081/warehouse/v3/api-docs"
     "http://localhost:8081/payment/v3/api-docs"
+    "http://localhost:8081/notification/v3/api-docs"
     "http://localhost:8081/docs/"
 )
 names=(
@@ -90,6 +91,7 @@ names=(
     "Gateway-served product image"
     "Warehouse service OpenAPI"
     "Payment service OpenAPI"
+    "Notification service OpenAPI"
     "Documentation wiki"
 )
 if [ "${WITH_MONITORING:-true}" = "true" ]; then
