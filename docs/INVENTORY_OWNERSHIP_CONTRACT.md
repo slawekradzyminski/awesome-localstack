@@ -129,19 +129,21 @@ Response: **204**, idempotent (204 also when the item is missing).
 ## 3. Asynchronous flows
 
 ### 3.1 Restore after cancel (warehouse consumes the feed)
-- The backend's `order.cancelled` event `data` gains `stockRestore` when the order's `inventoryState` was
-  `DEDUCTED`:
+- `order.cancelled` is NOT changed: its data and webhook payload stay exactly as before.
+- When the order's `inventoryState` was `DEDUCTED`, the backend records, in the same transaction as the cancel, a
+  second, **internal** feed event `stock.restore-requested`. It is not webhook-eligible, like
+  `notification.requested`, and its data is:
   ```json
-  "stockRestore":{"actor":"alice","lines":[{"productId":1,"quantity":2}]}
+  {"orderId":123,"actor":"alice","lines":[{"productId":1,"quantity":2}]}
   ```
-  `actor` is `reason.actorFor(username)`, exactly the actor today's restore writes.
+  `actor` is `reason.actorFor(username)`, exactly the actor today's restore writes. The feed serves it to the
+  `WAREHOUSE` caller. notification-service ignores it, and it is never delivered to webhooks.
 - The backend then sets `inventoryState = RESTORED` and no longer touches stock.
-- The event is still webhook-eligible. The new field is additive, and the notification-service payload stays as it
-  is.
 - warehouse writes one `ORDER_RESTORED` movement per line, with `orderId`, `actor` from the event and
   `reason = "Order cancellation"`. This happens once per order: unique `(order_id)` in `stock_restores`, plus the
   existing `processed_events`.
-- An event without `stockRestore` (legacy rows, shipped orders) is ignored by the stock module.
+- warehouse no longer derives restores from `order.cancelled`. Only `stock.restore-requested` restores stock.
+  Legacy and shipped orders get no such event.
 - Latency is the feed settle delay (3 s) plus `WAREHOUSE_EVENTS_POLL_INTERVAL` (5 s) plus the level push (3.3).
   Clients must poll.
 
@@ -200,8 +202,12 @@ Validate as today, check that the product exists, call 2.4, apply the projection
 ### 4.3 Product create, CSV import, startup seeding
 - Commit the product with `stock_quantity = initialQuantity` and `stock_ledger_version = 0`, plus a
   `stock_command_outbox` row (V25) in the same tx.
-- After commit, call 2.5 and mark the row done. On failure, the outbox dispatcher retries every `PT5S`.
-- The public response does not wait for the retry.
+- After commit, call 2.5 **synchronously in the request thread, before the response is sent**, and mark the row
+  done. A product is usable for checkout as soon as its create response arrives.
+- On failure (warehouse down), the response is still 201 and the outbox dispatcher retries every `PT5S`; the
+  public response does not wait for the retry.
+- Safety net: if a reserve (2.1) answers 404 for a product that exists on the backend and still has a pending
+  initial-stock command, the backend sends that command synchronously and retries the reserve once.
 
 ### 4.4 Product delete
 Delete as today, plus a `stock_command_outbox` DELETE row (2.6).
