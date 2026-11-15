@@ -449,7 +449,7 @@ arrives after that is answered **409** and payment-service **voids** the payment
     stays cancelled and its stock is back (`ORDER_RESTORED`); the customer is not
     charged for a cancelled order.
 
-**With today's images** (backend 3.20.1, payment-service 1.2.1) the same race
+**With images before reservation expiry** (backend 3.20.1, payment-service 1.2.1) the same race
 works with a customer cancel instead of the expiry: skip step 1 and step 4's
 expire call, and cancel the order in step 4 with `curl -s -X POST
 $B/api/v1/orders/$O/cancel -H "Authorization: Bearer $C"`. Everything else,

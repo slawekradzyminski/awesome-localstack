@@ -151,4 +151,4 @@ backend's own `/api/v1/local/email/outbox` keeps the account emails.
   that tag runs as is). `scripts/verify-release-images.py`,
   `scripts/verify-image-pins.py` and the Ansible image gate fail until
   `scripts/release-train.py pin` replaces them with the published digest (see
-  [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md#distributed-lab-release-pending)).
+  [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md#distributed-lab-release)).
