@@ -132,11 +132,14 @@ packages or provider-managed runtimes. In particular, the inspected Convex
 services still report Node 24.21.0, below corrected 24.22.1. Private scan receipts
 are under `~/.config/awesome-localstack-security/`.
 
-## Distributed lab release (pending)
+## Distributed lab release
 
-Not released yet: the LocalStack side of the November 2026 distributed-systems
-lab ([DISTRIBUTED_LAB_CONTRACTS.md](DISTRIBUTED_LAB_CONTRACTS.md)) is wired
-ahead of the images. The release train ships it as one set:
+Released on 14 November 2026 as backend 3.21.1, warehouse-service 1.5.1,
+payment-service 1.3.1, notification-service 1.0.1 and frontend 3.15.0 (the
+release train below), and deployed to awesome.byst.re and aitesters.byst.re on
+15 November 2026 together with the stock-ledger release (backend 3.22.0). The
+November 2026 distributed-systems lab
+([DISTRIBUTED_LAB_CONTRACTS.md](DISTRIBUTED_LAB_CONTRACTS.md)) planned this set:
 
 | Image | Adds |
 | --- | --- |
@@ -191,8 +194,54 @@ in notification-service.
 
 ## Release train: backend 3.22.0, warehouse-service 1.6.0 — 15 November 2026
 
-Published by `scripts/release-train.py`. TODO: what changes, LocalStack
-changes, upgrade order and rollback.
+Published by `scripts/release-train.py`; deployed to awesome.byst.re and
+aitesters.byst.re on 15 November 2026 (one quiesced backend upgrade that also
+brought the distributed-lab release).
+
+What changes ([ADR 6](ARCHITECTURE_DECISIONS.md#adr-6-warehouse-service-owns-the-stock-ledger),
+[INVENTORY_OWNERSHIP_CONTRACT.md](INVENTORY_OWNERSHIP_CONTRACT.md)):
+
+- warehouse-service owns the stock ledger (quantities, movements, reservations).
+  The backend keeps `products.stock_quantity` as a projection that warehouse
+  pushes to it, applied only when its `ledgerVersion` is newer.
+- Checkout reserves stock in warehouse-service, saves the order, then confirms
+  the reservation; a failed save releases it, and warehouse reaps reservations no
+  order confirmed within two minutes. Admin adjustments, initial stock and product
+  deletes are synchronous calls too. When warehouse-service is unreachable these
+  answer `503 {"message":"Inventory service unavailable"}`; reads, search and the
+  cart keep working from the projection.
+- Stock comes back after a cancel asynchronously, through the internal
+  `stock.restore-requested` feed event (a few seconds). The `order.cancelled`
+  payload and webhooks are unchanged. Purchase receipts and return restocks are
+  local warehouse ledger writes; the backend's `POST /internal/v1/inventory/receipts`
+  answers `410 Gone`.
+- On its first start warehouse-service 1.6.0 imports quantities and movement
+  history from the backend's `GET /internal/v1/inventory/export`; its readiness
+  stays down until the import finishes. The backend's `inventory_movements`
+  table is frozen and is dropped in a later release.
+- Flyway: backend V25, warehouse-service V7.
+
+LocalStack changes:
+
+- `WAREHOUSE_URL` and `BACKEND_SERVICE_TOKEN` for every backend, and
+  `BACKEND_SERVICE_TOKEN` for every warehouse-service (Compose profiles and
+  Ansible); two new Vault keys, `backend_service_token` and
+  `aitesters_backend_service_token`.
+- warehouse-service healthchecks use `/actuator/health/readiness`, so
+  `up --wait` and the deploy wait for the ledger import.
+- The course compatibility stack runs a warehouse-service per backend
+  (`COMPAT_WAREHOUSE_IMAGE`).
+- Chaos lab: proxy `backend-to-warehouse` on `toxiproxy:14005`, scenarios
+  `warehouse-down` and `warehouse-slow`.
+- The l20 course specs on `master` and `graphql` poll for the restored stock
+  after a cancel (merged in the course repository before the deploy).
+
+Upgrade: new Vault keys first, then `scripts/release-train.py deploy --yes`
+(quiesced upgrade with a pre-deploy backup). Rollback: re-pin backend 3.21.1 and
+warehouse-service 1.5.1 and restore the pre-deploy backup. Without the restore,
+3.21.1 would start from the projection's quantities, and movements recorded in
+warehouse-service after the move would be missing from the backend's history;
+whether 3.21.1 runs on the V25 schema is decided in the release review.
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
@@ -205,8 +254,9 @@ changes, upgrade order and rollback.
 
 ## Release train: frontend 3.15.0 — 14 November 2026
 
-Published by `scripts/release-train.py`. TODO: what changes, LocalStack
-changes, upgrade order and rollback.
+Published by `scripts/release-train.py`; deployed on 15 November 2026. The
+frontend side of the distributed lab (reservation countdown, parcels,
+notification-service API snapshot); see [Distributed lab release](#distributed-lab-release).
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
@@ -219,8 +269,9 @@ changes, upgrade order and rollback.
 
 ## Release train: backend 3.21.1, warehouse-service 1.5.1, payment-service 1.3.1, notification-service 1.0.1 — 14 November 2026
 
-Published by `scripts/release-train.py`. TODO: what changes, LocalStack
-changes, upgrade order and rollback.
+Published by `scripts/release-train.py`; deployed to awesome.byst.re and
+aitesters.byst.re on 15 November 2026. What changes, the LocalStack changes,
+upgrade order and rollback are in [Distributed lab release](#distributed-lab-release).
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
@@ -1048,7 +1099,7 @@ Release train: backend 3.22.0, warehouse-service 1.6.0, released 15 November 202
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
 | Warehouse service | `slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead` |
 | Payment service | `slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8` |
-| Notification service | `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` (not published yet; see [Distributed lab release](#distributed-lab-release-pending)) |
+| Notification service | `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` |
 
 ## Backend 3.9.1 traffic preview patch
 

@@ -22,7 +22,7 @@ Endpoints under `/api/v1/warehouse` require `ROLE_WAREHOUSE` or `ROLE_ADMIN`
 | `POST /api/v1/warehouse/shipments/{id}/ship` `{carrier, trackingNumber?}` | `PACKED → SHIPPED`; omit `trackingNumber` for the [simulated carrier](tracking.md) |
 | `POST /api/v1/warehouse/shipments/{id}/deliver` | `SHIPPED → DELIVERED` (manual confirmation) |
 | `POST /api/v1/warehouse/shipments/{id}/carrier/advance` | Fast-forward a simulated parcel one scan |
-| `POST /api/v1/warehouse/shipments/{id}/cancel` | Only in `AWAITING_PICK` or `PICKED`: cancels the order and restores stock |
+| `POST /api/v1/warehouse/shipments/{id}/cancel` | Only in `AWAITING_PICK` or `PICKED`: cancels the order; warehouse-service restores the stock asynchronously from the `stock.restore-requested` feed event (from 1.6.0, usually within a few seconds) |
 | `GET /api/v1/orders/{id}/shipment` | Owner or admin: the order's shipment |
 
 Any other transition is `409`.

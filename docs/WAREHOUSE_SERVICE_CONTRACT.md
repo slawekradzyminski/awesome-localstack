@@ -133,12 +133,12 @@ admin status endpoint returns 409 while the state is `AWAITING_PICK` through
 | Ship / deliver | `PUT fulfilment SHIPPED` / `DELIVERED`, then an outbox notification (`ORDER_SHIPPED` / `ORDER_DELIVERED`) |
 | Cancel shipment | `POST warehouse-cancel` (a 409 for an order that is already `CANCELLED` counts as done); then mark the shipment `CANCELLED` |
 | Request return | `GET order` for ownership, status `DELIVERED`, items, totals |
-| Receive return | `POST inventory/receipts` (`RETURN_RESTOCKED`, `requestId` = deterministic UUID from the return id) for resellable lines |
+| Receive return | Local stock-ledger write (`RETURN_RESTOCKED`, `requestId` = deterministic UUID from the return id) for resellable lines, from 1.6.0; the backend's projection follows through the stock-level push. Before 1.6.0: `POST inventory/receipts` |
 | Refund return | `POST orders/{id}/refunds` (`requestId` = deterministic UUID from the return id), then mark the return `REFUNDED` |
 | Approve / reject / refund | Outbox notification (`RETURN_UPDATED`) |
 | `order.cancelled` from the event feed (every 5 s) | `GET events?after={cursor}&types=order.cancelled`; cancels the local `AWAITING_PICK` or `PICKED` shipment without calling the backend (the order is already cancelled there) |
 | Reconcile (every 10 minutes from 1.3.0, a safety net behind the feed) | `GET orders?ids=` for `AWAITING_PICK` shipments, cancelling those whose order is `CANCELLED`; `GET orders?status=PAID&fulfilment=AWAITING_PICK`, adopting orders older than two minutes that have no shipment |
-| Receive purchase order | `POST inventory/receipts` (`PURCHASE_RECEIVED`, the receipt's `requestId`) |
+| Receive purchase order | Local stock-ledger write (`PURCHASE_RECEIVED`, the receipt's `requestId`) from 1.6.0, then the stock-level push. Before 1.6.0: `POST inventory/receipts` |
 | Reorder suggestions | `GET products` (all) plus local open purchase-order lines |
 | Queue | `GET orders?status=PAID&fulfilment=NONE` |
 

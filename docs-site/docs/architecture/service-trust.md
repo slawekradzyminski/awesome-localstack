@@ -50,12 +50,27 @@ values from Ansible Vault.
 | `GET /internal/v1/orders/{id}` | warehouse, payment |
 | `GET /internal/v1/webhooks/export` | notification only |
 | `POST /internal/v1/orders/{id}/payment` | payment only |
-| everything else (`orders` queue, `fulfilment`, `refunds`, `warehouse-cancel`, `products`, `inventory/receipts`, `notifications`) | warehouse only |
+| `POST /internal/v1/inventory/levels`, `GET /internal/v1/inventory/export`, `GET /internal/v1/orders/by-reservation/{id}` (3.22.0) | warehouse only |
+| `POST /internal/v1/inventory/receipts` | warehouse only; `410 Gone` from 3.22.0 (receipts are warehouse ledger writes) |
+| everything else (`orders` queue, `fulfilment`, `refunds`, `warehouse-cancel`, `products`, `notifications`) | warehouse only |
 
 | Situation | Response |
 | --- | --- |
 | No token configured for any caller of that path | `404 {"message":"Not found"}` |
 | Missing token, wrong token, or another caller's token | `401 {"message":"Invalid service token"}` — even with a valid user JWT |
+
+### Backend to warehouse-service (3.22.0)
+
+From backend 3.22.0 and warehouse-service 1.6.0 the direction also runs the other
+way: warehouse-service owns the stock ledger, and the backend calls its
+`/internal/v1/stock/**` endpoints (reserve, confirm, release, adjust, initial
+stock, delete, reads) with `Authorization: Bearer <BACKEND_SERVICE_TOKEN>`.
+warehouse-service accepts only that token there, compared in constant time like its other service tokens. Both sides
+read the same `BACKEND_SERVICE_TOKEN`; the Compose default is
+`local-backend-service-token-change-me`, and production takes
+`backend_service_token` / `aitesters_backend_service_token` from Ansible Vault,
+one per site. See the
+[inventory ownership contract](../reference/INVENTORY_OWNERSHIP_CONTRACT.md).
 
 The full endpoint list is in the
 [warehouse contract](../reference/WAREHOUSE_SERVICE_CONTRACT.md#internal-api-backend-called-by-warehouse-service)
