@@ -2,13 +2,17 @@
 # Add it after a local base profile (the simplest way is scripts/chaos):
 #
 #   scripts/chaos up lightweight          # or: make chaos-up
+#   scripts/chaos up lightweight broker   # with the broker transport overlay
 #   docker compose -f lightweight-docker-compose.yml -f docker-compose.chaos.yml up -d
 #   docker compose -f docker-compose.yml -f docker-compose.chaos.yml up -d
 #
+# With docker-compose.broker.yml, list it BEFORE this file: this file re-points
+# SPRING_ARTEMIS_BROKER_URL at Toxiproxy and the last file wins.
+#
 # One proxy per link (chaos/toxiproxy.json), so a scenario can break one
 # service's view of the backend or of PostgreSQL without touching the others.
-# The services need no change: only BACKEND_BASE_URL, WAREHOUSE_URL and
-# SPRING_DATASOURCE_URL are re-pointed. The gateway still talks to every service
+# The services need no change: only BACKEND_BASE_URL, WAREHOUSE_URL,
+# SPRING_DATASOURCE_URL and SPRING_ARTEMIS_BROKER_URL are re-pointed. The gateway still talks to every service
 # directly.
 #
 #   warehouse-service ─ toxiproxy:14001 ─┐            backend ─ toxiproxy:15432 ─┐
@@ -17,6 +21,10 @@
 #                                                     notification ─ toxiproxy:45432 ┘
 #   backend ────────── toxiproxy:14005 ─── warehouse-service:4003  (stock commands,
 #                                          backend 3.22.0+; older backends ignore it)
+#   backend ────────── toxiproxy:16161 ─┐
+#   warehouse ──────── toxiproxy:26161 ─┼─ activemq:61616  (broker transport and the
+#   payment ────────── toxiproxy:36161 ─┤                   full profile's emails; no
+#   notification ───── toxiproxy:46161 ─┘                   effect without a broker)
 #
 # The Toxiproxy API is published on 127.0.0.1 only (TOXIPROXY_PORT, default
 # 8474). Docs: docs/FAULT_INJECTION_LAB.md.
@@ -50,6 +58,7 @@ services:
       # Stock commands to warehouse-service (backend 3.22.0+): warehouse-down and
       # warehouse-slow break this link.
       WAREHOUSE_URL: http://toxiproxy:14005
+      SPRING_ARTEMIS_BROKER_URL: tcp://toxiproxy:16161
     depends_on:
       toxiproxy:
         condition: service_healthy
@@ -62,6 +71,7 @@ services:
       # and 9, e.g. WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S scripts/chaos up.
       WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT: ${WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT:-PT2M}
       WAREHOUSE_RESERVATION_REAPER_INTERVAL: ${WAREHOUSE_RESERVATION_REAPER_INTERVAL:-PT30S}
+      SPRING_ARTEMIS_BROKER_URL: tcp://toxiproxy:26161
     depends_on:
       toxiproxy:
         condition: service_healthy
@@ -73,6 +83,7 @@ services:
       # Simulated provider delay for PROCESSING cards (4000 0000 0000 0077);
       # lengthen it for the "payment settles after the reservation expired" exercise.
       PAYMENT_SETTLEMENT_DELAY: ${PAYMENT_SETTLEMENT_DELAY:-PT10S}
+      SPRING_ARTEMIS_BROKER_URL: tcp://toxiproxy:36161
     depends_on:
       toxiproxy:
         condition: service_healthy
@@ -81,6 +92,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:45432/testdb?currentSchema=notification
       BACKEND_BASE_URL: http://toxiproxy:34001
+      SPRING_ARTEMIS_BROKER_URL: tcp://toxiproxy:46161
     depends_on:
       toxiproxy:
         condition: service_healthy

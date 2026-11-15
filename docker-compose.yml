@@ -46,6 +46,10 @@ services:
       BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+      # Broker transport (backend 3.23.0+, docs/EVENT_BROKER_CONTRACT.md): the outbox
+      # relay also publishes every commerce event to Artemis; the feed stays served.
+      EVENTS_TRANSPORT: ${EVENTS_TRANSPORT:-broker}
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
     models:
       local_llm:
         endpoint_var: DMR_MODEL_ENDPOINT
@@ -80,7 +84,13 @@ services:
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
       # Checks the backend's stock-command calls (backend 3.22.0+, warehouse-service 1.6.0+).
       BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
+      # Broker transport (warehouse-service 1.7.0+): commerce events from its Artemis queue.
+      EVENTS_TRANSPORT: ${EVENTS_TRANSPORT:-broker}
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_started
       backend:
         condition: service_healthy
       postgres-roles:
@@ -118,7 +128,13 @@ services:
       BACKEND_BASE_URL: http://backend:4001
       PAYMENT_SERVICE_TOKEN: ${PAYMENT_SERVICE_TOKEN:-local-payment-service-token-change-me}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-payment-webhook-secret-change-me}
+      # Broker transport (payment-service 1.4.0+): card refunds from its Artemis queue.
+      EVENTS_TRANSPORT: ${EVENTS_TRANSPORT:-broker}
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_started
       backend:
         condition: service_healthy
       postgres-roles:
@@ -162,6 +178,9 @@ services:
       NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
       NOTIFICATION_EMAIL_TRANSPORT: jms
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      # Broker transport (notification-service 1.1.0+): commerce events from its Artemis queue.
+      EVENTS_TRANSPORT: ${EVENTS_TRANSPORT:-broker}
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
     depends_on:
       activemq:
         condition: service_started
@@ -311,11 +330,15 @@ services:
       ARTEMIS_PASSWORD: admin
       ANONYMOUS_LOGIN: "true"
       EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune --global-max-size 512M
+    # The commerce event addresses, queues and dead-letter queues (docs/EVENT_BROKER_CONTRACT.md),
+    # applied on top of the instance's broker.xml on every start.
+    command: ["run", "--properties", "/var/lib/artemis-config/commerce-events.properties"]
     ports:
       - "61616:61616"
       - "8161:8161"
       - "5672:5672"
     volumes:
+      - ./artemis/commerce-events.properties:/var/lib/artemis-config/commerce-events.properties:ro
       - type: bind
         source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
         target: /opt/java/openjdk/lib/security/blocked.certs

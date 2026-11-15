@@ -16,7 +16,9 @@
     database, reset every night.
 
 **Artemis**
-:   Apache ActiveMQ Artemis, the message broker carrying emails (queue `email`).
+:   Apache ActiveMQ Artemis, the message broker carrying emails (queue `email`)
+    and, with the [broker transport](operations/event-broker.md), the commerce
+    events (`awesome.commerce.events`).
 
 **Bootstrap admin / catalog**
 :   Production has no demo seed; it creates one admin from Vault values and a

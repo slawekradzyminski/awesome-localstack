@@ -6,5 +6,9 @@
   {"name": "backend-to-postgres", "listen": "0.0.0.0:15432", "upstream": "postgres:5432", "enabled": true},
   {"name": "warehouse-to-postgres", "listen": "0.0.0.0:25432", "upstream": "postgres:5432", "enabled": true},
   {"name": "payment-to-postgres", "listen": "0.0.0.0:35432", "upstream": "postgres:5432", "enabled": true},
-  {"name": "notification-to-postgres", "listen": "0.0.0.0:45432", "upstream": "postgres:5432", "enabled": true}
+  {"name": "notification-to-postgres", "listen": "0.0.0.0:45432", "upstream": "postgres:5432", "enabled": true},
+  {"name": "backend-to-activemq", "listen": "0.0.0.0:16161", "upstream": "activemq:61616", "enabled": true},
+  {"name": "warehouse-to-activemq", "listen": "0.0.0.0:26161", "upstream": "activemq:61616", "enabled": true},
+  {"name": "payment-to-activemq", "listen": "0.0.0.0:36161", "upstream": "activemq:61616", "enabled": true},
+  {"name": "notification-to-activemq", "listen": "0.0.0.0:46161", "upstream": "activemq:61616", "enabled": true}
 ]

@@ -200,11 +200,13 @@
     - (artemis_username | default('', true)) | length > 0
     - (artemis_password | default('', true)) | length > 0
 
-- name: Restart Artemis and consumer when broker credentials change
+- name: Restart Artemis and consumer when broker credentials or the commerce event topology change
   ansible.builtin.command:
     cmd: docker compose -f {{ app_compose_file }} restart activemq consumer
     chdir: "{{ app_dir }}"
-  when: artemis_service_user_result is changed
+  when: >-
+    artemis_service_user_result is changed
+    or (artemis_config_changed | default(false))
 
 - name: Recreate gateway to refresh Docker upstream addresses
   community.docker.docker_compose_v2:

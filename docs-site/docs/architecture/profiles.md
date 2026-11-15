@@ -13,6 +13,7 @@ the other.
 | model-mock | `docker-compose.yml` + `docker-compose.model-mock.yml` | `awesome-full-native` | Full profile with `ollama-mock` instead of Docker Model Runner (CI) |
 | grpc | base file + `docker-compose.grpc.yml` | base project | Publishes the backend's native gRPC listener on `127.0.0.1:9091` |
 | monitoring | base file + `docker-compose.monitoring.yml` | base project | Prometheus, Grafana, InfluxDB, cAdvisor, Node Exporter for k6 trainings (lightweight or full) |
+| broker | `lightweight-docker-compose.yml` + `docker-compose.broker.yml` | `awesome-light` | Adds Artemis and switches the services to the [broker transport](../operations/event-broker.md) (the full profile has it already) |
 | chaos | base file + `docker-compose.chaos.yml` | base project | [Fault-injection lab](../operations/fault-injection.md): Toxiproxy between the services, the backend and PostgreSQL (`scripts/chaos`) |
 | tracing | base file + `docker-compose.tracing.yml` | base project | Jaeger with OTLP export from the Spring services ([Tracing a request](../operations/tracing.md#jaeger-traces)) |
 | compatibility | `docker-compose.compatibility.yml` | its own | Runs the `ai-testers-api` course suite against two disposable backends on `127.0.0.1:14001` / `14002` |
@@ -24,6 +25,7 @@ the other.
 | Backend Spring profile | `local` (demo seed, emails to the in-memory local outbox) | `docker,demo` (demo seed, emails over JMS) | `docker,server` + `graphql,grpc` (no demo data; bootstrap admin and catalog) |
 | warehouse-, payment-, notification-service profile | `docker,demo` | `docker,demo` | `docker` |
 | PostgreSQL | tmpfs, 256 MiB, data lost on recreate | named volume `postgres-data`, host port 5432 | named volume, Vault password, nightly encrypted backups |
+| Commerce events | HTTP feed (`EVENTS_TRANSPORT=feed`); broker with `docker-compose.broker.yml` | Artemis ([broker transport](../operations/event-broker.md)) | Artemis, one address per site |
 | Emails | local outboxes: account emails `GET /api/v1/local/email/outbox` (backend), commerce emails `GET /api/v1/local/notifications/outbox` (notification-service) | ActiveMQ → consumer → Mailpit (`http://localhost:8025`), from the backend and notification-service | stable: ActiveMQ → consumer → Mailpit (private); aitesters: both local outboxes, key-protected |
 | SSO | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) | no (removed in backend 3.18.0) |
 | LLM | `ollama-mock` on `11434` | Docker Model Runner through `ollama-dmr-adapter` | `ollama-mock` (internal) |

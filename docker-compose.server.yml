@@ -63,6 +63,10 @@ services:
       # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
       # (from the env file). Ignored by older backends.
       WAREHOUSE_URL: http://warehouse-service:4003
+      # Broker transport (backend 3.23.0+, docs/EVENT_BROKER_CONTRACT.md): the outbox
+      # relay also publishes every commerce event to Artemis; the feed stays served.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
     # No depends_on warehouse-service, on purpose: it needs this backend's JWKS to
     # start and waits for a healthy backend. Until it is up, stock commands
     # answer 503 "Inventory service unavailable".
@@ -120,7 +124,14 @@ services:
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
+      # Broker transport (warehouse-service 1.7.0+): commerce events from its own Artemis queue;
+      # broker credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_healthy
       postgres-roles:
         condition: service_completed_successfully
       backend:
@@ -169,7 +180,14 @@ services:
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       BACKEND_BASE_URL: http://aitesters-backend:4001
+      # Broker transport (warehouse-service 1.7.0+): commerce events from its own Artemis queue;
+      # broker credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: aitesters.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_healthy
       aitesters-postgres-roles:
         condition: service_completed_successfully
         restart: true
@@ -217,7 +235,14 @@ services:
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
       BACKEND_BASE_URL: http://backend:4001
+      # Broker transport (payment-service 1.4.0+): commerce events from its own Artemis queue;
+      # broker credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_healthy
       postgres-roles:
         condition: service_completed_successfully
       backend:
@@ -265,7 +290,14 @@ services:
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
       BACKEND_BASE_URL: http://aitesters-backend:4001
+      # Broker transport (payment-service 1.4.0+): commerce events from its own Artemis queue;
+      # broker credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: aitesters.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_healthy
       aitesters-postgres-roles:
         condition: service_completed_successfully
         restart: true
@@ -326,6 +358,9 @@ services:
       # delivers them to Mailpit.
       NOTIFICATION_EMAIL_TRANSPORT: jms
       SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      # Broker transport (notification-service 1.1.0+): commerce events from its own queue.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
     depends_on:
       postgres-roles:
         condition: service_completed_successfully
@@ -383,7 +418,14 @@ services:
       # in memory, readable with the protected local outbox
       # (GET /api/v1/local/notifications/outbox, LOCAL_EMAIL_OUTBOX_ACCESS_KEY).
       NOTIFICATION_EMAIL_TRANSPORT: local-outbox
+      # Broker transport (notification-service 1.1.0+): commerce events from its own
+      # queue; emails stay in the local outbox. Broker credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: aitesters.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     depends_on:
+      activemq:
+        condition: service_healthy
       aitesters-postgres-roles:
         condition: service_completed_successfully
         restart: true
@@ -570,10 +612,17 @@ services:
       # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
       # (from the env file). Ignored by older backends.
       WAREHOUSE_URL: http://aitesters-warehouse-service:4003
+      # Broker transport (backend 3.23.0+): the sandbox has its own address on the shared
+      # broker, so its events never reach the stable site. Credentials from the env file.
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: aitesters.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
     # No depends_on aitesters-warehouse-service, on purpose: it needs this backend's JWKS to
     # start and waits for a healthy backend. Until it is up, stock commands
     # answer 503 "Inventory service unavailable".
     depends_on:
+      activemq:
+        condition: service_healthy
       aitesters-postgres:
         condition: service_healthy
       ollama-mock:
@@ -858,10 +907,15 @@ services:
         -Dhawtio.http.strictTransportSecurity=max-age=31536000;includeSubDomains;preload
         -Djolokia.policyLocation=file:/var/lib/artemis-instance/etc/jolokia-access.xml
         -Dlog4j2.disableJmx=true
+    # The commerce event addresses, queues and dead-letter queues of both sites
+    # (docs/EVENT_BROKER_CONTRACT.md), applied on top of the instance's broker.xml on
+    # every start. Ansible restarts the broker when the file changes.
+    command: ["run", "--properties", "/var/lib/artemis-config/commerce-events.properties"]
     expose:
       - "61616"
       - "8161"
     volumes:
+      - ./artemis/commerce-events.properties:/var/lib/artemis-config/commerce-events.properties:ro
       - type: bind
         source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
         target: /opt/java/openjdk/lib/security/blocked.certs

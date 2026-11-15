@@ -179,6 +179,7 @@ Recommended app URLs:
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Toxiproxy API (with the [fault-injection lab](FAULT_INJECTION_LAB.md), `scripts/chaos up`): `http://127.0.0.1:8474`
 - Jaeger UI (with the tracing overlay, `make tracing-up`): `http://127.0.0.1:16686`
+- Artemis console (commerce event queues, [broker transport](EVENT_BROKER_CONTRACT.md)): `http://localhost:8161/console`, `admin` / `admin`
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:
@@ -235,6 +236,7 @@ Recommended app URLs:
 - sign in API: `http://localhost:8081/api/v1/users/signin`
 - Toxiproxy API (with the [fault-injection lab](FAULT_INJECTION_LAB.md), `scripts/chaos up`): `http://127.0.0.1:8474`
 - Jaeger UI (with the tracing overlay, `make tracing-up`): `http://127.0.0.1:16686`
+- Artemis console (with the broker transport overlay, `docker-compose.broker.yml`): `http://127.0.0.1:8161/console`, `admin` / `admin` (`ARTEMIS_CONSOLE_PORT` moves it)
 - images through gateway: `http://localhost:8081/images/iphone.png`
 
 Published host ports:

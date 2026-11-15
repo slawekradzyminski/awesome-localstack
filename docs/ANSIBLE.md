@@ -264,6 +264,42 @@ export pending messages and retain a backup of the anonymous volume. The first
 convergent deployment creates the new named volume; do not delete the old
 anonymous volume until the Artemis-to-consumer delivery check has passed.
 
+### Commerce event broker
+
+Both sites run the broker transport ([EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md)):
+`awesome.commerce.events` and `aitesters.commerce.events` on the shared Artemis,
+one durable queue and one dead-letter queue per consuming service. The
+topology lives in `artemis/commerce-events.properties`, which `app_copy_paths`
+mirrors to the server and `activemq` loads with
+`artemis run --properties` on every start, on top of the instance's
+`broker.xml` in the `activemq-data` volume (so nothing inside the volume is
+edited for it).
+
+- When the file changes, `converge.yml` restarts `activemq` and `consumer`
+  (the same task as for changed broker credentials). The services reconnect on
+  their own: the backend's relay retries with backoff and the listeners
+  recover every 5 seconds; nothing is lost, events wait in `domain_events`.
+- warehouse-, payment- and notification-service of both sites and
+  `aitesters-backend` get `SPRING_ARTEMIS_USER` / `SPRING_ARTEMIS_PASSWORD`
+  (`artemis_username` / `artemis_password`, the account the backend already
+  used for the `email` queue) through their env files. No new Vault variable.
+- The first deployment recreates `activemq` (its `command` changes) and starts
+  publishing: migration V27 marks events older than one hour as published, so
+  the relay sends at most the last hour once, and the consumers skip what they
+  already handled through the feed by event id.
+- Rollback to the feed without a new image: set `EVENTS_TRANSPORT: feed` on
+  every backend and service of a site and deploy. The consumers resume the
+  feed from their cursors and skip what the broker delivered.
+- Dead letters on the server (`scripts/` is not mirrored there; the broker
+  container holds its own credentials):
+
+  ```bash
+  cd /opt/awesome-localstack
+  docker compose exec activemq bash -c \
+    './bin/artemis queue stat --user "$ARTEMIS_USER" --password "$ARTEMIS_PASSWORD" --maxColumnSize 80' \
+    | grep commerce.events
+  ```
+
 ### Verification as part of deploy
 
 The `verify` role remains separate so it can still be run on demand, but it is also included in `deploy.yml`.
@@ -275,6 +311,8 @@ The role checks:
   reviewed immutable Compose reference
 - an Artemis message is consumed and delivered to Mailpit as a uniquely named
   email
+- every commerce event queue of both sites exists with at least one consumer
+  and has its dead-letter queue (`verify_commerce_event_consumer_queues`)
 - `http://127.0.0.1/login`
 - `http://127.0.0.1/v3/api-docs`
 - `http://127.0.0.1/images/iphone.png`

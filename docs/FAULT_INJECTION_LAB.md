@@ -80,6 +80,15 @@ flowchart LR
 | `warehouse-to-postgres` | `toxiproxy:25432` | `postgres:5432` | warehouse-service `SPRING_DATASOURCE_URL` |
 | `payment-to-postgres` | `toxiproxy:35432` | `postgres:5432` | payment-service `SPRING_DATASOURCE_URL` |
 | `notification-to-postgres` | `toxiproxy:45432` | `postgres:5432` | notification-service `SPRING_DATASOURCE_URL` |
+| `backend-to-activemq` | `toxiproxy:16161` | `activemq:61616` | backend `SPRING_ARTEMIS_BROKER_URL` (event relay; full profile emails) |
+| `warehouse-to-activemq` | `toxiproxy:26161` | `activemq:61616` | warehouse-service `SPRING_ARTEMIS_BROKER_URL` |
+| `payment-to-activemq` | `toxiproxy:36161` | `activemq:61616` | payment-service `SPRING_ARTEMIS_BROKER_URL` |
+| `notification-to-activemq` | `toxiproxy:46161` | `activemq:61616` | notification-service `SPRING_ARTEMIS_BROKER_URL` (broker transport and emails) |
+
+The four `*-to-activemq` proxies matter only where a broker runs: the full
+profile, or lightweight with the broker transport (`scripts/chaos up
+lightweight broker`, see [Broker transport](#broker-transport)). Without a
+broker they have no upstream and nobody uses them.
 
 **notification-service.** Both base profiles run notification-service
 (1.0.0), so `docker-compose.chaos.yml` re-points it like the other services and
@@ -122,7 +131,7 @@ warehouse-to-postgres      toxiproxy:25432   postgres:5432          up        -
 
 | `scripts/chaos …` | `make …` | Does |
 | --- | --- | --- |
-| `up [full\|lightweight] [tracing] [monitoring]` | `make chaos-up [PROFILE=full] [WITH="tracing monitoring"]` | Starts the profile with the lab and waits for it. Overlays that already run (tracing, monitoring) are kept |
+| `up [full\|lightweight] [broker] [tracing] [monitoring]` | `make chaos-up [PROFILE=full] [WITH="broker tracing monitoring"]` | Starts the profile with the lab and waits for it. `broker` adds the Artemis event transport to lightweight (the full profile has it already). Overlays that already run (broker, tracing, monitoring) are kept |
 | `down` | `make chaos-down` | Stops the whole stack that runs the lab (`down --remove-orphans`; named volumes of the full profile are kept) |
 | `list` | `make chaos-list` | Scenarios with one-line descriptions |
 | `status` | `make chaos-status` | Proxies and active faults |
@@ -159,8 +168,8 @@ file too, or `--remove-orphans` removes it as well.)
 ## Scenarios
 
 Targets: `warehouse`, `payment`, `notification` (the `-service` suffix is
-optional), `backend` for the `postgres-*` scenarios, or nothing for all of
-them. The `warehouse-*` scenarios take no target: only the backend calls
+optional), `backend` for the `postgres-*` and `broker-*` scenarios, or nothing
+for all of them. The `warehouse-*` scenarios take no target: only the backend calls
 warehouse-service.
 
 | Scenario | Toxiproxy change | What you observe |
@@ -173,6 +182,8 @@ warehouse-service.
 | `postgres-down [target]` | disables `<target>-to-postgres` | Pooled connections are closed, new ones refused. Requests that need the database fail at once (warehouse-service: `500` in a few milliseconds); health turns DOWN |
 | `warehouse-down` | disables `backend-to-warehouse` | Backend 3.22.0+: stock commands fail at once. Checkout (`POST /api/v1/orders`) and admin stock adjust answer `503 {"message":"Inventory service unavailable"}`; product reads, the cart and admin stock reads (from the backend's projection) keep working. Older backends never call warehouse-service, so nothing changes |
 | `warehouse-slow [ms]` | `latency` toxic (default 3000 ms) on the answers of `backend-to-warehouse` | Backend 3.22.0+: checkout and adjust take `ms` longer. From 5000 ms on the backend's read timeout (`WAREHOUSE_READ_TIMEOUT`, 5 s) turns them into the same 503 |
+| `broker-down [target]` | disables `<target>-to-activemq` | Broker transport. `backend`: checkout and cancel keep working, the relay backs off and `events_relay_pending` grows until `heal`. A consumer: its listener reconnects every 5 s and its queue holds the events meanwhile. Health stays UP everywhere (the broker is not part of it) |
+| `broker-slow [ms] [target]` | `latency` toxic (default 3000 ms) on the answers of `<target>-to-activemq` | Every publish, receive and acknowledgement of the target is delayed: the relay or the consumer falls behind and catches up |
 | `partition-<service>` | disables every proxy to and from the service | `partition-warehouse`, `partition-payment`, `partition-notification`: the service loses the backend and its database (and for warehouse, the backend loses warehouse-service). `partition-backend`: no service reaches the backend and the backend loses PostgreSQL and warehouse-service. `partition-postgres`: nobody reaches PostgreSQL |
 
 The gateway is never behind Toxiproxy, so the backend's own API keeps working
@@ -733,6 +744,112 @@ rows, so it waits for the lock, while the reservation is already booked.
     With backend 3.22.1 or older the same steps end with the reservation
     `RELEASED`, an order that exists, and the stock back at the old value.
 
+## Broker transport
+
+The same events can travel through ActiveMQ Artemis instead of the HTTP feed
+([EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md)). The full profile always
+does; the lightweight profile does with one more overlay:
+
+```bash
+scripts/chaos up lightweight broker      # or: make chaos-up WITH=broker
+scripts/broker stat                      # every commerce queue: consumers, waiting messages
+```
+
+The Artemis console is on `http://127.0.0.1:8161/console` (`admin` /
+`admin`): *Artemis* tab, `awesome.commerce.events` and its queues. The
+exercises below compare the two transports; Exercise 3 shows the feed side.
+
+| | Feed (lightweight default) | Broker |
+| --- | --- | --- |
+| Who moves the event | Each consumer polls `GET /internal/v1/events` every 5 s | The backend's relay publishes every second; Artemis pushes to the consumers |
+| Where a backlog is visible | Cursor (`event_cursors`) behind the feed | Message count of the service's queue |
+| A failing event | Logged and skipped (gone) | Redelivered 5 times, then in `DLQ.<queue>` |
+| Duplicates | `processed_events` | Broker duplicate detection, then `processed_events` |
+
+### Exercise 10: watch an event cross the broker
+
+1. Open the console, or keep `watch -n1 scripts/broker stat` running.
+2. Place an order, pay it with `4242 4242 4242 4242` and cancel it:
+
+   ```bash
+   O=$(new_order); pay $O 4242424242424242
+   curl -s -X POST $B/api/v1/orders/$O/cancel -H "Authorization: Bearer $C" | jq .status
+   ```
+
+3. Within about a second, `ADDED` grows on all three queues: warehouse-service
+   gets `order.cancelled` and `stock.restore-requested`, payment-service
+   `card-refund.requested`, notification-service everything else (the queue
+   filters on the `type` property).
+4. The stock is back and the card refunded:
+
+   ```bash
+   psql "select type, delta from warehouse.stock_movements where order_id = $O"
+   psql "select status from payment.payments where order_id = $O"
+   ```
+
+5. The feed cursors did not move (`select * from warehouse.event_cursors`):
+   in broker mode nobody polls.
+
+**Question:** the restore took about one second here and 5 to 8 seconds with
+the feed (Exercise 3). Where did the difference go? (The settle delay and the
+poll interval; the relay runs every second.)
+
+### Exercise 11: a poison message ends in the dead-letter queue
+
+```bash
+scripts/broker poison warehouse
+docker compose -p awesome-light logs -f warehouse-service | grep -i redelivery
+```
+
+1. warehouse-service rolls the message back five times, after 1, 2, 4 and 8
+   seconds, then Artemis moves it to `DLQ.awesome.commerce.events.warehouse-service`
+   (`scripts/broker stat`, `scripts/broker dlq warehouse`).
+2. Meanwhile cancel another order: it is restored normally. A poison message
+   does not block the queue.
+3. Send it back: `scripts/broker redrive warehouse`. It fails five more times
+   and returns to the DLQ. Delete it with `scripts/broker purge-dlq warehouse`.
+
+**Compare with the feed:** with `EVENTS_TRANSPORT=feed` a malformed event is
+logged as "could not be handled and is skipped" and recorded as processed. It
+is gone; nothing tells a tester later. **Question:** which test would have
+found that difference before production?
+
+### Exercise 12: a consumer is down, its queue fills up
+
+```bash
+O=$(new_order)                                   # checkout needs warehouse-service (stock reservation)
+docker compose -p awesome-light stop warehouse-service
+curl -s -X POST $B/api/v1/orders/$O/cancel -H "Authorization: Bearer $C" | jq .status   # still works
+scripts/broker stat          # the warehouse queue holds 2 messages, the others are empty
+docker compose -p awesome-light start warehouse-service
+```
+
+The two events wait in the queue (no feed involved) and are handled as soon as
+the listener is back; the stock is restored. Try the same with
+`scripts/chaos broker-down warehouse` instead of stopping the container: the
+service stays healthy, its listener reconnects every 5 seconds, and the effect
+is the same.
+
+### Exercise 13: the broker is down for the backend
+
+```bash
+scripts/chaos broker-down backend
+O=$(new_order)                                     # checkout still 201
+curl -s -X POST $B/api/v1/orders/$O/cancel -H "Authorization: Bearer $C" | jq .status
+docker compose -p awesome-light exec gateway curl -s http://backend:4001/actuator/prometheus | grep events_relay
+scripts/chaos heal
+```
+
+`events_relay_pending` counts the events in the outbox. The backend logs one
+warning ("Event relay cannot reach the broker") and retries with a backoff up to
+30 seconds; nothing is lost because the events are rows in `domain_events`.
+After `heal` the backlog drains (within the current backoff) and the stock is
+restored.
+
+**Question:** why can checkout succeed while the broker is down, when Exercise 7
+showed it cannot while warehouse-service is down? (The reservation is a
+synchronous command; the events are an outbox.)
+
 ## With tracing and monitoring
 
 The overlays combine:
@@ -789,3 +906,13 @@ lock stalls the order save past the reservation timeout; the reservation ends
 forces or skips it. The run shortens the reaper
 (`WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S`, interval `PT5S`) and checks
 that `scripts/chaos up` prints the gateway's real address.
+
+`scripts/verify-event-broker.sh` does the same for the broker transport:
+`docker compose config` for the broker overlay combinations and the transport
+of every profile, then lightweight + broker + chaos in its own project
+(`broker-verify`), the declared queues with one consumer each, Exercise 10 (the
+stock restore and the card refund through Artemis, feed cursors still),
+Exercise 11 (five rollbacks, the DLQ, redrive and purge), Exercise 12 (a stopped
+consumer's backlog in its queue), Exercise 13 (`events_relay_pending` grows
+under `broker-down backend` while checkout works, and drains) and a consumer
+reconnecting after `broker-down payment`.

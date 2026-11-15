@@ -59,6 +59,9 @@ notification-service (`docker,demo`) share one small tmpfs PostgreSQL (schemas
 `warehouse`, `payment` and `notification`, each with its own role), so data
 resets whenever the stack is recreated. Commerce emails stay in
 notification-service's local outbox (`/api/v1/local/notifications/outbox`).
+The services exchange commerce events through the backend's HTTP feed; add
+`-f docker-compose.broker.yml` to carry them through ActiveMQ Artemis instead
+(see [Event broker transport](#event-broker-transport)).
 
 Start it with:
 
@@ -155,7 +158,10 @@ docker compose -f lightweight-docker-compose.yml down
 ## Full Profile
 
 Use this when you want the local app plus DB, queueing, email testing,
-consumer, and a real GPU-accelerated local model. Monitoring is an opt-in
+consumer, and a real GPU-accelerated local model. Commerce events travel
+through ActiveMQ Artemis here (`EVENTS_TRANSPORT=broker`; set
+`EVENTS_TRANSPORT=feed` before `docker compose up` to compare with the HTTP
+feed). Monitoring is an opt-in
 overlay (see [Local monitoring for k6 trainings](#local-monitoring-for-k6-trainings)).
 
 Start it with:
@@ -413,6 +419,38 @@ scripts/chaos down                   # make chaos-down
 [docs/FAULT_INJECTION_LAB.md](docs/FAULT_INJECTION_LAB.md);
 `scripts/verify-chaos-overlay.sh` runs every scenario against the published
 images.
+
+`scripts/chaos list` also has `broker-down`, `broker-slow` and
+`partition-broker` for the broker transport below.
+
+## Event broker transport
+
+The backend publishes every commerce event twice over: as a row of its HTTP
+feed (`GET /internal/v1/events`) and, with `EVENTS_TRANSPORT=broker`, through an
+outbox relay to ActiveMQ Artemis, where warehouse-, payment- and
+notification-service each have their own durable queue and dead-letter queue.
+Same events, same JSON; only the transport differs
+([docs/EVENT_BROKER_CONTRACT.md](docs/EVENT_BROKER_CONTRACT.md),
+[ADR 7](docs/ARCHITECTURE_DECISIONS.md#adr-7-a-broker-transport-next-to-the-event-feed)).
+
+| Stack | Transport |
+| --- | --- |
+| full (`docker-compose.yml`) and both production sites | broker |
+| lightweight | feed |
+| lightweight + `docker-compose.broker.yml` | broker (adds Artemis, about 300–400 MiB) |
+| course compatibility stack | feed |
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.broker.yml up -d
+scripts/chaos up lightweight broker      # the same with the fault-injection lab
+scripts/broker stat                      # queues, consumers, waiting messages, dead letters
+scripts/broker poison warehouse          # watch redelivery and the dead-letter queue
+```
+
+The Artemis console is on `http://127.0.0.1:8161/console` (`admin` / `admin`).
+The [broker exercises](docs/FAULT_INJECTION_LAB.md#broker-transport) compare
+the transports; `scripts/verify-event-broker.sh` checks them against the
+published images.
 
 `docker-compose.tracing.yml` adds Jaeger (UI `http://127.0.0.1:16686`) and
 turns OTLP export on in the Spring services: `make tracing-up` /
