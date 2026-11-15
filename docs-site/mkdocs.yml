@@ -166,6 +166,7 @@ nav:
       - Payment service contract: reference/PAYMENT_SERVICE_CONTRACT.md
       - Notification service contract: reference/NOTIFICATION_SERVICE_CONTRACT.md
       - Distributed lab contracts: reference/DISTRIBUTED_LAB_CONTRACTS.md
+      - Inventory ownership contract: reference/INVENTORY_OWNERSHIP_CONTRACT.md
       - Event feed: reference/EVENT_FEED.md
       - Architecture decisions: reference/ARCHITECTURE_DECISIONS.md
       - Webhooks: reference/WEBHOOKS.md

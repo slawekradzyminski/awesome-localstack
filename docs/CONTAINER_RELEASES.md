@@ -189,6 +189,20 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.22.0, warehouse-service 1.6.0 — 15 November 2026
+
+Published by `scripts/release-train.py`. TODO: what changes, LocalStack
+changes, upgrade order and rollback.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399` | [PR #111](https://github.com/slawekradzyminski/test-secure-backend/pull/111), `ae89db5` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43658155403) |
+| `slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead` | [PR #13](https://github.com/slawekradzyminski/warehouse-service/pull/13), `18a05ba` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43658156996) |
+| `slawekradzyminski/payment-service:1.3.1` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.0.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: frontend 3.15.0 — 14 November 2026
 
 Published by `scripts/release-train.py`. TODO: what changes, LocalStack
@@ -1024,15 +1038,15 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: frontend 3.15.0, released 14 November 2026:
+Release train: backend 3.22.0, warehouse-service 1.6.0, released 15 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73` |
+| Backend | `slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead` |
 | Payment service | `slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8` |
 | Notification service | `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` (not published yet; see [Distributed lab release](#distributed-lab-release-pending)) |
 

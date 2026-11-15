@@ -9,7 +9,11 @@
 # 3. Runs every scenario and asserts an effect a student can observe with curl
 #    (a warehouse 503, a slow or failing link, a database health check going
 #    DOWN, the feed cursor holding still during a partition, a payment outbox
-#    backlog), then heals and asserts recovery.
+#    backlog, the backend-to-warehouse link refusing or delaying), then heals
+#    and asserts recovery. With backend 3.22.0+ and warehouse-service 1.6.0+
+#    (warehouse owns the stock ledger) it also checks that checkout and admin
+#    stock adjust answer 503 under warehouse-down while reads and the cart work,
+#    and that the stock projection catches up after backend-down warehouse.
 # 4. Adds and removes docker-compose.tracing.yml with scripts/tracing and
 #    checks that Jaeger answers.
 # 5. Tears the stack down with scripts/chaos down.
@@ -18,7 +22,9 @@
 #
 # Environment: COMPOSE_PROJECT_NAME (default chaos-verify), TOXIPROXY_PORT
 # (18474), CHAOS_VERIFY_GATEWAY_PORT (18081), JAEGER_UI_PORT (26686),
-# KEEP_RUNNING=true (no teardown). Needs curl and python3.
+# KEEP_RUNNING=true (no teardown), CHAOS_VERIFY_STOCK_LEDGER=auto|true|false
+# (auto: on when the backend image tag is 3.22.0 or later; set true for a local
+# candidate image without a version tag). Needs curl and python3.
 set -Eeuo pipefail
 
 cd "$(dirname "$0")/.."
@@ -118,18 +124,38 @@ done
 url="$(docker compose -f lightweight-docker-compose.yml -f docker-compose.chaos.yml config --format json \
   | json 'd["services"]["notification-service"]["environment"]["BACKEND_BASE_URL"]')"
 check "notification-service goes through toxiproxy:34001" "$url" "http://toxiproxy:34001"
+for base in docker-compose.yml lightweight-docker-compose.yml; do
+  url="$(docker compose -f "$base" -f docker-compose.chaos.yml config --format json \
+    | json 'd["services"]["backend"]["environment"]["WAREHOUSE_URL"]')"
+  check "$base: backend reaches warehouse-service through toxiproxy:14005" "$url" "http://toxiproxy:14005"
+done
+proxy="$(json '[p["listen"] + " -> " + p["upstream"] for p in d if p["name"] == "backend-to-warehouse"]' < chaos/toxiproxy.json)"
+check "chaos/toxiproxy.json defines backend-to-warehouse" "$proxy" "['0.0.0.0:14005 -> warehouse-service:4003']"
+
+# Stock-ledger assertions need backend 3.22.0+ (warehouse-service 1.6.0+ owns stock).
+backend_image="$("${compose[@]}" config --format json | json 'd["services"]["backend"]["image"]')"
+STOCK_LEDGER="${CHAOS_VERIFY_STOCK_LEDGER:-auto}"
+if [ "$STOCK_LEDGER" = auto ]; then
+  STOCK_LEDGER="$(printf '%s' "$backend_image" | python3 -c "import re, sys
+m = re.search(r':(\d+)\.(\d+)\.(\d+)', sys.stdin.read())
+print('true' if m and tuple(map(int, m.groups())) >= (3, 22, 0) else 'false')")"
+fi
+printf '  stock-ledger checks: %s (backend %s)\n' "$STOCK_LEDGER" "$backend_image"
 
 section "Start lightweight + chaos ($COMPOSE_PROJECT_NAME, gateway $B, Toxiproxy 127.0.0.1:$TOXIPROXY_PORT)"
 "${compose[@]}" pull --ignore-buildable --quiet
 scripts/chaos up lightweight
 status="$(scripts/chaos status)"
-check "status lists the 7 proxies" "$(printf '%s\n' "$status" | grep -cE '^[a-z]+-to-(backend|postgres) ')" 7
+check "status lists the 8 proxies" "$(printf '%s\n' "$status" | grep -cE '^[a-z]+-to-(backend|postgres|warehouse) ')" 8
 printf '%s\n' "$status" | grep -q 'No faults active' && ok "no faults after start" || bad "no faults after start" "$status"
 for svc in backend warehouse-service payment-service notification-service; do
   env="$(docker inspect "$("${compose[@]}" ps -q "$svc")" --format '{{range .Config.Env}}{{println .}}{{end}}')"
   printf '%s\n' "$env" | grep -qE '^(SPRING_DATASOURCE_URL=jdbc:postgresql://toxiproxy:|BACKEND_BASE_URL=http://toxiproxy:)' \
     && ok "$svc is wired through toxiproxy" || bad "$svc wiring" "$env"
 done
+env="$(docker inspect "$("${compose[@]}" ps -q backend)" --format '{{range .Config.Env}}{{println .}}{{end}}')"
+printf '%s\n' "$env" | grep -qx 'WAREHOUSE_URL=http://toxiproxy:14005' \
+  && ok "backend calls warehouse-service through toxiproxy" || bad "backend WAREHOUSE_URL" "$env"
 
 A="$(signin admin 'LocalDemoAdmin123!')"; W="$(signin warehouse warehouse)"
 u="cv$RANDOM$RANDOM"
@@ -190,6 +216,64 @@ code="$(health warehouse-service:4003 50)"
 [ "$code" != 200 ] && ok "warehouse health not 200 while its database stalls ($code)" || bad "postgres-stall" "health $code"
 chaos heal
 check "after heal: warehouse health -> 200" "$(wait_for 120 'health warehouse-service:4003 5' 200)" 200
+
+section "warehouse-down / warehouse-slow: the backend-to-warehouse link"
+link_health() { inside -s -o /dev/null -w '%{http_code} %{time_total}' --max-time "${1:-10}" http://toxiproxy:14005/actuator/health || true; }
+check "link answers before the fault" "$(link_health | cut -d' ' -f1)" 200
+chaos warehouse-down
+scripts/chaos status | grep -E '^backend-to-warehouse .*DISABLED' >/dev/null && ok "status shows backend-to-warehouse DISABLED" || bad "status DISABLED"
+code="$(link_health | cut -d' ' -f1)"
+[ "$code" != 200 ] && ok "link refuses while warehouse-down ($code)" || bad "warehouse-down" "link answered $code"
+chaos heal
+check "after heal: link answers" "$(link_health | cut -d' ' -f1)" 200
+chaos warehouse-slow 2000
+result="$(link_health)"
+python3 -c "import sys; sys.exit(0 if '${result% *}' == '200' and float('${result#* }') >= 2.0 else 1)" \
+  && ok "slow link answered after ${result#* }s (>= 2 s)" || bad "warehouse-slow" "$result"
+scripts/chaos warehouse-slow 2000 payment >/dev/null 2>&1 && bad "warehouse-slow rejects a target" || ok "warehouse-slow rejects a target"
+chaos heal
+
+if [ "$STOCK_LEDGER" = true ]; then
+  section "warehouse-down: stock commands answer 503, reads and the cart keep working"
+  stock() { api GET "/api/v1/products/$1" "$T"; echo "$BODY" | json 'd and d.get("stockQuantity")'; }
+  api GET "/api/v1/products/search?inStock=true&sort=price_asc&size=1" "$T"
+  SP="$(echo "$BODY" | json 'd["content"][0]["id"]')"; before="$(stock "$SP")"
+  chaos warehouse-down
+  api GET "/api/v1/products/$SP" "$T"; check "product read -> 200" "$CODE" 200
+  api POST /api/v1/cart/items "$T" "{\"productId\":$SP,\"quantity\":1}"
+  case "$CODE" in 2*) ok "cart add -> $CODE" ;; *) bad "cart add" "$CODE $BODY" ;; esac
+  api GET /api/v1/cart "$T"; check "cart read -> 200" "$CODE" 200
+  api POST /api/v1/orders "$T" '{"street":"Marszalkowska 1","city":"Warszawa","state":"M","zipCode":"00-001","country":"Poland"}'
+  check "checkout -> 503" "$CODE" 503
+  check "503 says Inventory service unavailable" "$(echo "$BODY" | json 'd and d.get("message")')" "Inventory service unavailable"
+  api POST "/api/v1/admin/inventory/$SP/adjustments" "$A" "{\"delta\":1,\"reason\":\"Chaos check\",\"requestId\":\"$(python3 -c 'import uuid; print(uuid.uuid4())')\"}"
+  check "admin adjust -> 503" "$CODE" 503
+  check "stock unchanged during the outage" "$(stock "$SP")" "$before"
+  chaos heal
+  api POST /api/v1/orders "$T" '{"street":"Marszalkowska 1","city":"Warszawa","state":"M","zipCode":"00-001","country":"Poland"}'
+  check "after heal: checkout of the same cart -> 201" "$CODE" 201
+  check "after heal: stock deducted once" "$(stock "$SP")" "$((before - 1))"
+
+  section "backend-down warehouse: stock.outbox.pending grows, the projection catches up"
+  pending() { inside -s --max-time 10 http://warehouse-service:4003/actuator/prometheus \
+    | awk '/^stock_outbox_pending/ { printf "%d", $2; found=1 } END { if (!found) printf "missing" }'; }
+  check "stock_outbox_pending starts at 0" "$(wait_for 30 pending 0)" 0
+  api GET /api/v1/admin/suppliers "$A"; SUP="$(echo "$BODY" | json 'd[0]["id"]')"
+  api POST /api/v1/admin/purchase-orders "$A" "{\"supplierId\":$SUP,\"lines\":[{\"productId\":$SP,\"quantity\":5,\"unitCost\":1.00}]}"
+  PO="$(echo "$BODY" | json 'd["id"]')"
+  api POST "/api/v1/admin/purchase-orders/$PO/submit" "$A"; check "purchase order submitted" "$CODE" 200
+  before="$(stock "$SP")"
+  chaos backend-down warehouse
+  api POST "/api/v1/admin/purchase-orders/$PO/receipts" "$A" \
+    "{\"requestId\":\"$(python3 -c 'import uuid; print(uuid.uuid4())')\",\"lines\":[{\"productId\":$SP,\"quantity\":5}]}"
+  case "$CODE" in 2*) ok "receipt booked in the warehouse ledger without the backend ($CODE)" ;; *) bad "receipt" "$CODE $BODY" ;; esac
+  got="$(wait_for 20 "[ \"\$(pending)\" -gt 0 ] 2>/dev/null && echo yes" yes)"
+  check "stock_outbox_pending > 0 while the backend is unreachable" "$got" yes
+  check "projection still shows the old stock" "$(stock "$SP")" "$before"
+  chaos heal
+  check "after heal: projection caught up (+5)" "$(wait_for 60 "stock $SP" "$((before + 5))")" "$((before + 5))"
+  check "after heal: stock_outbox_pending back to 0" "$(wait_for 30 pending 0)" 0
+fi
 
 section "partition-payment"
 chaos partition-payment

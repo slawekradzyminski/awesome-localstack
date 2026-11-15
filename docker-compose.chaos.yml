@@ -7,13 +7,16 @@
 #
 # One proxy per link (chaos/toxiproxy.json), so a scenario can break one
 # service's view of the backend or of PostgreSQL without touching the others.
-# The services need no change: only BACKEND_BASE_URL and SPRING_DATASOURCE_URL
-# are re-pointed. The gateway still talks to every service directly.
+# The services need no change: only BACKEND_BASE_URL, WAREHOUSE_URL and
+# SPRING_DATASOURCE_URL are re-pointed. The gateway still talks to every service
+# directly.
 #
 #   warehouse-service ─ toxiproxy:14001 ─┐            backend ─ toxiproxy:15432 ─┐
 #   payment-service ── toxiproxy:24001 ──┼─ backend   warehouse ─ toxiproxy:25432 ┼─ postgres
 #   notification ───── toxiproxy:34001 ──┘            payment ─── toxiproxy:35432 ┤
 #                                                     notification ─ toxiproxy:45432 ┘
+#   backend ────────── toxiproxy:14005 ─── warehouse-service:4003  (stock commands,
+#                                          backend 3.22.0+; older backends ignore it)
 #
 # The Toxiproxy API is published on 127.0.0.1 only (TOXIPROXY_PORT, default
 # 8474). Docs: docs/FAULT_INJECTION_LAB.md.
@@ -44,6 +47,9 @@ services:
       # Reservation expiry (backend 3.21.0+): shorten it for the expiry exercises,
       # e.g. ORDERS_RESERVATION_TTL=PT2M scripts/chaos up lightweight.
       ORDERS_RESERVATION_TTL: ${ORDERS_RESERVATION_TTL:-PT30M}
+      # Stock commands to warehouse-service (backend 3.22.0+): warehouse-down and
+      # warehouse-slow break this link.
+      WAREHOUSE_URL: http://toxiproxy:14005
     depends_on:
       toxiproxy:
         condition: service_healthy

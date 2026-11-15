@@ -54,6 +54,7 @@ flowchart LR
         NOT[(schema notification)]
     end
     B --> PUB
+    B -->|stock commands| W
     W --> WH
     P --> PAY
     N --> NOT

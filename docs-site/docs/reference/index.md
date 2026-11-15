@@ -11,8 +11,9 @@ wiki: contracts, runbooks and release history.
 | [Commerce features](COMMERCE_FULFILMENT.md) | What students can test in the commerce features, demo data |
 | [Warehouse service contract](WAREHOUSE_SERVICE_CONTRACT.md) | Boundary between backend and warehouse-service, tracking addendum |
 | [Payment service contract](PAYMENT_SERVICE_CONTRACT.md) | Boundary between backend and payment-service |
+| [Inventory ownership contract](INVENTORY_OWNERSHIP_CONTRACT.md) | warehouse-service owns the stock ledger; backend stock commands and projection |
 | [Event feed](EVENT_FEED.md) | The backend's pull feed of domain events and how the services consume it |
-| [Architecture decisions](ARCHITECTURE_DECISIONS.md) | ADRs: pull event feed, fulfilment read model, per-service outboxes, one PostgreSQL server |
+| [Architecture decisions](ARCHITECTURE_DECISIONS.md) | ADRs: pull event feed, fulfilment read model, per-service outboxes, one PostgreSQL server, notifications and stock ownership |
 | [Webhooks](WEBHOOKS.md) | Payment result signatures and user webhooks |
 | [gRPC inventory](GRPC_INVENTORY.md), [gRPC training runbook](GRPC_TRAINING_RUNBOOK.md), [Protocol testing lab](PROTOCOL_TESTING_LAB.md) | REST, GraphQL and gRPC exercises |
 | [Fault-injection lab](FAULT_INJECTION_LAB.md) | Toxiproxy overlay, `scripts/chaos`, scenarios and guided exercises |

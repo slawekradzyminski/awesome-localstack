@@ -10,10 +10,20 @@ flowchart LR
     P[payment-service] -- "X-Service-Token: PAYMENT_SERVICE_TOKEN<br/>(calls and event feed polls)<br/>X-Payment-Signature (HMAC) on results" --> I
     N[notification-service] -- "X-Service-Token: NOTIFICATION_SERVICE_TOKEN<br/>(event feed polls, webhook export)" --> I
     N -- "X-Webhook-Signature (HMAC, per subscription)" --> U[customer webhook URL]
+    B[backend] -- "Authorization: Bearer BACKEND_SERVICE_TOKEN<br/>(stock commands, backend 3.22.0+)" --> WI["warehouse-service /internal/v1/stock"]
 ```
 
-The backend calls none of the services (since backend 3.16.0; notification-service
-from 3.21.0): they poll its event feed instead. payment-service has no internal API of its own any more.
+The backend calls one service: warehouse-service, the owner of the stock
+ledger from backend 3.22.0 and warehouse-service 1.6.0, for stock commands
+(checkout reservations, adjustments, initial stock), at `WAREHOUSE_URL`
+([ADR 6](../reference/ARCHITECTURE_DECISIONS.md#adr-6-warehouse-service-owns-the-stock-ledger)).
+warehouse-service checks the token against its own `BACKEND_SERVICE_TOKEN` in
+constant time; the Compose files share the development default
+`local-backend-service-token-change-me`, production takes
+`backend_service_token` / `aitesters_backend_service_token` from Ansible Vault.
+Everything else flows the other way: the services poll the backend's event feed
+(since backend 3.16.0; notification-service from 3.21.0). payment-service has no
+internal API of its own any more.
 
 ## Internal API (`/internal/v1` on the backend)
 

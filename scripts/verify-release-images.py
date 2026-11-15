@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -515,6 +516,57 @@ def main() -> int:
                 "payment-service reads card refunds from the event feed)",
                 failures,
             )
+
+    # Stock ledger (backend 3.22.0, warehouse-service 1.6.0): each backend calls its
+    # own site's warehouse-service with BACKEND_SERVICE_TOKEN, but never waits for it
+    # at start-up (warehouse-service needs the backend's JWKS first).
+    # Compose interpolates the development default, so an exported value would differ.
+    local_token = "local-backend-service-token-change-me"
+    for profile_name, services, pairs, server in (
+            ("docker-compose.server.yml", server_services,
+             (("backend", "warehouse-service"), ("aitesters-backend", "aitesters-warehouse-service")), True),
+            ("docker-compose.yml", compose_services("docker-compose.yml"),
+             (("backend", "warehouse-service"),), False),
+            ("lightweight-docker-compose.yml", compose_services("lightweight-docker-compose.yml"),
+             (("backend", "warehouse-service"),), False)):
+        for backend, warehouse in pairs:
+            backend_service = services.get(backend, {})
+            require(
+                backend_service.get("environment", {}).get("WAREHOUSE_URL") == f"http://{warehouse}:4003",
+                f"{profile_name} {backend} must call its own site's {warehouse} through WAREHOUSE_URL",
+                failures,
+            )
+            require(
+                warehouse not in backend_service.get("depends_on", {}),
+                f"{profile_name} {backend} must not depend on {warehouse} (it starts after the backend's JWKS)",
+                failures,
+            )
+            if server:
+                require(
+                    "BACKEND_SERVICE_TOKEN" not in backend_service.get("environment", {})
+                    and "BACKEND_SERVICE_TOKEN" not in services.get(warehouse, {}).get("environment", {}),
+                    f"{profile_name} {backend} and {warehouse} must read BACKEND_SERVICE_TOKEN from their "
+                    "Ansible-rendered env files, never inline",
+                    failures,
+                )
+            else:
+                require(
+                    backend_service.get("environment", {}).get("BACKEND_SERVICE_TOKEN")
+                    == services.get(warehouse, {}).get("environment", {}).get("BACKEND_SERVICE_TOKEN")
+                    == os.environ.get("BACKEND_SERVICE_TOKEN", local_token),
+                    f"{profile_name} {backend} and {warehouse} must share the development BACKEND_SERVICE_TOKEN "
+                    f"default {local_token}",
+                    failures,
+                )
+    runtime = (ROOT / "ansible" / "inventory" / "group_vars" / "production" / "main.yml").read_text()
+    for snippet in ("BACKEND_SERVICE_TOKEN: \"{{ backend_service_token | default('', true) }}\"",
+                    "BACKEND_SERVICE_TOKEN: \"{{ aitesters_backend_service_token | default('', true) }}\""):
+        require(snippet in runtime, f"production/main.yml must render {snippet}", failures)
+    require(
+        "'BACKEND_SERVICE_TOKEN': aitesters_backend_service_token" in sandbox_template,
+        "the sandbox runtime env must replace the stable backend service token with aitesters_backend_service_token",
+        failures,
+    )
 
     # The docs wiki is the one locally built image on the server: built from
     # docs-site/ on deploy, never pulled, small and reachable at /docs/ on every

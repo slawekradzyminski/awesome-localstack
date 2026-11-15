@@ -8,13 +8,14 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73
+    image: slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
     env_file:
       # Supplies JWT_SIGNING_KEY, WAREHOUSE_SERVICE_TOKEN, PAYMENT_SERVICE_TOKEN,
-      # PAYMENT_WEBHOOK_SECRET and NOTIFICATION_SERVICE_TOKEN from Ansible Vault.
+      # PAYMENT_WEBHOOK_SECRET, NOTIFICATION_SERVICE_TOKEN and BACKEND_SERVICE_TOKEN
+      # (sent to warehouse-service) from Ansible Vault.
       - path: .env.runtime
         required: false
     environment:
@@ -58,6 +59,13 @@ services:
       # runs no webhook dispatcher of its own.
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
+      # (from the env file). Ignored by older backends.
+      WAREHOUSE_URL: http://warehouse-service:4003
+    # No depends_on warehouse-service, on purpose: it needs this backend's JWKS to
+    # start and waits for a healthy backend. Until it is up, stock commands
+    # answer 503 "Inventory service unavailable".
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,13 +101,14 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e
+    image: slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead
     restart: unless-stopped
     hostname: warehouse-service
     logging: *default-logging
     env_file:
-      # Only WAREHOUSE_SERVICE_TOKEN and the warehouse role's SPRING_DATASOURCE_PASSWORD,
-      # rendered by Ansible from Vault. Access tokens are verified with the backend's JWKS.
+      # Only WAREHOUSE_SERVICE_TOKEN, BACKEND_SERVICE_TOKEN (checks the backend's stock
+      # commands) and the warehouse role's SPRING_DATASOURCE_PASSWORD, rendered by
+      # Ansible from Vault. Access tokens are verified with the backend's JWKS.
       - path: .env.warehouse
         required: false
     environment:
@@ -125,7 +134,7 @@ services:
         - -ec
         - >-
           exec 3<>/dev/tcp/127.0.0.1/4003;
-          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          printf 'GET /actuator/health/readiness HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
           read -r _ status _ <&3;
           test "$$status" = 200
       interval: 10s
@@ -141,13 +150,14 @@ services:
   aitesters-warehouse-service:
     # The sandbox's own warehouse-service, paired with aitesters-backend and sharing
     # its database (schema warehouse), like warehouse-service on the stable site.
-    image: slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e
+    image: slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead
     restart: unless-stopped
     hostname: aitesters-warehouse-service
     logging: *default-logging
     env_file:
-      # Only its own service token and the warehouse role's database password; tokens
-      # are verified with aitesters-backend's JWKS, so stable-site tokens never match.
+      # Only its own service tokens (warehouse and backend) and the warehouse role's
+      # database password; tokens are verified with aitesters-backend's JWKS, so
+      # stable-site tokens never match.
       - path: .env.aitesters-warehouse
         required: false
     environment:
@@ -175,7 +185,7 @@ services:
         - -ec
         - >-
           exec 3<>/dev/tcp/127.0.0.1/4003;
-          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          printf 'GET /actuator/health/readiness HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
           read -r _ status _ <&3;
           test "$$status" = 200
       interval: 10s
@@ -507,7 +517,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73
+    image: slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging
@@ -556,6 +566,13 @@ services:
       # runs no webhook dispatcher of its own.
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for stock commands with BACKEND_SERVICE_TOKEN
+      # (from the env file). Ignored by older backends.
+      WAREHOUSE_URL: http://aitesters-warehouse-service:4003
+    # No depends_on aitesters-warehouse-service, on purpose: it needs this backend's JWKS to
+    # start and waits for a healthy backend. Until it is up, stock commands
+    # answer 503 "Inventory service unavailable".
     depends_on:
       aitesters-postgres:
         condition: service_healthy

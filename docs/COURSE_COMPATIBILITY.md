@@ -2,7 +2,8 @@
 
 The compatibility runner executes a frozen revision of `ai-testers-api` against
 two disposable instances of the existing backend, each with its own tmpfs
-PostgreSQL running the production Flyway migrations. It preserves the
+PostgreSQL running the production Flyway migrations and its own
+warehouse-service, the owner of the stock ledger from backend 3.22.0. It preserves the
 lesson TypeScript files and assertions, recreates fixtures for each lesson,
 and stops its containers when finished. It does not use the running lightweight
 stack or either public deployment.
@@ -58,7 +59,16 @@ override for lightweight/full/server. It publishes only loopback ports:
 | --- | --- | --- |
 | `backend` | `http://127.0.0.1:14001` | Ordinary API course tests |
 | `admin-backend` | `http://127.0.0.1:14002` | Admin course tests with isolated data |
+| `warehouse-service`, `admin-warehouse-service` | Internal only | The stock owner of each backend (`WAREHOUSE_URL`), schema and role `warehouse` in that backend's database |
+| `postgres-roles`, `admin-postgres-roles` | One-shot | Prepare the `warehouse` role and schema with `postgres/service-roles.sh`, as in every other profile |
 | `ollama-mock` | Internal only | Deterministic model dependency |
+
+Each warehouse-service starts after its backend is healthy (it needs the
+backend's JWKS); the backends never wait for it. The runner waits until both
+warehouse-services report healthy before it installs and runs a lesson, so
+checkout never meets a warehouse that is still starting. Older backends
+(before 3.22.0) ignore `WAREHOUSE_URL`; the warehouse-services then only run
+beside them.
 
 The default stack verifies REST directly. The optional `graphql-preview` Compose
 profile also starts the pinned frontend and nginx, reusing the actual lightweight
@@ -81,16 +91,20 @@ local fixtures let the unchanged course assertions run without changing backend
 money arithmetic. This baseline is therefore not proof that those assertions
 work for every catalog price. Backend decimal-money tests remain necessary.
 
-The pinned default backend image is the baseline. To test a locally built
-candidate without publishing it:
+The pinned default backend and warehouse-service images are the baseline. To
+test locally built candidates without publishing them:
 
 ```bash
-COMPAT_BACKEND_IMAGE=your-local-candidate-image \
+COMPAT_BACKEND_IMAGE=your-local-backend-candidate \
+COMPAT_WAREHOUSE_IMAGE=your-local-warehouse-candidate \
   python3 scripts/verify-course-compatibility.py \
   --ref <same-recorded-course-commit> \
   --lessons l20 \
   --output outputs/course-candidate-l20
 ```
+
+Either variable may be set alone; the other service keeps its pinned image.
+Both values are recorded in `summary.json` (`candidate_images`).
 
 To check GraphQL in both direct and proxied requests,
 reserve port 14081 as well and add `--graphql-preview`:

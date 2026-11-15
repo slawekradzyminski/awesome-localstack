@@ -68,6 +68,7 @@ verification is part of the playbook, not a follow-up.
 | `payment_webhook_secret`, `aitesters_payment_webhook_secret` | payment result HMAC |
 | `payment_postgres_password`, `aitesters_payment_postgres_password` | `payment` database roles |
 | `notification_service_token`, `aitesters_notification_service_token` | notification → backend internal API (event feed, webhook export) |
+| `backend_service_token`, `aitesters_backend_service_token` | backend → warehouse-service stock commands (backend 3.22.0+, warehouse-service 1.6.0+) |
 | `notification_postgres_password`, `aitesters_notification_postgres_password` | `notification` database roles |
 | `notification_webhook_secret_encryption_password` / `_salt` and their `aitesters_` variants | encryption of the webhook secrets notification-service stores |
 | `aitesters_postgres_password` | sandbox PostgreSQL |

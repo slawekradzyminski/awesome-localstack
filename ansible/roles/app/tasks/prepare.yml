@@ -190,6 +190,28 @@
       aitesters_ variants in Ansible Vault.
   no_log: true
 
+- name: Require dedicated backend service tokens for the stock commands
+  ansible.builtin.assert:
+    that:
+      # backend 3.22.0+ sends it to its site's warehouse-service (warehouse-service
+      # 1.6.0+ checks it); harmless for older images, which ignore it.
+      - (backend_service_token | default('', true) | string | length) >= 32
+      - (aitesters_backend_service_token | default('', true) | string | length) >= 32
+      # Every service token and webhook secret is distinct (see the payment assert).
+      - >-
+        [backend_service_token, aitesters_backend_service_token,
+         notification_service_token, aitesters_notification_service_token,
+         payment_service_token, aitesters_payment_service_token,
+         payment_webhook_secret, aitesters_payment_webhook_secret,
+         warehouse_service_token, aitesters_warehouse_service_token]
+        | unique | length == 10
+    quiet: true
+    fail_msg: >-
+      Configure backend_service_token and aitesters_backend_service_token (at least
+      32 characters each, distinct from each other and from every warehouse, payment
+      and notification token or secret) in Ansible Vault.
+  no_log: true
+
 - name: Require distinct RS256 signing keys for both backends
   ansible.builtin.assert:
     that:

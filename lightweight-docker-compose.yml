@@ -2,7 +2,7 @@ name: awesome-light
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.21.1@sha256:872f6c143a7165d87b17da599a9ae9a31ffe7a6a2b1fb9b3124cb1db3bc78d73
+    image: slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399
     restart: always
     expose:
       - "4001"
@@ -32,8 +32,17 @@ services:
       # webhooks: the backend records notification.requested feed events instead of
       # sending those emails and runs no webhook dispatcher of its own.
       NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-local-notification-service-token-change-me}
+      # Stock ledger (backend 3.22.0+): warehouse-service owns stock, and the backend
+      # calls it synchronously for every stock command (checkout reservation, admin
+      # adjust, initial stock) with Authorization: Bearer BACKEND_SERVICE_TOKEN.
+      # Ignored by older backends.
+      WAREHOUSE_URL: http://warehouse-service:4003
+      BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
       NOTIFICATIONS_DELIVERY: feed
       WEBHOOKS_ENABLED: "false"
+    # No depends_on warehouse-service, on purpose: warehouse-service needs the
+    # backend's JWKS to start, so it waits for a healthy backend. A stock command
+    # sent before warehouse is up answers 503 "Inventory service unavailable".
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,7 +64,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.5.1@sha256:17adbb3cc45ed71bb522cae280e442f4af3690cb48a20627c6f04efdb6371a7e
+    image: slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead
     restart: always
     expose:
       - "4003"
@@ -69,6 +78,8 @@ services:
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       BACKEND_BASE_URL: http://backend:4001
       WAREHOUSE_SERVICE_TOKEN: ${WAREHOUSE_SERVICE_TOKEN:-local-warehouse-service-token-change-me}
+      # Checks the backend's stock-command calls (backend 3.22.0+, warehouse-service 1.6.0+).
+      BACKEND_SERVICE_TOKEN: ${BACKEND_SERVICE_TOKEN:-local-backend-service-token-change-me}
     depends_on:
       backend:
         condition: service_healthy
@@ -82,7 +93,7 @@ services:
         - -ec
         - >-
           exec 3<>/dev/tcp/127.0.0.1/4003;
-          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          printf 'GET /actuator/health/readiness HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
           read -r _ status _ <&3;
           test "$$status" = 200
       interval: 10s

@@ -62,6 +62,12 @@ aitesters_payment_webhook_secret: replace-with-a-different-random-value-of-at-le
 # other token and secret.
 notification_service_token: replace-with-at-least-32-random-bytes
 aitesters_notification_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
+# The backend's own service token (backend 3.22.0+, warehouse-service 1.6.0+):
+# the backend sends it as `Authorization: Bearer` on every stock command to its
+# site's warehouse-service, which checks it. `openssl rand -hex 32`, distinct per
+# site and from every other token and secret.
+backend_service_token: replace-with-at-least-32-random-bytes
+aitesters_backend_service_token: replace-with-a-different-random-value-of-at-least-32-bytes
 # Passwords of the `notification` database roles (schema notification only),
 # distinct from every other database password.
 notification_postgres_password: replace-with-a-fifth-value-of-at-least-16-characters
