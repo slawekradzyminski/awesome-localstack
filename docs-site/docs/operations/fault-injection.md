@@ -8,7 +8,7 @@ that loses the race against an expiring reservation.
 
 It is a local overlay (`docker-compose.chaos.yml`) for the lightweight and the
 full profile, driven by one command, `scripts/chaos` (bash, curl and Docker;
-nothing to install). The full guide with every scenario and eight guided
+nothing to install). The full guide with every scenario and nine guided
 exercises is the reference page
 [Fault-injection lab](../reference/FAULT_INJECTION_LAB.md).
 
@@ -92,7 +92,14 @@ walks through, with exact commands and the expected observations:
    reservation that the reaper releases, so the stock comes back;
 8. the stock projection catching up (`backend-down warehouse`): a purchase
    receipt grows `stock_outbox_pending`, the projection lags the ledger, and
-   both agree again after `heal`.
+   both agree again after `heal`;
+9. a slow order save against the reaper: a row lock on the cart stalls the
+   order past the reservation timeout, and (backend 3.22.2+) the reservation
+   still ends `CONFIRMED` instead of releasing the stock of a saved order.
+
+Exercises 7 and 9 wait for warehouse-service's reservation reaper (2 minutes by
+default). Shorten it when you start the lab:
+`WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S WAREHOUSE_RESERVATION_REAPER_INTERVAL=PT5S scripts/chaos up`.
 
 ## Combining overlays
 
@@ -106,4 +113,4 @@ shows the latency and the outbox gauges.
 
 `scripts/verify-chaos-overlay.sh` checks every overlay combination with
 `docker compose config` and runs all scenarios against the published images
-(exercises 7 and 8 only with backend 3.22.0 or later).
+(exercises 7 and 8 only with backend 3.22.0 or later, exercise 9 from 3.22.2).

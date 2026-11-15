@@ -13,7 +13,11 @@
 #    and asserts recovery. With backend 3.22.0+ and warehouse-service 1.6.0+
 #    (warehouse owns the stock ledger) it also checks that checkout and admin
 #    stock adjust answer 503 under warehouse-down while reads and the cart work,
-#    and that the stock projection catches up after backend-down warehouse.
+#    and that the stock projection catches up after backend-down warehouse,
+#    that an answer lost under warehouse-slow 7000 leaves an orphaned
+#    reservation the reaper releases, and (backend 3.22.2+) that an order save
+#    stalled past the reservation timeout still ends with a confirmed
+#    reservation (Exercise 9).
 # 4. Adds and removes docker-compose.tracing.yml with scripts/tracing and
 #    checks that Jaeger answers.
 # 5. Tears the stack down with scripts/chaos down.
@@ -24,7 +28,10 @@
 # (18474), CHAOS_VERIFY_GATEWAY_PORT (18081), JAEGER_UI_PORT (26686),
 # KEEP_RUNNING=true (no teardown), CHAOS_VERIFY_STOCK_LEDGER=auto|true|false
 # (auto: on when the backend image tag is 3.22.0 or later; set true for a local
-# candidate image without a version tag). Needs curl and python3.
+# candidate image without a version tag), CHAOS_VERIFY_RESERVATION_CLAIMS=
+# auto|true|false (auto: on from backend 3.22.2). The run shortens the
+# warehouse reaper (WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S, interval PT5S).
+# Needs curl and python3.
 set -Eeuo pipefail
 
 cd "$(dirname "$0")/.."
@@ -32,6 +39,8 @@ export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-chaos-verify}"
 export TOXIPROXY_PORT="${TOXIPROXY_PORT:-18474}"
 export JAEGER_UI_PORT="${JAEGER_UI_PORT:-26686}"
 GATEWAY_PORT="${CHAOS_VERIFY_GATEWAY_PORT:-18081}"
+# A short reaper, so the orphan and the race checks take seconds, not minutes.
+export WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S WAREHOUSE_RESERVATION_REAPER_INTERVAL=PT5S
 B="http://127.0.0.1:$GATEWAY_PORT"
 RUN="cv$(date +%H%M%S)$RANDOM"
 
@@ -134,17 +143,23 @@ check "chaos/toxiproxy.json defines backend-to-warehouse" "$proxy" "['0.0.0.0:14
 
 # Stock-ledger assertions need backend 3.22.0+ (warehouse-service 1.6.0+ owns stock).
 backend_image="$("${compose[@]}" config --format json | json 'd["services"]["backend"]["image"]')"
-STOCK_LEDGER="${CHAOS_VERIFY_STOCK_LEDGER:-auto}"
-if [ "$STOCK_LEDGER" = auto ]; then
-  STOCK_LEDGER="$(printf '%s' "$backend_image" | python3 -c "import re, sys
+backend_at_least() {  # major minor patch -> true|false from the image tag
+  printf '%s' "$backend_image" | python3 -c "import re, sys
 m = re.search(r':(\d+)\.(\d+)\.(\d+)', sys.stdin.read())
-print('true' if m and tuple(map(int, m.groups())) >= (3, 22, 0) else 'false')")"
-fi
-printf '  stock-ledger checks: %s (backend %s)\n' "$STOCK_LEDGER" "$backend_image"
+print('true' if m and tuple(map(int, m.groups())) >= ($1, $2, $3) else 'false')"
+}
+STOCK_LEDGER="${CHAOS_VERIFY_STOCK_LEDGER:-auto}"
+[ "$STOCK_LEDGER" = auto ] && STOCK_LEDGER="$(backend_at_least 3 22 0)"
+# The order save and the reaper's lookup wait for each other from backend 3.22.2.
+CLAIMS="${CHAOS_VERIFY_RESERVATION_CLAIMS:-auto}"
+[ "$CLAIMS" = auto ] && CLAIMS="$(backend_at_least 3 22 2)"
+printf '  stock-ledger checks: %s, reservation-claim check: %s (backend %s)\n' "$STOCK_LEDGER" "$CLAIMS" "$backend_image"
 
 section "Start lightweight + chaos ($COMPOSE_PROJECT_NAME, gateway $B, Toxiproxy 127.0.0.1:$TOXIPROXY_PORT)"
 "${compose[@]}" pull --ignore-buildable --quiet
-scripts/chaos up lightweight
+up_out="$(scripts/chaos up lightweight)"; printf '%s\n' "$up_out"
+printf '%s\n' "$up_out" | grep -qF "App: http://127.0.0.1:$GATEWAY_PORT " \
+  && ok "chaos up prints the gateway's real address ($B)" || bad "chaos up app URL" "$(printf '%s\n' "$up_out" | grep 'App:')"
 status="$(scripts/chaos status)"
 check "status lists the 8 proxies" "$(printf '%s\n' "$status" | grep -cE '^[a-z]+-to-(backend|postgres|warehouse) ')" 8
 printf '%s\n' "$status" | grep -q 'No faults active' && ok "no faults after start" || bad "no faults after start" "$status"
@@ -273,6 +288,44 @@ if [ "$STOCK_LEDGER" = true ]; then
   chaos heal
   check "after heal: projection caught up (+5)" "$(wait_for 60 "stock $SP" "$((before + 5))")" "$((before + 5))"
   check "after heal: stock_outbox_pending back to 0" "$(wait_for 30 pending 0)" 0
+
+  section "warehouse-slow 7000: a lost answer leaves an orphaned reservation, the reaper releases it"
+  ADDR='{"street":"Marszalkowska 1","city":"Warszawa","state":"M","zipCode":"00-001","country":"Poland"}'
+  reservations() { sql "select count(*) from warehouse.stock_reservations where status = '$1'"; }
+  api DELETE /api/v1/cart "$T"
+  api POST /api/v1/cart/items "$T" "{\"productId\":$SP,\"quantity\":1}"
+  before="$(stock "$SP")"; released="$(reservations RELEASED)"
+  chaos warehouse-slow 7000
+  api POST /api/v1/orders "$T" "$ADDR"
+  check "checkout -> 503 at the read timeout" "$CODE" 503
+  python3 -c "import sys; sys.exit(0 if 4.5 <= float('$TIME') < 7 else 1)" \
+    && ok "503 after ${TIME}s (5 s read timeout, not the 7 s delay)" || bad "503 timing" "${TIME}s"
+  check "orphan holds the stock (projection one lower)" "$(wait_for 15 "stock $SP" "$((before - 1))")" "$((before - 1))"
+  check "one reservation PENDING_CONFIRMATION" "$(reservations PENDING_CONFIRMATION)" 1
+  chaos heal
+  check "reaper released it (20 s timeout)" "$(wait_for 60 "reservations RELEASED" "$((released + 1))")" "$((released + 1))"
+  check "stock back to $before" "$(wait_for 20 "stock $SP" "$before")" "$before"
+  check "last movement is the release" \
+    "$(sql "select type || ' ' || delta from warehouse.stock_movements where product_id = $SP order by id desc limit 1")" "ORDER_RESTORED 1"
+  api DELETE /api/v1/cart "$T"
+fi
+
+if [ "$STOCK_LEDGER" = true ] && [ "$CLAIMS" = true ]; then
+  section "Exercise 9: an order save stalled past the reservation timeout still confirms"
+  api POST /api/v1/cart/items "$T" "{\"productId\":$SP,\"quantity\":1}"
+  before="$(stock "$SP")"
+  # Hold the customer's cart rows for 30 s: the order save waits, the reaper (20 s) runs meanwhile.
+  "${compose[@]}" exec -T postgres psql -U postgres -d testdb -qc \
+    "begin; select id from cart_items where username = '$u' for update; select pg_sleep(30); commit;" >/dev/null &
+  lock=$!; sleep 1
+  since="$(sql "select now()::timestamp - interval '2 seconds'")"
+  api POST /api/v1/orders "$T" "$ADDR"
+  wait "$lock" || true
+  check "checkout -> 201 after the stall" "$CODE" 201
+  ORDER="$(echo "$BODY" | json 'd and d.get("id")')"
+  check "reservation CONFIRMED for the order, not RELEASED" "$(wait_for 15 "sql \"select status || ' ' || coalesce(order_id::text, '-') from warehouse.stock_reservations where created_at > '$since' order by created_at limit 1\"" "CONFIRMED $ORDER")" "CONFIRMED $ORDER"
+  sleep 6  # one more reaper run
+  check "stock deducted exactly once" "$(stock "$SP")" "$((before - 1))"
 fi
 
 section "partition-payment"
