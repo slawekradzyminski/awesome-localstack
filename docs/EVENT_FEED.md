@@ -15,6 +15,7 @@ decision is recorded in
 | warehouse-service 1.3.0 | Consumes `order.cancelled` (Flyway V4: cursor and processed events) |
 | backend 3.21.0 | Adds `order.reservation-expired` and the internal `notification.requested`, accepts the `NOTIFICATION` service token, and stores `span_id` (Flyway V24) so every event carries `spanId` |
 | notification-service 1.0.0 | Consumes every webhook-eligible type and `notification.requested` |
+| backend 3.23.0 and the 1.7.0 / 1.4.0 / 1.1.0 services | Optional broker transport: the same events through ActiveMQ Artemis ([EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md)); the feed keeps being served and stays the default |
 
 ## Producer: the backend
 

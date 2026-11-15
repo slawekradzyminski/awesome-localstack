@@ -150,6 +150,7 @@ nav:
       - Monitoring and alerts: operations/monitoring.md
       - Tracing a request: operations/tracing.md
       - Fault-injection lab: operations/fault-injection.md
+      - Event broker: operations/event-broker.md
       - Backups: operations/backups.md
       - Troubleshooting: operations/troubleshooting.md
       - This documentation site: operations/docs-site.md
@@ -168,6 +169,7 @@ nav:
       - Distributed lab contracts: reference/DISTRIBUTED_LAB_CONTRACTS.md
       - Inventory ownership contract: reference/INVENTORY_OWNERSHIP_CONTRACT.md
       - Event feed: reference/EVENT_FEED.md
+      - Event broker transport: reference/EVENT_BROKER_CONTRACT.md
       - Architecture decisions: reference/ARCHITECTURE_DECISIONS.md
       - Webhooks: reference/WEBHOOKS.md
       - gRPC inventory: reference/GRPC_INVENTORY.md

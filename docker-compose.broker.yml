@@ -1,0 +1,106 @@
+# Broker transport for the lightweight profile: ActiveMQ Artemis carries the
+# commerce events instead of the HTTP feed (docs/EVENT_BROKER_CONTRACT.md).
+#
+#   docker compose -f lightweight-docker-compose.yml -f docker-compose.broker.yml up -d
+#   scripts/chaos up lightweight broker         # with the fault-injection lab
+#
+# The full profile (docker-compose.yml) runs the broker transport already; this
+# overlay is only for the lightweight profile. It adds about 300-400 MiB.
+#
+#   backend ── relay ──> awesome.commerce.events (MULTICAST)
+#                          ├── ...warehouse-service      ──> warehouse-service
+#                          ├── ...payment-service        ──> payment-service
+#                          └── ...notification-service   ──> notification-service
+#                        commerce.events.DLA ── DLQ.<queue> after 5 failed deliveries
+#
+# Console: http://127.0.0.1:${ARTEMIS_CONSOLE_PORT:-8161}/console (admin / admin).
+# Queues from the command line: scripts/broker stat.
+services:
+  activemq:
+    image: apache/artemis:2.55.0@sha256:a192eee9c46e6352625ca9dbf0beebe4a34c363111c628bbb10c4aff1227341d
+    restart: unless-stopped
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+      ANONYMOUS_LOGIN: "false"
+      EXTRA_ARGS: --http-host 0.0.0.0 --relax-jolokia --no-autotune --global-max-size 128M
+      # The image's defaults plus a smaller heap; JAVA_ARGS replaces them all, so the
+      # console (hawtio) realm and Jolokia policy are listed again, as in the server file.
+      JAVA_ARGS: >-
+        -XX:+UseG1GC
+        -Xms128M
+        -Xmx256M
+        -Dhawtio.disableProxy=true
+        -Dhawtio.realm=activemq
+        -Dhawtio.offline=true
+        -Dhawtio.rolePrincipalClasses=org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
+        -Djolokia.policyLocation=file:/var/lib/artemis-instance/etc/jolokia-access.xml
+        -Dlog4j2.disableJmx=true
+    # The commerce event addresses, queues and dead-letter queues, applied on every start.
+    command: ["run", "--properties", "/var/lib/artemis-config/commerce-events.properties"]
+    ports:
+      - "127.0.0.1:${ARTEMIS_CONSOLE_PORT:-8161}:8161"
+    volumes:
+      - type: bind
+        source: ./security/java/blocked-2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10.certs
+        target: /opt/java/openjdk/lib/security/blocked.certs
+        read_only: true
+        bind:
+          create_host_path: false
+      - ./artemis/commerce-events.properties:/var/lib/artemis-config/commerce-events.properties:ro
+    hostname: activemq
+    healthcheck:
+      # The image has bash but no curl: a TCP connect proves the core acceptor listens.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/61616"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+      start_interval: 2s
+    mem_limit: 512m
+    networks:
+      - my-private-ntwk
+
+  backend:
+    environment:
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      activemq:
+        condition: service_healthy
+
+  warehouse-service:
+    environment:
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      activemq:
+        condition: service_healthy
+
+  payment-service:
+    environment:
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      activemq:
+        condition: service_healthy
+
+  notification-service:
+    environment:
+      EVENTS_TRANSPORT: broker
+      EVENTS_BROKER_ADDRESS: awesome.commerce.events
+      SPRING_ARTEMIS_BROKER_URL: tcp://activemq:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      activemq:
+        condition: service_healthy

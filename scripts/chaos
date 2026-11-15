@@ -9,6 +9,7 @@ PORT="${TOXIPROXY_PORT:-8474}"
 API="http://127.0.0.1:${PORT}"
 SERVICES="warehouse payment notification"
 DB_CLIENTS="backend warehouse payment notification"
+BROKER_CLIENTS="backend warehouse payment notification"
 
 if [ -t 1 ]; then
   BOLD=$'\033[1m'; RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; DIM=$'\033[2m'; OFF=$'\033[0m'
@@ -23,8 +24,9 @@ usage() {
   cat <<EOF
 ${BOLD}scripts/chaos${OFF} - break the links between the services on purpose (Toxiproxy)
 
-  scripts/chaos up [full|lightweight] [tracing] [monitoring]
-                               start the profile with the lab (default: the running profile, else lightweight)
+  scripts/chaos up [full|lightweight] [broker] [tracing] [monitoring]
+                               start the profile with the lab (default: the running profile, else lightweight);
+                               broker adds the Artemis event transport to lightweight (full always has it)
   scripts/chaos down           stop the whole stack started with the lab
   scripts/chaos list           scenarios with one-line descriptions
   scripts/chaos status         proxies and active faults
@@ -36,9 +38,10 @@ Examples:
   scripts/chaos backend-slow 5000 payment   payment-service waits 5 s for every backend answer
   scripts/chaos postgres-stall              every service's database connections hang
   scripts/chaos warehouse-down              the backend cannot reach warehouse-service (checkout 503)
+  scripts/chaos broker-down backend         the backend's event relay cannot reach Artemis (broker transport)
   scripts/chaos heal
 
-Targets: warehouse, payment, notification (backend for the postgres-* scenarios); default all.
+Targets: warehouse, payment, notification (also backend for the postgres-* and broker-* scenarios); default all.
 The warehouse-* scenarios take no target: only the backend calls warehouse-service.
 Environment: TOXIPROXY_PORT (default 8474), COMPOSE_PROJECT_NAME, CHAOS_EXTRA_FILES (extra -f files for up).
 Guide: docs/FAULT_INJECTION_LAB.md
@@ -62,6 +65,9 @@ ${BOLD}Scenarios${OFF} (value and target are optional; target defaults to all)
                                   (backend 3.22.0+, warehouse-service 1.6.0+)
   warehouse-slow [ms]             every warehouse-service answer to the backend arrives ms later
                                   (default 3000); from 5000 on the backend's read timeout turns it into 503
+  broker-down [target]            the target loses Artemis (broker transport): the backend's relay backs off
+                                  and events wait in the outbox; a consumer's queue fills up (target may be backend)
+  broker-slow [ms] [target]       every Artemis answer to the target arrives ms later (default 3000)
   partition-warehouse             warehouse-service loses the backend and its database,
                                   and the backend loses warehouse-service
   partition-payment               payment-service loses the backend and its database
@@ -70,6 +76,7 @@ ${BOLD}Scenarios${OFF} (value and target are optional; target defaults to all)
                                   and warehouse-service
                                   (the gateway still reaches the backend directly)
   partition-postgres              nobody reaches PostgreSQL (same as postgres-down)
+  partition-broker                nobody reaches Artemis (same as broker-down)
 
   reset | heal                    remove every fault
 EOF
@@ -108,13 +115,14 @@ running_profile() {
 
 up() {
   require_docker
-  local profile="" tracing=false monitoring=false arg
+  local profile="" tracing=false monitoring=false broker=false arg
   for arg in "$@"; do
     case "$arg" in
       full|lightweight|light) profile="$arg" ;;
+      broker) broker=true ;;
       tracing) tracing=true ;;
       monitoring) monitoring=true ;;
-      *) die "unknown option '$arg' for up" "Usage: scripts/chaos up [full|lightweight] [tracing] [monitoring]" ;;
+      *) die "unknown option '$arg' for up" "Usage: scripts/chaos up [full|lightweight] [broker] [tracing] [monitoring]" ;;
     esac
   done
   [ -n "$profile" ] || profile="$(running_profile)"
@@ -124,8 +132,13 @@ up() {
   # Keep overlays that already run in this project.
   running "$project" jaeger && tracing=true
   running "$project" prometheus && monitoring=true
+  # The full profile has the broker already; for lightweight keep a running broker overlay.
+  if [ "$base" = docker-compose.yml ]; then broker=false; else running "$project" activemq && broker=true; fi
 
-  local files=(-f "$base" -f docker-compose.chaos.yml)
+  # The broker overlay goes before the lab: the lab re-points SPRING_ARTEMIS_BROKER_URL at Toxiproxy.
+  local files=(-f "$base")
+  $broker && files+=(-f docker-compose.broker.yml)
+  files+=(-f docker-compose.chaos.yml)
   $monitoring && files+=(-f docker-compose.monitoring.yml)
   $tracing && files+=(-f docker-compose.tracing.yml)
   local extra
@@ -161,6 +174,9 @@ up() {
   say ""
   say "App: $(app_url "$project" "${files[@]}")   Toxiproxy API: $API"
   $tracing && say "Jaeger: http://127.0.0.1:${JAEGER_UI_PORT:-16686}"
+  if $broker || [ "$base" = docker-compose.yml ]; then
+    say "Artemis console: http://127.0.0.1:${ARTEMIS_CONSOLE_PORT:-8161}/console   queues: ${BOLD}scripts/broker stat${OFF}"
+  fi
   say "Next: ${BOLD}scripts/chaos list${OFF}, then e.g. ${BOLD}scripts/chaos backend-down warehouse${OFF}"
 }
 
@@ -251,7 +267,7 @@ normalise_target() {
     payment|payment-service) echo payment ;;
     notification|notification-service|notifications) echo notification ;;
     backend) echo backend ;;
-    *) die "unknown target '$1'" "Targets: warehouse, payment, notification, backend (postgres-* only), all" ;;
+    *) die "unknown target '$1'" "Targets: warehouse, payment, notification, backend (postgres-* and broker-* only), all" ;;
   esac
 }
 
@@ -262,6 +278,15 @@ backend_links() {  # target -> proxy names to the backend
     all) for s in $SERVICES; do echo "$s-to-backend"; done ;;
     backend) die "backend is the upstream of this scenario." "Choose who loses the backend: warehouse, payment, notification or all." ;;
     *) echo "$t-to-backend" ;;
+  esac
+}
+
+broker_links() {
+  local t
+  t="$(normalise_target "$1")"
+  case "$t" in
+    all) for s in $BROKER_CLIENTS; do echo "$s-to-activemq"; done ;;
+    *) echo "$t-to-activemq" ;;
   esac
 }
 
@@ -352,6 +377,16 @@ run_scenario() {
       parse_args "$@"; no_target "$scenario"; local wms="${VALUE:-3000}"
       add_toxic backend-to-warehouse warehouse-slow latency downstream 1 "{\"latency\":$wms,\"jitter\":0}"
       applied "warehouse-service answers to the backend delayed by ${wms} ms" ;;
+    broker-down)
+      parse_args "$@"; no_value "$scenario"
+      links="$(broker_links "$TARGET")"
+      for link in $links; do set_enabled "$link" false; done
+      applied "Artemis unreachable for: $(echo $links | sed 's/-to-activemq//g')" ;;
+    broker-slow)
+      parse_args "$@"; local bms="${VALUE:-3000}"
+      links="$(broker_links "$TARGET")"
+      for link in $links; do add_toxic "$link" broker-slow latency downstream 1 "{\"latency\":$bms,\"jitter\":0}"; done
+      applied "Artemis answers delayed by ${bms} ms for: $(echo $links | sed 's/-to-activemq//g')" ;;
     postgres-down)
       parse_args "$@"; no_value "$scenario"
       links="$(postgres_links "$TARGET")"
@@ -362,6 +397,7 @@ run_scenario() {
       local who="${scenario#partition-}" matched=""
       case "$who" in
         warehouse-service) who=warehouse ;; payment-service) who=payment ;; notification-service) who=notification ;;
+        broker|artemis) who=activemq ;;
       esac
       for link in $(proxy_names); do
         case "$link" in
@@ -369,7 +405,7 @@ run_scenario() {
         esac
       done
       [ -n "$matched" ] || die "unknown partition '$scenario'" \
-        "Use partition-warehouse, partition-payment, partition-notification, partition-backend or partition-postgres."
+        "Use partition-warehouse, partition-payment, partition-notification, partition-backend, partition-postgres or partition-broker."
       applied "$who partitioned; disabled:$matched" ;;
     *)
       die "unknown command or scenario '$scenario'" "List scenarios: scripts/chaos list   ·   help: scripts/chaos help" ;;

@@ -8,7 +8,7 @@ that loses the race against an expiring reservation.
 
 It is a local overlay (`docker-compose.chaos.yml`) for the lightweight and the
 full profile, driven by one command, `scripts/chaos` (bash, curl and Docker;
-nothing to install). The full guide with every scenario and nine guided
+nothing to install). The full guide with every scenario and thirteen guided
 exercises is the reference page
 [Fault-injection lab](../reference/FAULT_INJECTION_LAB.md).
 
@@ -50,8 +50,11 @@ notification-service gets `notification-to-backend` (`:34001`) and
 `notification-to-postgres` (`:45432`) the same way. `backend-to-warehouse`
 carries the backend's stock commands to warehouse-service, the stock owner
 from backend 3.22.0 and warehouse-service 1.6.0 (older backends never use it).
-The overlay changes nothing but `BACKEND_BASE_URL`, `WAREHOUSE_URL` and
-`SPRING_DATASOURCE_URL`.
+With a broker running (full profile, or `scripts/chaos up lightweight broker`),
+`backend-`, `warehouse-`, `payment-` and `notification-to-activemq`
+(`:16161` to `:46161`) carry the [event broker](event-broker.md) links. The
+overlay changes nothing but `BACKEND_BASE_URL`, `WAREHOUSE_URL`,
+`SPRING_DATASOURCE_URL` and `SPRING_ARTEMIS_BROKER_URL`.
 
 ## Scenarios
 
@@ -65,10 +68,12 @@ The overlay changes nothing but `BACKEND_BASE_URL`, `WAREHOUSE_URL` and
 | `postgres-down [target]` | The target's database connections are closed and refused |
 | `warehouse-down` | The backend gets *connection refused* from warehouse-service: checkout and admin stock adjust answer `503 Inventory service unavailable`, reads and the cart keep working (backend 3.22.0+) |
 | `warehouse-slow [ms]` | Every warehouse-service answer to the backend is `ms` late (3000); from 5000 the backend's 5 s read timeout turns it into the 503 |
+| `broker-down [target]` | The target loses Artemis: the backend's relay backs off and `events_relay_pending` grows (checkout keeps working); a consumer's queue holds its events until `heal` |
+| `broker-slow [ms] [target]` | Every Artemis answer to the target is `ms` late (3000) |
 | `partition-<service>` | `warehouse`, `payment`, `notification`: the service loses the backend and its database (and the backend loses warehouse-service); `backend`: nobody reaches the backend and it loses PostgreSQL and warehouse-service; `postgres`: nobody reaches PostgreSQL |
 
 Targets are `warehouse`, `payment`, `notification` (and `backend` for the
-`postgres-*` scenarios); without one the scenario hits all of them. The
+`postgres-*` and `broker-*` scenarios); without one the scenario hits all of them. The
 `warehouse-*` scenarios take no target: only the backend calls warehouse-service.
 
 ## Guided exercises
@@ -95,7 +100,10 @@ walks through, with exact commands and the expected observations:
    both agree again after `heal`;
 9. a slow order save against the reaper: a row lock on the cart stalls the
    order past the reservation timeout, and (backend 3.22.2+) the reservation
-   still ends `CONFIRMED` instead of releasing the stock of a saved order.
+   still ends `CONFIRMED` instead of releasing the stock of a saved order;
+10. to 13. the [event broker](event-broker.md): an event crossing Artemis, a
+   poison message in the dead-letter queue, a stopped consumer's backlog, and
+   the relay's backlog while the backend cannot reach the broker.
 
 Exercises 7 and 9 wait for warehouse-service's reservation reaper (2 minutes by
 default). Shorten it when you start the lab:
@@ -113,4 +121,5 @@ shows the latency and the outbox gauges.
 
 `scripts/verify-chaos-overlay.sh` checks every overlay combination with
 `docker compose config` and runs all scenarios against the published images
-(exercises 7 and 8 only with backend 3.22.0 or later, exercise 9 from 3.22.2).
+(exercises 7 and 8 only with backend 3.22.0 or later, exercise 9 from 3.22.2);
+`scripts/verify-event-broker.sh` does the same for exercises 10 to 13.

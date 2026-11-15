@@ -23,7 +23,7 @@
 | --- | --- | --- | --- | --- |
 | `postgres` | `postgres:16.14-bookworm` | host `5432` (full), internal (lightweight, server) | all | Database `testdb`; schemas `public` (backend), `warehouse`, `payment`, `notification` |
 | `postgres-roles` | `postgres:16.14-bookworm` | — | all | One-shot: creates or updates the `warehouse`, `payment` and `notification` roles before those services start (`postgres/service-roles.sh`) |
-| `activemq` | `apache/artemis:2.55.0` | host `61616`, `8161`, `5672` (full), internal (server) | full, server | Message broker for outgoing emails (queue `email`) |
+| `activemq` | `apache/artemis:2.55.0` | host `61616`, `8161`, `5672` (full), internal (server) | full, server, broker overlay | Message broker: outgoing emails (queue `email`) and the commerce events of the [broker transport](../operations/event-broker.md) (`awesome.commerce.events`, on the server also `aitesters.commerce.events`) |
 | `mailpit` | `axllent/mailpit:v1.30.0` | host `8025` UI, `1025` SMTP (full); `127.0.0.1:8025` (server) | full, server | Fake SMTP inbox |
 | `ollama-mock` | `slawekradzyminski/ollama-mock` | host `11434` (lightweight), internal (server) | lightweight, server, model-mock override | Deterministic Ollama-compatible LLM mock |
 | `ollama-dmr-adapter` | built locally | internal `11434` | full | Adapter in front of Docker Model Runner (the real local model) |

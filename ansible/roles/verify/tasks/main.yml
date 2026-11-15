@@ -366,6 +366,56 @@
       JMS contract email reached Mailpit with unexpected recipients:
       {{ verify_jms_delivered_message.To }}
 
+# Broker transport (docs/EVENT_BROKER_CONTRACT.md): every commerce event queue and
+# dead-letter queue exists, and each consumer queue has its service listening.
+- name: Read the commerce event queues
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ app_compose_file }}"
+      - exec
+      - -T
+      - activemq
+      - /var/lib/artemis-instance/bin/artemis
+      - queue
+      - stat
+      - --url
+      - tcp://localhost:61616
+      - --user
+      - "{{ artemis_username }}"
+      - --password
+      - "{{ artemis_password }}"
+      - --maxColumnSize
+      - "80"
+      - --maxRows
+      - "500"
+    chdir: "{{ app_dir }}"
+  register: verify_commerce_queues
+  changed_when: false
+  no_log: true
+  until: >-
+    verify_commerce_queues.rc == 0
+    and (verify_commerce_event_consumer_queues
+         | reject('in', verify_commerce_queues.stdout
+                  | regex_findall('\\|(\\S+commerce\\.events\\.\\S+-service)\\s*\\|[^|]*\\|\\s*[1-9]'))
+         | list | length == 0)
+  retries: "{{ verify_retries }}"
+  delay: "{{ verify_delay_seconds }}"
+
+- name: Verify every commerce event queue has its consumer and a dead-letter queue
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ('|' ~ item ~ ' ') in verify_commerce_queues.stdout
+      - ('|DLQ.' ~ item ~ ' ') in verify_commerce_queues.stdout
+    fail_msg: >-
+      Commerce event queue {{ item }} or its dead-letter queue is missing (or
+      has no consumer): check artemis/commerce-events.properties and the
+      service's EVENTS_TRANSPORT.
+  loop: "{{ verify_commerce_event_consumer_queues }}"
+
 - name: Verify internal monitoring endpoints
   ansible.builtin.command:
     argv:

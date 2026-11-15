@@ -192,6 +192,20 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0 — 15 November 2026
+
+Published by `scripts/release-train.py`. TODO: what changes, LocalStack
+changes, upgrade order and rollback.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49` | [PR #114](https://github.com/slawekradzyminski/test-secure-backend/pull/114), `58339c8` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43754235148) |
+| `slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6` | [PR #14](https://github.com/slawekradzyminski/warehouse-service/pull/14), `a9990b4` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/43754237288) |
+| `slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765` | [PR #9](https://github.com/slawekradzyminski/payment-service/pull/9), `99804a1` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/43754239611) |
+| `slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb` | [PR #4](https://github.com/slawekradzyminski/notification-service/pull/4), `d4b693d` | [run](https://github.com/slawekradzyminski/notification-service/actions/runs/43754241152) |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.22.2 — 15 November 2026
 
 Published by `scripts/release-train.py`. Fixes a race between checkout and
@@ -1140,17 +1154,17 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.22.2, released 15 November 2026:
+Release train: backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0, released 15 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266` |
+| Backend | `slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead` |
-| Payment service | `slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8` |
-| Notification service | `slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6` |
+| Payment service | `slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765` |
+| Notification service | `slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb` |
 
 ## Backend 3.9.1 traffic preview patch
 

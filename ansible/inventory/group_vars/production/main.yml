@@ -70,6 +70,8 @@ postgres_restore_image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66
 
 app_copy_paths:
   - security
+  # Commerce event topology of the broker transport, loaded by activemq on every start.
+  - artemis
   - postgres
   - nginx
   - prometheus
@@ -128,6 +130,9 @@ warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ warehouse_service_token | default('', true) }}"
   BACKEND_SERVICE_TOKEN: "{{ backend_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ warehouse_postgres_password | default('', true) }}"
+  # Broker transport (warehouse-service 1.7.0+): its commerce event queue on Artemis.
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
 
 # The aitesters sandbox has its own warehouse-service and aitesters-postgres; it
 # verifies tokens with aitesters-backend's JWKS, so stable-site tokens never
@@ -136,6 +141,8 @@ aitesters_warehouse_runtime_env:
   WAREHOUSE_SERVICE_TOKEN: "{{ aitesters_warehouse_service_token | default('', true) }}"
   BACKEND_SERVICE_TOKEN: "{{ aitesters_backend_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_warehouse_postgres_password | default('', true) }}"
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
 
 # payment-service receives only the payment service token (shared with the
 # backend, which accepts it on the payment, order, JWKS and event feed internal
@@ -147,6 +154,9 @@ payment_runtime_env:
   PAYMENT_SERVICE_TOKEN: "{{ payment_service_token | default('', true) }}"
   PAYMENT_WEBHOOK_SECRET: "{{ payment_webhook_secret | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ payment_postgres_password | default('', true) }}"
+  # Broker transport (payment-service 1.4.0+): its commerce event queue on Artemis.
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
 
 # The aitesters sandbox has its own payment-service with its own token, webhook
 # secret and `payment` role on aitesters-postgres.
@@ -154,6 +164,8 @@ aitesters_payment_runtime_env:
   PAYMENT_SERVICE_TOKEN: "{{ aitesters_payment_service_token | default('', true) }}"
   PAYMENT_WEBHOOK_SECRET: "{{ aitesters_payment_webhook_secret | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_payment_postgres_password | default('', true) }}"
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
 
 # notification-service receives only its service token (accepted by the backend
 # on the event feed, JWKS and webhook export internal endpoints; the backend never
@@ -172,13 +184,16 @@ notification_runtime_env:
 # The aitesters sandbox has its own notification-service with its own token,
 # `notification` role on aitesters-postgres and encryption key. It sends no real
 # email (local outbox, like aitesters-backend), so it gets the outbox access key
-# the E2E automation uses instead of broker credentials.
+# the E2E automation uses; the broker credentials are for its commerce event
+# queue (broker transport, notification-service 1.1.0+).
 aitesters_notification_runtime_env:
   NOTIFICATION_SERVICE_TOKEN: "{{ aitesters_notification_service_token | default('', true) }}"
   SPRING_DATASOURCE_PASSWORD: "{{ aitesters_notification_postgres_password | default('', true) }}"
   WEBHOOKS_SECRET_ENCRYPTION_PASSWORD: "{{ aitesters_notification_webhook_secret_encryption_password | default('', true) }}"
   WEBHOOKS_SECRET_ENCRYPTION_SALT: "{{ aitesters_notification_webhook_secret_encryption_salt | default('', true) }}"
   LOCAL_EMAIL_OUTBOX_ACCESS_KEY: "{{ local_email_outbox_access_key | default('', true) }}"
+  SPRING_ARTEMIS_USER: "{{ artemis_username | default('', true) }}"
+  SPRING_ARTEMIS_PASSWORD: "{{ artemis_password | default('', true) }}"
 
 # One-shot postgres-roles services (postgres/service-roles.sh): the superuser
 # password and the warehouse, payment and notification role passwords for each
@@ -240,6 +255,14 @@ verify_urls:
     status_code: 404
   - url: http://127.0.0.1/mailhog/
     status_code: 404
+# Commerce event queues (broker transport) that must have a listening consumer.
+verify_commerce_event_consumer_queues:
+  - awesome.commerce.events.warehouse-service
+  - awesome.commerce.events.payment-service
+  - awesome.commerce.events.notification-service
+  - aitesters.commerce.events.warehouse-service
+  - aitesters.commerce.events.payment-service
+  - aitesters.commerce.events.notification-service
 verify_retries: 12
 verify_delay_seconds: 10
 

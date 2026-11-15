@@ -173,6 +173,17 @@ jobs:
     - name: Run the lightweight profile with the local monitoring overlay
       run: bash ./scripts/verify-monitoring-overlay.sh lightweight-docker-compose.yml
 
+  verifyEventBroker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v7.0.1
+    # The broker transport (docs/EVENT_BROKER_CONTRACT.md) on lightweight +
+    # docker-compose.broker.yml + the chaos overlay: delivery through Artemis,
+    # dead-lettering and redrive, a consumer's backlog, the relay's backlog.
+    - name: Run the lightweight profile with the broker transport
+      run: bash ./scripts/verify-event-broker.sh
+
   verifyDocsSite:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -2,7 +2,7 @@
 name: awesome-compatibility
 
 x-backend: &backend
-  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266}
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49}
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
@@ -53,7 +53,7 @@ x-backend: &backend
 x-warehouse: &warehouse
   # The stock owner next to each backend (schema and role `warehouse` in that
   # backend's database), prepared by the matching *-postgres-roles one-shot.
-  image: ${COMPAT_WAREHOUSE_IMAGE:-slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead}
+  image: ${COMPAT_WAREHOUSE_IMAGE:-slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6}
   environment: &warehouse-environment
     SPRING_PROFILES_ACTIVE: docker
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse

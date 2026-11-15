@@ -169,5 +169,12 @@ scenario can break one service's view without touching the others:
 | `payment-to-postgres` | `toxiproxy:35432` | `postgres:5432` |
 | `notification-to-postgres` | `toxiproxy:45432` | `postgres:5432` |
 
-The services need no change: the overlay only overrides `BACKEND_BASE_URL` and
-`SPRING_DATASOURCE_URL`.
+| `backend-to-activemq` | `toxiproxy:16161` | `activemq:61616` |
+| `warehouse-to-activemq` | `toxiproxy:26161` | `activemq:61616` |
+| `payment-to-activemq` | `toxiproxy:36161` | `activemq:61616` |
+| `notification-to-activemq` | `toxiproxy:46161` | `activemq:61616` |
+
+The services need no change: the overlay only overrides `BACKEND_BASE_URL`,
+`SPRING_DATASOURCE_URL`, `WAREHOUSE_URL` and `SPRING_ARTEMIS_BROKER_URL` (the
+`*-to-activemq` links matter only with the
+[broker transport](EVENT_BROKER_CONTRACT.md)).

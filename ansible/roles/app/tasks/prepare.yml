@@ -295,6 +295,18 @@
         or 'nginx' in app_copy_pruned_dirs
       }}
 
+- name: Detect whether the Artemis topology changed
+  ansible.builtin.set_fact:
+    artemis_config_changed: >-
+      {{
+        (app_copy_results.results
+         | selectattr('item', 'equalto', 'artemis')
+         | selectattr('changed')
+         | list
+         | length > 0)
+        or 'artemis' in app_copy_pruned_dirs
+      }}
+
 - name: Detect whether Prometheus assets changed
   ansible.builtin.set_fact:
     prometheus_config_changed: >-

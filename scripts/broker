@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# Broker transport lab helper: look at the commerce event queues in Artemis and
+# exercise redelivery and dead-lettering (docs/EVENT_BROKER_CONTRACT.md).
+# Needs only bash (3.2 is fine) and Docker; runs the Artemis CLI inside the
+# running activemq container. Run `scripts/broker help`.
+set -euo pipefail
+
+SITE="${EVENTS_SITE:-awesome}"
+DLA="commerce.events.DLA"
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; RED=$'\033[31m'; GREEN=$'\033[32m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+else
+  BOLD=""; RED=""; GREEN=""; DIM=""; OFF=""
+fi
+
+die() { printf '%serror:%s %s\n' "$RED" "$OFF" "$1" >&2; shift; for line in "$@"; do printf '       %s\n' "$line" >&2; done; exit 1; }
+say() { printf '%s\n' "$*"; }
+
+usage() {
+  cat <<EOF
+${BOLD}scripts/broker${OFF} - the commerce event queues in Artemis (broker transport)
+
+  scripts/broker stat                  every commerce queue and dead-letter queue: messages, consumers
+  scripts/broker poison <service>      put one unparsable event on the service's queue; it is
+                                       redelivered 5 times and then moved to its dead-letter queue
+  scripts/broker dlq [service]         browse the dead-letter queue(s)
+  scripts/broker redrive <service>     move the service's dead letters back to its queue
+  scripts/broker purge-dlq <service>   delete the service's dead letters
+
+Services: warehouse, payment, notification.
+Environment: EVENTS_SITE (awesome or aitesters, default awesome), COMPOSE_PROJECT_NAME
+(the stack to use when several run a broker).
+Console: http://127.0.0.1:${ARTEMIS_CONSOLE_PORT:-8161}/console (local stacks).
+EOF
+}
+
+container() {
+  command -v docker >/dev/null 2>&1 || die "docker is not installed or not on PATH."
+  local filter=(--filter label=com.docker.compose.service=activemq)
+  [ -n "${COMPOSE_PROJECT_NAME:-}" ] && filter+=(--filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")
+  local ids
+  ids="$(docker ps -q "${filter[@]}")"
+  [ -n "$ids" ] || die "no Artemis broker is running." \
+    "Lightweight: docker compose -f lightweight-docker-compose.yml -f docker-compose.broker.yml up -d" \
+    "Full profile: docker compose up -d (it includes the broker)"
+  [ "$(printf '%s\n' "$ids" | wc -l | tr -d ' ')" = 1 ] \
+    || die "several stacks run a broker." "Choose one: COMPOSE_PROJECT_NAME=<project> scripts/broker $*"
+  printf '%s' "$ids"
+}
+
+artemis() {  # args... -> the Artemis CLI in the broker container, with its own credentials
+  local id
+  id="$(container)"
+  # The credentials stay inside the container; nothing is printed or passed on this command line.
+  docker exec -i "$id" bash -c 'exec ./bin/artemis "$@" --user "$ARTEMIS_USER" --password "$ARTEMIS_PASSWORD"' artemis "$@"
+}
+
+jolokia() {  # exec|read MBEAN-SUFFIX -> JSON from the broker's management API (console port)
+  local id port user password
+  id="$(container)"
+  port="$(docker port "$id" 8161/tcp 2>/dev/null | head -n 1 | sed 's/.*://')"
+  [ -n "$port" ] || die "the broker publishes no console port." \
+    "Local stacks publish 8161 (ARTEMIS_CONSOLE_PORT); on the server use the Artemis console through an SSH tunnel."
+  # The credentials stay in this process: read from the container, never printed.
+  user="$(docker exec "$id" printenv ARTEMIS_USER)"; password="$(docker exec "$id" printenv ARTEMIS_PASSWORD)"
+  curl -s --fail -u "$user:$password" -H 'Origin: http://localhost' \
+    "http://127.0.0.1:$port/console/jolokia/$1/org.apache.activemq.artemis:broker=%220.0.0.0%22,$2" \
+    || die "the broker's management API did not answer on 127.0.0.1:$port."
+}
+
+dlq_mbean() {  # service -> MBean suffix of its dead-letter queue
+  echo "component=addresses,address=%22$DLA%22,subcomponent=queues,routing-type=%22multicast%22,queue=%22DLQ.$(queue_of "$1")%22"
+}
+
+json_value() { python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])'; }
+
+service_of() {
+  case "${1:-}" in
+    warehouse|warehouse-service) echo warehouse-service ;;
+    payment|payment-service) echo payment-service ;;
+    notification|notification-service|notifications) echo notification-service ;;
+    "") die "which service?" "Services: warehouse, payment, notification" ;;
+    *) die "unknown service '$1'" "Services: warehouse, payment, notification" ;;
+  esac
+}
+
+queue_of() { echo "$SITE.commerce.events.$(service_of "$1")"; }
+
+# A type the service's queue filter accepts and no other queue does, so the poison reaches one service.
+poison_type_of() {
+  case "$(service_of "$1")" in
+    warehouse-service) echo stock.restore-requested ;;
+    payment-service) echo card-refund.requested ;;
+    notification-service) echo notification.requested ;;
+  esac
+}
+
+stat() {
+  # artemis queue stat columns: NAME|ADDRESS|CONSUMER_COUNT|MESSAGE_COUNT|MESSAGES_ADDED|DELIVERING_COUNT|...
+  printf '%s%-52s %9s %9s %10s %9s%s\n' "$BOLD" QUEUE CONSUMERS MESSAGES DELIVERING ADDED "$OFF"
+  artemis queue stat --maxColumnSize 80 --maxRows 500 \
+    | awk -F'|' '$2 ~ /commerce\.events/ {
+        for (i = 2; i <= 7; i++) gsub(/^ +| +$/, "", $i)
+        printf "%-52s %9s %9s %10s %9s\n", $2, $4, $5, $7, $6
+      }' \
+    | sort
+}
+
+poison() {
+  local queue type
+  queue="$(queue_of "$1")"; type="$(poison_type_of "$1")"
+  artemis producer --destination "topic://$SITE.commerce.events" --message-count 1 \
+    --message '{"this":"is not a feed event"' \
+    --properties "[{\"type\":\"string\",\"key\":\"type\",\"value\":\"$type\"}]" >/dev/null
+  say "${GREEN}✓${OFF} one unparsable ${type} event sent; only ${queue} accepts that type"
+  say "  The listener rolls it back; Artemis redelivers it after 1, 2, 4 and 8 s and then moves it"
+  say "  to DLQ.${queue}. Watch: ${BOLD}scripts/broker stat${OFF}, ${BOLD}scripts/broker dlq $1${OFF}"
+}
+
+dlq() {
+  local services="warehouse payment notification" s
+  [ $# -gt 0 ] && services="$1"
+  for s in $services; do
+    say "${BOLD}DLQ.$(queue_of "$s")${OFF}"
+    jolokia exec "$(dlq_mbean "$s")/browse()" | python3 -c '
+import json, sys
+messages = json.load(sys.stdin).get("value") or []
+if not messages:
+    print("  (empty)")
+for m in messages:
+    strings = m.get("StringProperties") or {}
+    print("  - message %s, type %s, failed on %s" % (m.get("messageID"), strings.get("type", "?"),
+                                                    strings.get("_AMQ_ORIG_QUEUE", "?")))
+    print("    body: %s" % str(m.get("text") or "")[:300])
+'
+  done
+}
+
+redrive() {
+  local queue moved
+  queue="$(queue_of "$1")"
+  moved="$(jolokia exec "$(dlq_mbean "$1")/retryMessages()" | json_value)"
+  say "${GREEN}✓${OFF} ${moved} dead letter(s) sent back to ${queue}; they get five new delivery attempts"
+}
+
+purge_dlq() {
+  local removed
+  removed="$(jolokia exec "$(dlq_mbean "$1")/removeAllMessages()" | json_value)"
+  say "${GREEN}✓${OFF} ${removed} dead letter(s) deleted from DLQ.$(queue_of "$1")"
+}
+
+case "${1:-help}" in
+  help|-h|--help) usage ;;
+  stat|status) stat ;;
+  poison) poison "${2:-}" ;;
+  dlq) shift; dlq "$@" ;;
+  redrive) redrive "${2:-}" ;;
+  purge-dlq) purge_dlq "${2:-}" ;;
+  *) die "unknown command '$1'" "Run: scripts/broker help" ;;
+esac

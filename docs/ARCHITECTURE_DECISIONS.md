@@ -12,13 +12,16 @@ from it. A superseded decision stays in this file with its status changed.
 | [4](#adr-4-database-per-service-on-one-postgresql-server) | Database per service on one PostgreSQL server | Accepted | backend 3.12.0, warehouse-service 1.0.0 |
 | [5](#adr-5-notifications-move-out-of-the-backend) | Notifications move out of the backend | Accepted | backend 3.21.0, notification-service 1.0.0 |
 | [6](#adr-6-warehouse-service-owns-the-stock-ledger) | warehouse-service owns the stock ledger | Accepted | backend 3.22.0, warehouse-service 1.6.0 |
+| [7](#adr-7-a-broker-transport-next-to-the-event-feed) | A broker transport next to the event feed | Accepted; amends ADR 1 | backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0 |
 
 ## ADR 1: Internal integration via a pull event feed
 
 **Status:** accepted, November 2026 (backend 3.16.0, warehouse-service 1.3.0,
 payment-service 1.1.0). Reversed for stock only by
 [ADR 6](#adr-6-warehouse-service-owns-the-stock-ledger): the backend calls
-warehouse-service for stock commands.
+warehouse-service for stock commands. Amended by
+[ADR 7](#adr-7-a-broker-transport-next-to-the-event-feed): the same events can
+also travel through Artemis; the feed stays and remains the default.
 
 ### Context
 
@@ -331,6 +334,66 @@ second writer made every warehouse change a backend change.
 - One more secret per site (`backend_service_token`,
   `aitesters_backend_service_token`), and the course compatibility stack runs
   a warehouse-service next to each backend.
+
+## ADR 7: A broker transport next to the event feed
+
+**Status:** accepted, November 2026 (backend 3.23.0, warehouse-service 1.7.0,
+payment-service 1.4.0, notification-service 1.1.0). Contract:
+[EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md).
+
+### Context
+
+ADR 1 chose a pull feed over ActiveMQ because the lightweight classroom profile
+and the aitesters sandbox had no broker. Since then the stack became the base of
+a course on testing distributed systems, and the feed hides the failure modes
+that course is about: there is no queue to watch, no redelivery, and a poison
+event is logged and skipped, so it is simply gone. Meanwhile the production
+server already runs Artemis for the `email` queue, and a broker costs the
+lightweight profile about 300–400 MiB only when a student asks for it.
+
+### Decision
+
+- **One contract, two transports.** The events, their JSON and their ids stay
+  exactly those of the feed. Each service chooses at run time with
+  `EVENTS_TRANSPORT=feed|broker`; the native images contain both paths.
+- **The outbox stays the source of truth.** `domain_events` is already written
+  in the transaction of the change. A relay in the backend publishes the rows it
+  has not published yet (`published_at`, migration V27) in one transacted JMS
+  session and then marks them, so delivery is at least once and a crash can only
+  duplicate, never lose. Change data capture (Debezium) was rejected as too heavy
+  for the lab.
+- **Topology in the broker's configuration, not in code.** One multicast
+  address per site (`awesome.commerce.events`, `aitesters.commerce.events`), one
+  durable queue per consuming service filtered on the event type, and one
+  dead-letter queue per consumer queue, all declared in
+  `artemis/commerce-events.properties` so the queues exist before the first
+  publish (a multicast address without queues drops messages).
+- **Failures go back to the broker.** A consumer handles each message in a
+  transacted session; any exception rolls it back, Artemis redelivers it with
+  backoff and dead-letters it after five attempts. The feed poller's "log and
+  skip" does not exist in broker mode.
+- **The feed stays.** It is the default, the course compatibility stack and the
+  replay path. Profiles: full and both production sites use `broker`;
+  lightweight uses `feed` unless `docker-compose.broker.yml` is added.
+
+### Consequences
+
+- The backend still calls no consumer, and consumers still depend only on the
+  backend, now plus the broker. Checkout never waits for the broker: while
+  Artemis is unreachable the relay's backlog grows (`events_relay_pending`) and
+  drains afterwards.
+- Latency from a cancellation to its effect drops from 5–8 seconds (settle
+  delay plus poll interval) to about one second (the relay interval).
+- Ordering is per order (message groups), and only while nothing is being
+  redelivered: a redelivery delay lets later events of the same order overtake
+  the failed one. Consumers therefore deduplicate by event id only and no longer
+  trust the feed cursor's sequence order in broker mode.
+- New operational surface: the broker topology file, broker credentials for
+  every service (`SPRING_ARTEMIS_USER`/`_PASSWORD` from Vault on the server),
+  dead letters someone has to look at (`scripts/broker dlq`), and an Ansible
+  check that every queue has its consumer.
+- The fault-injection lab gains `broker-down`, `broker-slow` and
+  `partition-broker`, and the [broker exercises](FAULT_INJECTION_LAB.md#broker-transport).
 
 ## Reservations saga (note)
 
