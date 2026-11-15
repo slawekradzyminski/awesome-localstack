@@ -592,7 +592,9 @@ goes through its own proxy, `backend-to-warehouse`.
    reaper releases it once it is older than `WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT`
    (2 minutes; the reaper runs every 30 s). Before releasing, it asks the
    backend whether an order holds the reservation, and there is none. Within
-   about 2.5 minutes:
+   about 2.5 minutes (start the lab with
+   `WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S WAREHOUSE_RESERVATION_REAPER_INTERVAL=PT5S scripts/chaos up`
+   to wait about 25 s instead):
 
     ```bash
     stock                                                                   # back to the old value
@@ -657,6 +659,80 @@ records the cancellation at once, but the stock comes back only after `heal`:
 warehouse-service learns about the cancel from the event feed (Exercise 3),
 writes `ORDER_RESTORED` and pushes the new level.
 
+### Exercise 9: a slow order save against the reaper
+
+Needs backend 3.22.2 and warehouse-service 1.6.0. Exercise 7 showed the reaper
+cleaning up after a checkout that gave up. This one asks the opposite
+question: what if the checkout did **not** give up, but saving the order took
+longer than the reservation timeout?
+
+The reaper decides by asking the backend whether an order holds the
+reservation. An order that is still being saved does not exist yet for any
+other transaction, so the honest answer is "no". Up to backend 3.22.1 the
+reaper then released the stock, and a moment later the order committed: an
+order without stock behind it. From 3.22.2 the order transaction first claims
+the reservation id (table `stock_reservation_claims`), and the reaper's lookup
+writes a tombstone for the same id before it reads `orders`. Whichever comes
+second waits for the first, so the two can no longer overtake each other: the
+lookup waits for the order and confirms it, or a save that comes after a
+"no order" answer fails with `409 Stock reservation expired during checkout;
+please try again` instead of keeping an order without stock.
+
+Latency on the database link does **not** reproduce the race: it slows the
+reaper's lookup as much as the order save (and long latency only drains the
+connection pool). The fault has to hit the order save alone. A row lock on the
+customer's cart does exactly that: the checkout's last step deletes the cart
+rows, so it waits for the lock, while the reservation is already booked.
+
+1. Start the lab with a short reaper, so the race fits into half a minute:
+
+    ```bash
+    WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S WAREHOUSE_RESERVATION_REAPER_INTERVAL=PT5S scripts/chaos up
+    ```
+
+    Sign in again (`C`, `A`, see [Where to look](#where-to-look)) and pick a
+    product (`P`, `stock`) as in Exercise 7. Empty the cart and add one item:
+
+    ```bash
+    curl -s -o /dev/null -X DELETE $B/api/v1/cart -H "Authorization: Bearer $C"
+    curl -s -o /dev/null $B/api/v1/cart/items -H "Authorization: Bearer $C" -H 'Content-Type: application/json' \
+      -d "{\"productId\":$P,\"quantity\":1}"
+    stock
+    ```
+
+2. In a second terminal, lock the cart rows for 30 s (longer than the 20 s
+   timeout):
+
+    ```bash
+    docker compose -p awesome-light exec -T postgres psql -U postgres -d testdb -c \
+      "begin; select id from cart_items where username = 'client' for update; select pg_sleep(30); commit;"
+    ```
+
+3. Back in the first terminal, check out at once:
+
+    ```bash
+    curl -s -w ' %{http_code} in %{time_total}s\n' $B/api/v1/orders -H "Authorization: Bearer $C" \
+      -H 'Content-Type: application/json' -H 'X-Request-Id: lab-ex9' \
+      -d '{"street":"Main 1","city":"Warszawa","state":"M","zipCode":"00-001","country":"Poland"}' | tail -c 40
+    ```
+
+    **Expected:** `201` after about 30 s. While the order waited for the lock,
+    the reaper found the reservation older than 20 s and asked the backend
+    about it. Instead of answering "no order", the lookup waited for the order
+    save (if it waits longer than warehouse-service's 10 s read timeout, the
+    reaper simply asks again on its next run) and then found the order.
+
+4. Look at the reservation and the stock:
+
+    ```bash
+    psql "select status, order_id from warehouse.stock_reservations order by created_at desc limit 1"   # CONFIRMED, the new order
+    stock                                                                                               # one lower, once
+    docker compose -p awesome-light logs warehouse-service | grep -i 'reservation' | tail -n 3
+    ```
+
+    With backend 3.22.1 or older the same steps end with the reservation
+    `RELEASED`, an order that exists, and the stock back at the old value.
+
 ## With tracing and monitoring
 
 The overlays combine:
@@ -703,6 +779,13 @@ the `backend-to-warehouse` link refusing and delaying), heals and checks
 recovery, adds and removes the tracing overlay and tears the stack down with
 `scripts/chaos down`. With backend 3.22.0+ it also runs Exercise 7 (checkout
 and adjust 503, reads and cart 200, stock deducted once after `heal`) and
-Exercise 8 (`stock_outbox_pending` grows, the projection catches up); set
-`CHAOS_VERIFY_STOCK_LEDGER=true` to force them for a candidate image without a
-version tag.
+Exercise 8 (`stock_outbox_pending` grows, the projection catches up) and the
+slow variant of Exercise 7 (`warehouse-slow 7000`: a 503 at the 5 s read
+timeout, an orphaned reservation, the reaper releasing it and the stock coming
+back); set `CHAOS_VERIFY_STOCK_LEDGER=true` to force them for a candidate image
+without a version tag. With backend 3.22.2+ it also runs Exercise 9 (a cart
+lock stalls the order save past the reservation timeout; the reservation ends
+`CONFIRMED` and the stock is deducted once); `CHAOS_VERIFY_RESERVATION_CLAIMS`
+forces or skips it. The run shortens the reaper
+(`WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S`, interval `PT5S`) and checks
+that `scripts/chaos up` prints the gateway's real address.

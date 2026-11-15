@@ -159,9 +159,21 @@ up() {
   fi
   status
   say ""
-  say "App: http://localhost:8081   Toxiproxy API: $API"
+  say "App: $(app_url "$project" "${files[@]}")   Toxiproxy API: $API"
   $tracing && say "Jaeger: http://127.0.0.1:${JAEGER_UI_PORT:-16686}"
   say "Next: ${BOLD}scripts/chaos list${OFF}, then e.g. ${BOLD}scripts/chaos backend-down warehouse${OFF}"
+}
+
+# The gateway's published address (an override file may move it from 8081).
+app_url() {  # project compose-args...
+  local project="$1"; shift
+  local addr
+  addr="$(cd "$ROOT" && docker compose -p "$project" "$@" port gateway 80 2>/dev/null | head -n 1 || true)"
+  case "$addr" in
+    "") echo "http://localhost:8081" ;;
+    0.0.0.0:*|\[::\]:*) echo "http://localhost:${addr##*:}" ;;
+    *) echo "http://$addr" ;;
+  esac
 }
 
 down() {

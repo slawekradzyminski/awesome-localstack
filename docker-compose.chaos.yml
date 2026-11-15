@@ -58,6 +58,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://toxiproxy:25432/testdb?currentSchema=warehouse
       BACKEND_BASE_URL: http://toxiproxy:14001
+      # Reservation reaper (warehouse-service 1.6.0+): shorten it for Exercises 7
+      # and 9, e.g. WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT=PT20S scripts/chaos up.
+      WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT: ${WAREHOUSE_RESERVATION_CONFIRM_TIMEOUT:-PT2M}
+      WAREHOUSE_RESERVATION_REAPER_INTERVAL: ${WAREHOUSE_RESERVATION_REAPER_INTERVAL:-PT30S}
     depends_on:
       toxiproxy:
         condition: service_healthy
