@@ -193,6 +193,11 @@ Never hold a DB connection during an HTTP call: the pool size is 3.
    existing order is confirmed by the reaper. Before releasing, the reaper asks the backend
    `GET /internal/v1/orders/by-reservation/{reservationId}`, which returns `{"orderId":123}` or 404, and confirms
    instead when an order exists.
+   Since backend 3.22.2 the lookup and step 3 cannot both conclude: step 3 first inserts and deletes the
+   reservation id in `stock_reservation_claims` (V26), and the lookup commits the id there as a tombstone before it
+   reads `orders`. The primary key makes the later writer wait, so a lookup during a slow step 3 waits and finds
+   the order, and a step 3 that is still running after a 404 fails with 409
+   `"Stock reservation expired during checkout; please try again"` (no order stored, cart kept).
 5. If step 3 throws, release (2.3) in a catch and rethrow the original error.
 
 ### 4.2 Admin adjust, GraphQL `adjustInventory`, gRPC
