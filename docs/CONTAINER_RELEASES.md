@@ -192,6 +192,33 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.22.2 — 15 November 2026
+
+Published by `scripts/release-train.py`. Fixes a race between checkout and
+warehouse-service's reservation reaper. When saving an order took longer than
+the reaper's confirm timeout (2 min; for example a stalled database), the
+reaper's lookup `GET /internal/v1/orders/by-reservation/{id}` answered 404, the
+reaper released the stock, and the order was stored anyway with no stock
+deducted. Both now write the reservation id into a new table,
+`stock_reservation_claims` (V26), so the database orders them. A lookup during
+the save waits and finds the order; a save that finishes after a lookup found
+nothing answers `409 Stock reservation expired during checkout; please try
+again` and keeps the cart. No API body or configuration change.
+
+LocalStack changes: the backend pin, and section 4.1 of
+[INVENTORY_OWNERSHIP_CONTRACT.md](INVENTORY_OWNERSHIP_CONTRACT.md). Upgrade:
+`scripts/release-train.py deploy --yes` (quiesced backend upgrade, Flyway
+applies V26). Rollback: re-pin backend 3.22.1; the extra table is ignored.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266` | [PR #113](https://github.com/slawekradzyminski/test-secure-backend/pull/113), `2c95d28` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43724119784) |
+| `slawekradzyminski/warehouse-service:1.6.0` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.3.1` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.0.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.22.1 — 15 November 2026
 
 Published by `scripts/release-train.py`. Fixes a startup race of 3.22.0: the
@@ -1113,11 +1140,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.22.1, released 15 November 2026:
+Release train: backend 3.22.2, released 15 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.22.1@sha256:eaa41570307a70107a894fdb89c8cc63a39bb16675738ec707d979cb8a2aba97` |
+| Backend | `slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
