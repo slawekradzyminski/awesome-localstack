@@ -192,6 +192,30 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.22.1 — 15 November 2026
+
+Published by `scripts/release-train.py`. Fixes a startup race of 3.22.0: the
+backend calls warehouse-service as soon as it starts (initial stock and the
+stock-command retry every 5 s), before warehouse-service's container exists,
+and the native image cached each failed DNS lookup for 10 s. Checkout then
+answered `503 Inventory service unavailable` for a few seconds after
+warehouse-service was ready (intermittent `verifyLightweight` failures, and
+briefly after each deploy). The native image fixes security properties at build
+time, so runtime flags could not change this; 3.22.1 is built with
+`networkaddress.cache.negative.ttl=0`. No API, schema or configuration change.
+
+LocalStack changes: the backend pin only. Upgrade: `scripts/release-train.py
+deploy --yes` (quiesced backend upgrade). Rollback: re-pin backend 3.22.0.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.22.1@sha256:eaa41570307a70107a894fdb89c8cc63a39bb16675738ec707d979cb8a2aba97` | [PR #112](https://github.com/slawekradzyminski/test-secure-backend/pull/112), `3b6a86b` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/43696468375) |
+| `slawekradzyminski/warehouse-service:1.6.0` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.3.1` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.0.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.22.0, warehouse-service 1.6.0 — 15 November 2026
 
 Published by `scripts/release-train.py`; deployed to awesome.byst.re and
@@ -1089,11 +1113,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.22.0, warehouse-service 1.6.0, released 15 November 2026:
+Release train: backend 3.22.1, released 15 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.22.0@sha256:f16bbc2d585f663b2fd7f7f6892d65fe17ae2c1ceb349a4a4d20929e82390399` |
+| Backend | `slawekradzyminski/backend:3.22.1@sha256:eaa41570307a70107a894fdb89c8cc63a39bb16675738ec707d979cb8a2aba97` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
