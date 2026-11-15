@@ -324,6 +324,8 @@ class RepoState:
 # Overlays are only valid on top of a base profile.
 COMPOSE_OVERLAYS = {
     "docker-compose.model-mock.yml": ("docker-compose.yml",),
+    # The full profile carries the broker transport itself; the overlay adds it to lightweight.
+    "docker-compose.broker.yml": ("lightweight-docker-compose.yml",),
     "docker-compose.monitoring.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),
     "docker-compose.chaos.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),
     "docker-compose.tracing.yml": ("docker-compose.yml", "lightweight-docker-compose.yml"),

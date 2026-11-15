@@ -8,7 +8,7 @@ x-default-logging: &default-logging
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266
+    image: slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49
     restart: unless-stopped
     hostname: backend
     logging: *default-logging
@@ -105,7 +105,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead
+    image: slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6
     restart: unless-stopped
     hostname: warehouse-service
     logging: *default-logging
@@ -161,7 +161,7 @@ services:
   aitesters-warehouse-service:
     # The sandbox's own warehouse-service, paired with aitesters-backend and sharing
     # its database (schema warehouse), like warehouse-service on the stable site.
-    image: slawekradzyminski/warehouse-service:1.6.0@sha256:8cb354517b9408600cca55a1e23e0ff83ada2ade9a0507e8270ff23fc0482ead
+    image: slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6
     restart: unless-stopped
     hostname: aitesters-warehouse-service
     logging: *default-logging
@@ -216,7 +216,7 @@ services:
       - my-private-ntwk
 
   payment-service:
-    image: slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8
+    image: slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765
     restart: unless-stopped
     hostname: payment-service
     logging: *default-logging
@@ -271,7 +271,7 @@ services:
   aitesters-payment-service:
     # The sandbox's own payment-service, paired with aitesters-backend and sharing
     # its database (schema payment), like payment-service on the stable site.
-    image: slawekradzyminski/payment-service:1.3.1@sha256:a82b2da62b18514a27039c716ac6d6b49a6ed804f58a739a8812f49cd91bc5b8
+    image: slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765
     restart: unless-stopped
     hostname: aitesters-payment-service
     logging: *default-logging
@@ -332,7 +332,7 @@ services:
     # and lightweight-docker-compose.yml, which carry the bare 1.0.0 tag).
     # scripts/verify-release-images.py, scripts/verify-image-pins.py and the Ansible
     # image gate fail until then.
-    image: slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52
+    image: slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb
     restart: unless-stopped
     hostname: notification-service
     logging: *default-logging
@@ -393,7 +393,7 @@ services:
     # The sandbox's own notification-service, paired with aitesters-backend and
     # sharing its database (schema notification), like notification-service on the
     # stable site. Same placeholder pin as notification-service.
-    image: slawekradzyminski/notification-service:1.0.1@sha256:1a051e8aa54e90f5e9dd9d8dbd1aacd94b1af6f886ea571a0f4d7cac23019c52
+    image: slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb
     restart: unless-stopped
     hostname: aitesters-notification-service
     logging: *default-logging
@@ -559,7 +559,7 @@ services:
       - my-private-ntwk
 
   aitesters-backend:
-    image: slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266
+    image: slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49
     restart: unless-stopped
     hostname: aitesters-backend
     logging: *default-logging

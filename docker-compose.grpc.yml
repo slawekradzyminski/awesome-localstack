@@ -2,7 +2,7 @@
 # Add this override after the chosen base Compose file; existing profiles survive.
 services:
   backend:
-    image: ${GRPC_BACKEND_IMAGE:-slawekradzyminski/backend:3.22.2@sha256:2942b64511d461a1b45e3d210386999eca3eaca534ca8b98ef597228a966a266}
+    image: ${GRPC_BACKEND_IMAGE:-slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49}
     environment:
       SPRING_PROFILES_INCLUDE: graphql,grpc
       GRPC_HOST: 0.0.0.0
