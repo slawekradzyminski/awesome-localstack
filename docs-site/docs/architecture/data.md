@@ -51,7 +51,7 @@ one shipment per order and location, `shipment_lines`).
     | Area | Tables |
     | --- | --- |
     | Users and security | `app_user`, `user_entity_roles`, `refresh_token`, `password_reset_token`, `mfa_credential`, `mfa_challenge`, `mfa_recovery_code` |
-    | Catalog and stock | `products`, `inventory_movements`, `product_reviews`, `wishlist_items` |
+    | Catalog and stock | `products` (`stock_quantity` is a projection of warehouse-service's ledger), `stock_command_outbox`, `product_reviews`, `wishlist_items` |
     | Cart | `cart_items`, `cart_coupons`, `cart_tenders` (gift card and points) |
     | Orders | `orders` (incl. `fulfilment_state`, tax and tender columns), `order_items`, `order_idempotency_keys`, `order_refunds` |
     | Coupons | `coupons`, `coupon_redemptions` |

@@ -9,7 +9,7 @@ gRPC bodies do not change.
 | Data | Owner after the move | Notes |
 |---|---|---|
 | Stock quantity per product | warehouse `stock_items` | backend `products.stock_quantity` is a projection |
-| Stock movements | warehouse `stock_movements` | backend `inventory_movements` is frozen (read only for the import) and dropped in a later release |
+| Stock movements | warehouse `stock_movements` | backend `inventory_movements` was frozen in 3.22.0 (read only for the import) and dropped in 3.24.0 (V28) |
 | Reservations | warehouse `stock_reservations` | one per checkout |
 | Product catalog | backend | unchanged |
 | Order inventory state (`orders.inventory_state`) | backend | `DEDUCTED` after checkout, `RESTORED` when the cancel is recorded (the restore itself is asynchronous) |
@@ -150,8 +150,8 @@ Response: **204**, idempotent (204 also when the item is missing).
 ### 3.2 Purchase receipts and return restocks
 These are now local ledger writes in warehouse (`PURCHASE_RECEIVED`, `RETURN_RESTOCKED`), with the same actor,
 reason, `requestId` and `orderId` as the backend writes today. warehouse stops calling
-`POST /internal/v1/inventory/receipts`. The backend keeps that endpoint for one release and answers 410 Gone. Remove
-it in the follow-up.
+`POST /internal/v1/inventory/receipts`. The backend answered 410 Gone on that endpoint in 3.22.0 and 3.23.0 and
+removed it in 3.24.0 (404).
 
 ### 3.3 Stock-level push: warehouse → backend projection
 - Every ledger change, in the same transaction, writes a row to warehouse's `stock_level_outbox`, holding
@@ -235,15 +235,17 @@ The existing code calls `inventoryService.adjust`, which becomes 4.2.
 - Null fields are serialized as they are today. Check the backend's Jackson inclusion and match it.
 
 ## 6. One-time import
-- The backend exposes `GET /internal/v1/inventory/export`, for service caller `WAREHOUSE`. It is streamed or paged
+- The backend exposes `GET /internal/v1/inventory/export`, for service caller `WAREHOUSE`. It is paged
   with `?afterProductId=&limit=500`:
   ```json
-  {"items":[{"productId":1,"quantity":10,
-    "movements":[{"id":5,"orderId":null,"type":"INITIAL_STOCK","delta":10,"quantityAfter":10,"actor":"admin",
-                  "reason":"Initial stock","requestId":null,"createdAt":"..."}]}],
+  {"items":[{"productId":1,"quantity":10}],
    "nextAfterProductId":1}
   ```
   The response ends with `nextAfterProductId: null`.
+- Backend 3.22.0 and 3.23.0 also sent each product's `movements` from the frozen `inventory_movements` table, so
+  the deployments of the move kept their history. Backend 3.24.0 dropped the table (V28) and the list: an empty
+  warehouse ledger now starts from the projected quantities, with no movements. warehouse-service reads a missing
+  `movements` list as empty, so 1.6.0 and later import from either backend.
 - On startup, if the warehouse ledger tables are empty, warehouse imports before reporting healthy:
   - `ledgerVersion` is set to `1` for each item;
   - movement ids are kept;
@@ -272,6 +274,9 @@ Vault, for both sites: `backend_service_token`, `aitesters_backend_service_token
 - backend V25 `stock_ledger_projection`: adds `products.stock_ledger_version bigint not null default 0`,
   `orders.stock_reservation_id uuid null`, and the `stock_command_outbox` table. Guard every table with
   `to_regclass`, because legacy schemas are baselined at V1.
+- backend V28 `drop_frozen_inventory_movements` (3.24.0): `DROP TABLE IF EXISTS inventory_movements`. A database
+  that jumps from 3.21 or older straight to 3.24.0 keeps its quantities but loses the old movement history; upgrade
+  through 3.23.0 and let warehouse-service import first to keep it.
 - warehouse V7 `stock_ledger`: `stock_items`, `stock_movements` (identity id), `stock_reservations`,
   `stock_reservation_lines`, `stock_restores`, `stock_level_outbox`.
 

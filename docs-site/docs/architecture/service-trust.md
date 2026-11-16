@@ -51,7 +51,6 @@ values from Ansible Vault.
 | `GET /internal/v1/webhooks/export` | notification only |
 | `POST /internal/v1/orders/{id}/payment` | payment only |
 | `POST /internal/v1/inventory/levels`, `GET /internal/v1/inventory/export`, `GET /internal/v1/orders/by-reservation/{id}` (3.22.0) | warehouse only |
-| `POST /internal/v1/inventory/receipts` | warehouse only; `410 Gone` from 3.22.0 (receipts are warehouse ledger writes) |
 | everything else (`orders` queue, `fulfilment`, `refunds`, `warehouse-cancel`, `products`, `notifications`) | warehouse only |
 
 | Situation | Response |
