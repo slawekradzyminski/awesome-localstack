@@ -408,8 +408,9 @@
   ansible.builtin.assert:
     quiet: true
     that:
-      - ('|' ~ item ~ ' ') in verify_commerce_queues.stdout
-      - ('|DLQ.' ~ item ~ ' ') in verify_commerce_queues.stdout
+      # The longest queue name fills its column, so no padding follows it: match up to the bar.
+      - verify_commerce_queues.stdout is search('\\|' ~ (item | regex_escape) ~ '\\s*\\|')
+      - verify_commerce_queues.stdout is search('\\|DLQ\\.' ~ (item | regex_escape) ~ '\\s*\\|')
     fail_msg: >-
       Commerce event queue {{ item }} or its dead-letter queue is missing (or
       has no consumer): check artemis/commerce-events.properties and the
