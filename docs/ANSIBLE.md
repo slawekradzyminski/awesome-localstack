@@ -312,7 +312,9 @@ The role checks:
 - an Artemis message is consumed and delivered to Mailpit as a uniquely named
   email
 - every commerce event queue of both sites exists with at least one consumer
-  and has its dead-letter queue (`verify_commerce_event_consumer_queues`)
+  and has its dead-letter queue (`verify_commerce_event_consumer_queues`);
+  names are matched up to the column bar of `artemis queue stat`, because the
+  longest one fills its column without padding
 - `http://127.0.0.1/login`
 - `http://127.0.0.1/v3/api-docs`
 - `http://127.0.0.1/images/iphone.png`
