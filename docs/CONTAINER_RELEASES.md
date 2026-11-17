@@ -192,6 +192,42 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.24.0 — 17 November 2026
+
+Published by `scripts/release-train.py`. The follow-up of ADR 6 (warehouse-service
+owns the stock ledger), [PR #115](https://github.com/slawekradzyminski/test-secure-backend/pull/115):
+
+- Flyway V28 drops the `inventory_movements` table frozen in 3.22.0; the
+  movement history lives in warehouse-service's `stock_movements`, imported by
+  every deployment of 3.22.0 or 3.23.0.
+- `POST /internal/v1/inventory/receipts` (410 Gone since 3.22.0) is removed and
+  answers 404.
+- `GET /internal/v1/inventory/export` pages product ids and projected
+  quantities without the `movements` list; warehouse-service 1.6.0 and later
+  read a missing list as empty, so fresh stacks import as before.
+- Public REST, GraphQL and gRPC bodies are unchanged.
+
+LocalStack changes: pins and docs only
+([INVENTORY_OWNERSHIP_CONTRACT.md](INVENTORY_OWNERSHIP_CONTRACT.md) sections 6
+and 8).
+
+Upgrade: backend only (`make ansible-deploy-backend-upgrade`). A database still
+on 3.21 or older should go through 3.23.0 and let warehouse-service import
+first, or it keeps its quantities but loses the old movement history.
+Rollback: 3.23.0 does not start on the V28 schema where Hibernate validates it
+(`ddl-auto: validate` in the `aitesters`, `docker` and `local` profiles still
+maps the dropped table), so rolling back means restoring the pre-deploy
+PostgreSQL backup (`make ansible-deploy-backend-upgrade` takes one); keep it.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.24.0@sha256:aa1ea75151591cbe4798a2640352d1594d805ce3a00c12020f73726365476c1a` | [PR #116](https://github.com/slawekradzyminski/test-secure-backend/pull/116), `30f71ab` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/44028916112) |
+| `slawekradzyminski/warehouse-service:1.7.0` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.4.0` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.1.0` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0 — 15 November 2026
 
 Published by `scripts/release-train.py`. TODO: what changes, LocalStack
@@ -1154,11 +1190,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0, released 15 November 2026:
+Release train: backend 3.24.0, released 17 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.23.0@sha256:c7b62a5209a282af5e3eca18bc0becc59f11c16b53082827c04e78be6ab13c49` |
+| Backend | `slawekradzyminski/backend:3.24.0@sha256:aa1ea75151591cbe4798a2640352d1594d805ce3a00c12020f73726365476c1a` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
