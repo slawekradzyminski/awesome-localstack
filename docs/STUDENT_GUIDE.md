@@ -14,6 +14,7 @@ Its goal is to give you a fast local environment with:
 - PostgreSQL shared by the backend, warehouse-service, payment-service and
   notification-service
 - a gateway that serves the frontend, the four APIs and the static product images
+- the documentation wiki (`/docs/`)
 - a mocked LLM
 
 The lightweight profile uses `ollama-mock` and expects the `qwen3.5:2b` request model.
@@ -33,6 +34,7 @@ Use that URL for:
 - notification API (`/api/v1/webhooks`, `/api/v1/webhook-inboxes`,
   `/api/v1/notifications/emails`), routed by the gateway
 - Swagger UI and the OpenAPI documents
+- the documentation wiki (`/docs/`)
 - product images
 
 Do not think in terms of “frontend on one port and backend on another port” for normal usage. The gateway on `8081` is the intended entrypoint; the backend, warehouse-service, payment-service and notification-service are not published on host ports.
@@ -49,10 +51,15 @@ Make sure `8081` and `11434` are free before you start.
 flowchart TB
     U[Browser] --> G[Gateway<br/>localhost:8081<br/>serves frontend + /images]
     G --> F[Frontend]
+    G --> D[Docs wiki]
     G --> B[Backend]
     G --> W[warehouse-service]
     G --> PS[payment-service]
     G --> NS[notification-service]
+    B -- "stock commands" --> W
+    W -. "events + stock pushes" .-> B
+    PS -. "events" .-> B
+    NS -. "events" .-> B
     B --> P[(PostgreSQL)]
     W --> P
     PS --> P
@@ -69,6 +76,21 @@ paths (`/api/v1/webhooks`, `/api/v1/webhook-inboxes`, `/api/v1/notifications/`,
 under `/api/v1/` to the backend. All four services accept the same JWT from
 `POST /api/v1/users/signin`.
 
+Behind the gateway the services also talk to each other:
+
+- **warehouse-service owns the stock** (backend 3.22.0 and later). The backend
+  keeps a read copy of each product's quantity for product pages, search and
+  the cart, but checkout, admin stock adjustments and new products go to
+  warehouse-service synchronously. Without warehouse-service, checkout answers
+  `503`.
+- **Events flow from the backend.** warehouse-, payment- and
+  notification-service read the backend's commerce events (order paid,
+  cancelled, shipped...) by polling its event feed every 5 seconds. That is
+  why refunds, shipment cancellations, webhooks and restored stock appear a
+  few seconds after the change, not at once. The
+  [broker option](#optional-event-broker) carries the same events through
+  ActiveMQ Artemis instead.
+
 ## Start The Profile
 
 From the `awesome-localstack` directory run:
@@ -81,7 +103,9 @@ This profile has its own Compose project name (`awesome-light`), so switching fr
 
 Still, do not run the full profile and the lightweight profile at the same time. They use the same local ports.
 
-The first start downloads the images. After that the stack is usually ready within a minute.
+The first start downloads the images and builds the documentation wiki
+image locally, so it takes a few minutes. After that the stack is usually ready
+within a minute.
 
 ## Check That Containers Started
 
@@ -101,6 +125,7 @@ Long-running services, expected state `Up`:
 - `warehouse-service` (`healthy`, fulfilment, tracking, returns and purchasing)
 - `payment-service` (`healthy`, card payments)
 - `notification-service` (`healthy`, webhooks and commerce emails)
+- `docs` (`healthy` after about 30 seconds, the documentation wiki)
 
 One-shot setup container, expected state `Exited (0)`:
 
@@ -126,6 +151,7 @@ Main application URL:
 Useful lightweight URLs:
 
 - frontend login: `http://localhost:8081/login`
+- documentation wiki (how every service and flow works): `http://localhost:8081/docs/`
 - Swagger UI: `http://localhost:8081/swagger-ui/index.html` (definitions: backend JSON, backend YAML, "Warehouse service" and "Payment service")
 - backend OpenAPI JSON: `http://localhost:8081/v3/api-docs`
 - warehouse OpenAPI JSON: `http://localhost:8081/warehouse/v3/api-docs`
@@ -277,15 +303,30 @@ These `curl` requests verify container and gateway availability only.
 
 Usually means:
 
-- backend, warehouse-service or payment-service is still starting
-- the backend, warehouse-service and payment-service are ready within seconds once PostgreSQL is
-  up
+- backend, warehouse-service, payment-service or notification-service is still
+  starting
+- they are ready within seconds once PostgreSQL is up
 
 What to do:
 
 ```bash
 docker compose -f lightweight-docker-compose.yml ps -a
 docker compose -f lightweight-docker-compose.yml logs -f backend warehouse-service payment-service notification-service gateway
+```
+
+### Checkout Answers `503 Inventory service unavailable`
+
+Usually means the backend cannot reach warehouse-service, which owns the stock:
+it is still starting, restarting, or (in the chaos lab) cut off on purpose.
+Product pages and the cart keep working, because they read the backend's copy
+of the stock.
+
+What to check:
+
+```bash
+docker compose -f lightweight-docker-compose.yml ps -a warehouse-service
+docker compose -f lightweight-docker-compose.yml logs -f warehouse-service
+scripts/chaos status   # only if you started the chaos lab
 ```
 
 ### A Container Keeps Restarting
@@ -425,12 +466,20 @@ currencies and webhooks.
   Without a public receiver, create a built-in inbox, subscribe with its
   `inbox://<token>` URL, send `POST /api/v1/webhooks/{id}/test` and read the
   signed request back through the API. Deliveries arrive 5–8 seconds after the
-  change (they come from the event feed). Details: [WEBHOOKS.md](WEBHOOKS.md).
+  change (they come from the event feed; about one second with the
+  [broker option](#optional-event-broker)). Details: [WEBHOOKS.md](WEBHOOKS.md).
 - **Stock reservations with a time limit (backend 3.21.0):** a new order holds
   its stock until `reservationExpiresAt` (30 minutes); unpaid orders are then
   cancelled with reason `RESERVATION_EXPIRED` and the stock returns. Admins can
   expire a hold at once with
   `POST /api/v1/admin/orders/{id}/expire-reservation`.
+- **Stock owned by warehouse-service (backend 3.22.0, warehouse-service
+  1.6.0):** checkout reserves stock in warehouse-service; a cancelled or
+  expired order gets its stock back a few seconds later, once warehouse-service
+  has processed the cancellation and pushed the new quantity to the backend.
+  Tests that check the stock right after a cancel should poll for it. The stock
+  history (`GET /api/v1/admin/inventory/{productId}/movements`) is read from
+  warehouse-service.
 - **Split shipments (warehouse-service 1.5.0):** an order whose products are
   stocked in different warehouses ships as several parcels;
   `GET /api/v1/orders/{id}/shipments` lists them with `locationCode` and
@@ -442,8 +491,30 @@ currencies and webhooks.
 These features need backend 3.15.0, warehouse-service 1.2.0, payment-service
 1.0.0 and frontend 3.12.0; the reservation, parcel and notification items need
 backend 3.21.0, warehouse-service 1.5.0, notification-service 1.0.0 and
-frontend 3.15.0 (see
-[CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)).
+frontend 3.15.0; warehouse-owned stock needs backend 3.22.0 and
+warehouse-service 1.6.0; the broker option needs backend 3.23.0,
+warehouse-service 1.7.0, payment-service 1.4.0 and notification-service 1.1.0
+(see [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md)).
+
+## Optional: Event Broker
+
+By default the services poll the backend's event feed. To see the same events
+travel through a message broker (ActiveMQ Artemis) instead, add the broker
+overlay. It needs about 300–400 MiB more memory and the extra port `8161`:
+
+```bash
+docker compose -f lightweight-docker-compose.yml -f docker-compose.broker.yml up -d
+```
+
+- Artemis console: `http://127.0.0.1:8161/console` (`admin` / `admin`); each
+  service has its own queue and a dead-letter queue for events it failed five
+  times
+- queues from the command line: `scripts/broker stat`
+- webhooks, refunds and restored stock follow a change after about one second
+  instead of 5–8 seconds
+
+Stop it with the same two `-f` files. Details:
+[EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md).
 
 ## Performance Testing With k6 (Monitoring Overlay)
 
@@ -488,11 +559,22 @@ scripts/chaos status                 # what is broken now
 scripts/chaos heal                   # everything back to normal
 ```
 
-The guided exercises (a warehouse 503, an outbox backlog that drains, an
-event-feed consumer resuming from its cursor, a payment losing the race against
-an expiring reservation, a stalled database) are in the
-[fault-injection lab guide](FAULT_INJECTION_LAB.md). Add Jaeger traces with
-`scripts/chaos up lightweight tracing` (UI `http://127.0.0.1:16686`).
+The guided exercises are in the
+[fault-injection lab guide](FAULT_INJECTION_LAB.md):
+
+- a warehouse 503, an outbox backlog that drains, an event-feed consumer
+  resuming from its cursor, a payment losing the race against an expiring
+  reservation, a stalled database, following one request by `X-Request-Id`
+- checkout without the stock owner (`warehouse-down`, `warehouse-slow`), the
+  stock copy catching up, and an orphaned stock reservation released by the
+  reaper
+- with the broker (`scripts/chaos up lightweight broker`): an event crossing
+  the broker, a poison message in the dead-letter queue, a consumer that is
+  down while its queue fills up, and the broker down for the backend
+
+Add Jaeger traces with `scripts/chaos up lightweight tracing`
+(UI `http://127.0.0.1:16686`); the options combine, for example
+`scripts/chaos up lightweight broker tracing`.
 
 ## Stop The Profile
 
