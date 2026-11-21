@@ -171,16 +171,17 @@ LocalStack changes already on the branch:
   (`docker-compose.chaos-notification.yml` and
   `docker-compose.tracing-notification.yml` were folded in).
 
-Until notification-service 1.0.0 is published the server profile carries
+Until notification-service was first published (as 1.0.1 in the train below)
+the server profile carried
 `slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST`
 and the local profiles the bare `1.0.0` tag. `scripts/verify-release-images.py`,
-`scripts/verify-image-pins.py` and the Ansible image gate fail with an explicit
+`scripts/verify-image-pins.py` and the Ansible image gate failed with an explicit
 placeholder message, and CI's `runDocker`, `verifyLightweight` and
-`verifyMonitoringOverlay` cannot pull the image. `scripts/release-train.py pin`
-treats the placeholder as a first pin: it replaces the placeholder and the bare
+`verifyMonitoringOverlay` could not pull the image. `scripts/release-train.py pin`
+treated the placeholder as a first pin: it replaced the placeholder and the bare
 tags in every Compose file and the compatibility-set row with the published
-`tag@sha256`. Bump backend, warehouse-service, payment-service and frontend in
-the same train (the other images stay at their current pins until then).
+`tag@sha256`, in the same train as backend, warehouse-service, payment-service
+and frontend.
 
 Upgrade: new Vault keys first, then `scripts/release-train.py deploy --yes`
 (backend version change: quiesced upgrade with a pre-deploy backup).
@@ -230,8 +231,70 @@ PostgreSQL backup (`make ansible-deploy-backend-upgrade` takes one); keep it.
 
 ## Release train: backend 3.23.0, warehouse-service 1.7.0, payment-service 1.4.0, notification-service 1.1.0 — 15 November 2026
 
-Published by `scripts/release-train.py`. TODO: what changes, LocalStack
-changes, upgrade order and rollback.
+Published by `scripts/release-train.py` and deployed to awesome.byst.re and
+aitesters.byst.re on 16 November 2026. Commerce events can travel through
+ActiveMQ Artemis next to the HTTP feed: the same events, JSON and ids, chosen
+per stack with `EVENTS_TRANSPORT=feed|broker`
+([EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md),
+[ADR 7](ARCHITECTURE_DECISIONS.md#adr-7-a-broker-transport-next-to-the-event-feed)).
+
+- **backend 3.23.0:** an outbox relay publishes new `domain_events` rows to
+  the site's multicast address every second in one transacted JMS session
+  (at least once, with broker duplicate detection). Flyway V27 adds
+  `domain_events.published_at` and marks everything older than one hour as
+  published, so the first run in `broker` mode relays at most the last hour.
+  New gauge `events_relay_pending`. The feed endpoint is served in both modes.
+- **warehouse-service 1.7.0, payment-service 1.4.0, notification-service
+  1.1.0:** a transacted listener on each service's own durable queue, started
+  only in `broker` mode (warehouse-service waits for its stock ledger). Any
+  exception rolls the delivery back; Artemis redelivers it and dead-letters it
+  after five attempts. `processed_events` deduplicates by event id; the feed
+  cursor does not move in `broker` mode. warehouse- and payment-service gained
+  the Artemis client's native reflection hints, and every service starts Netty
+  with the pooled allocator (the 4.2 adaptive allocator made the native Artemis
+  client drop listener sessions at start-up).
+- Public REST, GraphQL and gRPC bodies are unchanged.
+
+LocalStack changes ([PR #107](https://github.com/slawekradzyminski/awesome-localstack/pull/107),
+[PR #108](https://github.com/slawekradzyminski/awesome-localstack/pull/108)):
+
+- Profiles: full and both production sites run `broker`
+  (`awesome.commerce.events`, `aitesters.commerce.events` on the shared
+  Artemis); lightweight stays on `feed` unless `docker-compose.broker.yml` is
+  added; the course compatibility stack stays on `feed`, so l20 is unchanged.
+- `artemis/commerce-events.properties` declares one durable queue per consumer
+  filtered on the event type and one dead-letter queue per consumer queue
+  (five attempts, 1/2/4/8 s backoff); Artemis loads it with
+  `artemis run --properties`.
+- Lab: Toxiproxy proxies to the broker, scenarios `broker-down`,
+  `broker-slow` and `partition-broker`, `scripts/broker`
+  (stat, poison, dlq, redrive, purge-dlq), broker exercises in
+  [FAULT_INJECTION_LAB.md](FAULT_INJECTION_LAB.md#broker-transport), the docs-site
+  page *Event broker*, and `scripts/verify-event-broker.sh` in CI.
+- Ansible: `artemis/` is mirrored and the broker restarted when the topology
+  changes; every consumer gets `SPRING_ARTEMIS_USER`/`_PASSWORD` from the
+  existing `artemis_username`/`artemis_password` Vault keys (no new secret);
+  the verify role checks that every commerce queue has a consumer and a
+  dead-letter queue (#108 fixed its match for the longest queue name).
+
+Upgrade: all four images in one train with `make ansible-deploy-backend-upgrade`
+(migration V27, pre-deploy backup). The first deployment recreates `activemq`
+and starts relaying; consumers skip the part of the last hour they already
+handled through the feed.
+
+Rollback, in order of preference:
+
+1. Transport only, no image change: set `EVENTS_TRANSPORT: feed` on every
+   backend and service of a site and deploy. The consumers resume the feed from
+   their cursors and skip by event id what the broker delivered
+   ([ANSIBLE.md](ANSIBLE.md#commerce-event-broker)).
+2. Images: re-pin backend 3.22.2, warehouse-service 1.6.0, payment-service
+   1.3.1 and notification-service 1.0.1 and redeploy. These images ignore
+   `EVENTS_TRANSPORT` and poll the feed; backend 3.22.2 tolerates the extra
+   `published_at` column of V27 (Hibernate validation does not reject
+   unmapped columns), so the database stays as it is. Rolling back past 3.23.0
+   means also rolling back any later backend first (3.24.0 drops a table; see
+   its section).
 
 | Image | Source | Release workflow |
 | --- | --- | --- |
@@ -1349,14 +1412,12 @@ Rollback backend reference: `slawekradzyminski/backend:3.7.16@sha256:71cd8913a27
 
 The production compatibility set is the seven first-party services above
 (`PRODUCTION_SERVICES` in `scripts/verify-release-images.py`).
-`notification-service` is listed but not yet published: the server profile
-carries the `@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST` placeholder (any
-`PENDING_<SERVICE>_DIGEST` is recognised), the verification scripts report it
-explicitly, and the server deployment refuses to run (see `docs/ANSIBLE.md`).
-`scripts/release-train.py pin` uses the same reference in the lightweight, full
-and server profiles (`notification-service` and
-`aitesters-notification-service`) and replaces the table row above with the
-immutable reference.
+A service whose first release is not published yet is pinned with a
+`@sha256:PENDING_<SERVICE>_DIGEST` placeholder: the verification scripts report
+it explicitly and the server deployment refuses to run (see `docs/ANSIBLE.md`)
+until `scripts/release-train.py pin` replaces it, in every profile, with the
+published reference. No placeholder is in use today; notification-service, the
+last service to get one, has been pinned by digest since 1.0.1.
 The main and `aitesters` variants do not have separate application release
 lines: `aitesters-backend` must use the exact current backend reference and
 `aitesters-frontend` must use the exact current frontend reference. Their

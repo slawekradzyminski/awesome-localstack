@@ -157,9 +157,6 @@ services:
       - my-private-ntwk
 
   notification-service:
-    # TODO(release train): notification-service 1.0.0 is not published yet. Pin the
-    # published tag@sha256 here, in lightweight-docker-compose.yml and (replacing the
-    # PENDING_NOTIFICATION_SERVICE_DIGEST placeholder) in docker-compose.server.yml.
     image: slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb
     restart: always
     expose:

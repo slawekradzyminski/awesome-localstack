@@ -326,12 +326,6 @@ services:
       - my-private-ntwk
 
   notification-service:
-    # PLACEHOLDER PIN (TODO release train): replace PENDING_NOTIFICATION_SERVICE_DIGEST
-    # with the published Docker Hub manifest digest (here, in
-    # aitesters-notification-service, and as the full tag@sha256 in docker-compose.yml
-    # and lightweight-docker-compose.yml, which carry the bare 1.0.0 tag).
-    # scripts/verify-release-images.py, scripts/verify-image-pins.py and the Ansible
-    # image gate fail until then.
     image: slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb
     restart: unless-stopped
     hostname: notification-service
@@ -392,7 +386,7 @@ services:
   aitesters-notification-service:
     # The sandbox's own notification-service, paired with aitesters-backend and
     # sharing its database (schema notification), like notification-service on the
-    # stable site. Same placeholder pin as notification-service.
+    # stable site. Same image reference as notification-service.
     image: slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb
     restart: unless-stopped
     hostname: aitesters-notification-service
