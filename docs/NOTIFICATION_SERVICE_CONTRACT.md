@@ -145,10 +145,10 @@ backend's own `/api/v1/local/email/outbox` keeps the account emails.
 - **Labs.** `docker-compose.chaos.yml` routes it through `notification-to-backend`
   (`toxiproxy:34001`) and `notification-to-postgres` (`toxiproxy:45432`);
   `docker-compose.tracing.yml` turns its tracing on.
-- **Image pin.** Until 1.0.0 is published the server profile carries
-  `slawekradzyminski/notification-service:1.0.0@sha256:PENDING_NOTIFICATION_SERVICE_DIGEST`
-  and the local profiles use the bare `1.0.0` tag (a locally built image with
-  that tag runs as is). `scripts/verify-release-images.py`,
-  `scripts/verify-image-pins.py` and the Ansible image gate fail until
-  `scripts/release-train.py pin` replaces them with the published digest (see
-  [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md#distributed-lab-release)).
+- **Image pin.** Every profile pins the same published `tag@sha256` reference
+  for `notification-service` and `aitesters-notification-service` (see
+  [CONTAINER_RELEASES.md](CONTAINER_RELEASES.md#current-compatibility-set)).
+  The first release went out with a `PENDING_NOTIFICATION_SERVICE_DIGEST`
+  placeholder; `scripts/verify-release-images.py`,
+  `scripts/verify-image-pins.py` and the Ansible image gate still refuse any
+  such placeholder or a bare tag.
