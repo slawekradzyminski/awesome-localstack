@@ -164,9 +164,8 @@ the event id in `processed_events` and advances the cursor:
 
 A refund leaves the payment `PARTIALLY_REFUNDED` or `REFUNDED`. The backend
 does not learn the outcome; testers read it from
-`GET /api/v1/orders/{orderId}/payments`. A refund appears there about 5–8
-seconds after the cancellation or refund booking (3 s settle delay plus up to
-one poll interval).
+`GET /api/v1/orders/{orderId}/payments`. A refund appears there within about
+5 seconds of the cancellation or refund booking (up to one poll interval).
 
 **Removed in 1.1.0:** the inbound `POST /internal/v1/payments/refunds`
 endpoint and its service-token filter; payment-service has no internal API.

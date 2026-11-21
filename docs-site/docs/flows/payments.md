@@ -188,7 +188,7 @@ sequenceDiagram
     C->>B: Cancel order 42
     B->>F: card-refund.requested (same transaction)
     B-->>C: 200 CANCELLED
-    Note over F: Settle delay 3 s
+    Note over F: Feed position assigned on commit
     P->>F: Poll after cursor (every 5 s)
     F-->>P: card-refund.requested
     Note over P: Refund booked, payment REFUNDED
@@ -208,8 +208,8 @@ each event once (event ids are recorded in `processed_events`):
 | Malformed event | Logged and skipped; the feed moves on |
 | Backend unavailable | Poll stops; the next poll retries from the same cursor |
 
-Expect the refund about **5–8 seconds** after the cancellation or refund
-booking (3 s settle delay plus up to one 5 s poll). The backend's order JSON
+Expect the refund within about **5 seconds** of the cancellation or refund
+booking (up to one 5 s poll). The backend's order JSON
 does not show the card refund; check it with
 `GET /api/v1/orders/{orderId}/payments`.
 

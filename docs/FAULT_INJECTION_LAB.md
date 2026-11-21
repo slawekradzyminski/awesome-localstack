@@ -178,8 +178,8 @@ warehouse-service.
 | `backend-slow [ms] [target]` | `latency` toxic (default 3000 ms) on the answers of `<target>-to-backend` | Every backend call of the target takes `ms` longer. Beyond the client read timeout (warehouse-service: 10 s) the call fails and becomes a 503 |
 | `backend-flaky [percent] [target]` | `reset_peer` and `timeout` (5 s) toxics, each on half of the given share of connections (default 30 %) | Some calls fail at once (connection reset), some after 5 s, the rest work. Retries and outboxes earn their keep. Pooled keep-alive connections keep their fate until they are replaced, so the effect is per connection, not per request |
 | `bandwidth [KB/s] [target]` | `bandwidth` toxic (default 8 KB/s) on the answers of `<target>-to-backend` | Small answers are fine, big ones (an order list, the JWKS on a cold start) crawl |
-| `postgres-stall [ms] [target]` | `timeout` toxics on both directions of `<target>-to-postgres` | Database connections stop passing data. Without `ms` they hang until `heal`; with `ms` they close after `ms`. Requests that need the database hang and fail after HikariCP's 30 s connection timeout; `/actuator/health` stops answering |
-| `postgres-down [target]` | disables `<target>-to-postgres` | Pooled connections are closed, new ones refused. Requests that need the database fail at once (warehouse-service: `500` in a few milliseconds); health turns DOWN |
+| `postgres-stall [ms] [target]` | `timeout` toxics on both directions of `<target>-to-postgres` | Database connections stop passing data. Without `ms` they hang until `heal`; with `ms` they close after `ms`. Requests that need the database hang and fail after HikariCP's 5 s connection timeout with `503 Database unavailable` (a request already holding a connection hangs until the stall ends); `/actuator/health` stops answering |
+| `postgres-down [target]` | disables `<target>-to-postgres` | Pooled connections are closed, new ones refused. Requests that need the database answer `503 {"message":"Database unavailable"}`, at once when they hit a closed pooled connection, otherwise after HikariCP's 5 s `connectionTimeout`; health turns DOWN |
 | `warehouse-down` | disables `backend-to-warehouse` | Backend 3.22.0+: stock commands fail at once. Checkout (`POST /api/v1/orders`) and admin stock adjust answer `503 {"message":"Inventory service unavailable"}`; product reads, the cart and admin stock reads (from the backend's projection) keep working. Older backends never call warehouse-service, so nothing changes |
 | `warehouse-slow [ms]` | `latency` toxic (default 3000 ms) on the answers of `backend-to-warehouse` | Backend 3.22.0+: checkout and adjust take `ms` longer. From 5000 ms on the backend's read timeout (`WAREHOUSE_READ_TIMEOUT`, 5 s) turns them into the same 503 |
 | `broker-down [target]` | disables `<target>-to-activemq` | Broker transport. `backend`: checkout and cancel keep working, the relay backs off and `events_relay_pending` grows until `heal`. A consumer: its listener reconnects every 5 s and its queue holds the events meanwhile. Health stays UP everywhere (the broker is not part of it) |
@@ -366,8 +366,10 @@ select status, count(*) from notification.webhook_deliveries group by status;
 ### Exercise 3: the event-feed consumer resumes from its cursor
 
 warehouse-service and payment-service learn about cancellations from the
-backend's [event feed](EVENT_FEED.md). Each keeps a **cursor**: the sequence of
-the last event it handled, stored in its own database. After an outage it asks
+backend's [event feed](EVENT_FEED.md). Each keeps a **cursor**: the feed
+position of the last event it handled, stored in its own database. Positions
+follow commit order (`domain_events.feed_position`, equal to `sequence` unless
+a transaction committed after a later one). After an outage it asks
 for "everything after my cursor", so nothing is lost and nothing is handled
 twice.
 
@@ -391,7 +393,7 @@ twice.
 4. The backend recorded the event; the warehouse has not seen it:
 
     ```bash
-    psql "select sequence, type, order_id, request_id from domain_events order by sequence desc limit 3"
+    psql "select sequence, feed_position, type, order_id, request_id from domain_events order by sequence desc limit 3"
     psql "select id, status from warehouse.shipments where order_id = $O"   # AWAITING_PICK
     psql "select * from warehouse.event_cursors"                            # unchanged
     psql "select * from payment.event_cursors"                              # moved: payment-service refunded
@@ -485,9 +487,11 @@ A stalled database is worse than a dead one: nothing fails, everything waits.
       -H "Authorization: Bearer $W" -H 'X-Request-Id: lab-ex5'
     ```
 
-    **Expected:** `500 Internal Server Error` after about 30 s. HikariCP finds
-    its pooled connections dead, cannot open a new one through the stalled link
-    and gives up after its `connectionTimeout` (30 s).
+    **Expected:** `503 {"message":"Database unavailable"}` after about 5 s.
+    HikariCP finds its pooled connections dead, cannot open a new one through
+    the stalled link and gives up after its `connectionTimeout` (5 s; HikariCP's
+    default of 30 s made every caller wait 30 s in warehouse-service 1.7.0 and
+    earlier).
 3. Read the warehouse log:
 
     ```bash
@@ -496,20 +500,24 @@ A stalled database is worse than a dead one: nothing fails, everything waits.
 
     **Expected:** `HikariPool-1 - Failed to validate connection … (This
     connection has been closed.)` and `HikariPool-1 - Connection is not
-    available, request timed out after 30003ms (total=0, active=0, idle=0,
+    available, request timed out after 5003ms (total=0, active=0, idle=0,
     waiting=3)` under `lab-ex5`: the pool is empty and three requests queue for
     it. The health endpoint stops answering, so after three failed checks
     `docker compose -p awesome-light ps` shows the service `unhealthy`.
 4. `scripts/chaos heal`. HikariCP opens new connections on the next request;
    the service answers normally within a second or two.
 5. Compare with `scripts/chaos postgres-down warehouse`: the same call answers
-   `500` in a few milliseconds. A refused connection fails fast, a stalled one
-   costs every caller 30 s. `scripts/chaos postgres-stall 5000 warehouse` stalls
+   `503 Database unavailable` too, also after about 5 s: HikariCP keeps trying
+   to open a connection until its `connectionTimeout`, refused or stalled. A
+   short timeout bounds what an outage costs every caller; the 503 tells the
+   caller a retry may work. `scripts/chaos postgres-stall 5000 warehouse` stalls
    connections and closes them after 5 s.
 6. `scripts/chaos postgres-stall backend` does the same to the backend:
-   `GET /api/v1/products` hangs until the gateway gives up with
-   `504 Gateway Time-out` after 60 s, and the storefront hangs with it. After
-   `heal` the backend answers at once.
+   `GET /api/v1/products` answers `503 Database unavailable` after about 5 s
+   (backend 3.24.0 and earlier hung until the gateway gave up with
+   `504 Gateway Time-out` after 60 s, and the storefront hung with it). A
+   request that already holds a connection when the stall starts still hangs
+   until the stall ends. After `heal` the backend answers at once.
 
 ### Exercise 6: find everything with X-Request-Id
 
@@ -790,9 +798,9 @@ exercises below compare the two transports; Exercise 3 shows the feed side.
 5. The feed cursors did not move (`select * from warehouse.event_cursors`):
    in broker mode nobody polls.
 
-**Question:** the restore took about one second here and 5 to 8 seconds with
-the feed (Exercise 3). Where did the difference go? (The settle delay and the
-poll interval; the relay runs every second.)
+**Question:** the restore took about one second here and up to 5 seconds with
+the feed (Exercise 3). Where did the difference go? (The poll interval; the
+relay runs every second.)
 
 ### Exercise 11: a poison message ends in the dead-letter queue
 

@@ -22,8 +22,8 @@ flowchart LR
 | Local outbox | `GET /api/v1/local/notifications/outbox` | Lightweight profile and the aitesters sandbox (key-protected there) |
 | OpenAPI | `/notification/v3/api-docs` | |
 
-Timing: an event becomes visible in the feed after a 3 s settle delay, so a
-delivery or an email leaves 5–8 s after the change. When the backend is down
+Timing: an event becomes visible in the feed once its transaction commits, so a
+delivery or an email leaves up to 5 s (one poll) after the change. When the backend is down
 (`scripts/chaos backend-down notification`) nothing new is read; when a
 receiver or the broker is down, deliveries and emails wait in the service's
 outboxes (`notification_outbox_pending` in Prometheus) and are retried.

@@ -83,7 +83,7 @@ Step by step:
 4. **Card** — in the same transaction the backend publishes the card part as
    a `card-refund.requested` event (internal, never sent to user webhooks).
    payment-service pulls it from the [event feed](../reference/EVENT_FEED.md)
-   about 5–8 seconds later and moves the payment to `PARTIALLY_REFUNDED` or
+   up to about 5 seconds later and moves the payment to `PARTIALLY_REFUNDED` or
    `REFUNDED`. The backend never calls payment-service and does not wait for
    the result.
 

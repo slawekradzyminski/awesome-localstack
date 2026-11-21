@@ -62,10 +62,11 @@ The feed reuses what every profile already has: PostgreSQL and HTTP.
   payment-service → backend. The backend can start, run and be released without
   either service; `PAYMENT_BASE_URL` is gone from every Compose file and the
   release check now requires its absence.
-- Delivery is at-least-once with idempotent consumers. Latency is the settle
-  delay (3 s) plus up to one poll interval (5 s): about **5–8 seconds** from a
-  cancellation to a refunded card or a cancelled shipment, instead of the next
-  outbox or reconciler run.
+- Delivery is at-least-once with idempotent consumers. Latency is up to one
+  poll interval (5 s) from a cancellation to a refunded card or a cancelled
+  shipment, instead of the next outbox or reconciler run. (Until backend
+  3.24.0 a 3 s settle delay came on top; the feed now serves events in commit
+  order instead, see EVENT_FEED.md.)
 - The backend stores events for **30 days** (`events.retention`). A consumer
   down for longer misses events; warehouse-service keeps its reconciler (now
   every 10 minutes) as a safety net, and refunds stay capped by the backend's
@@ -273,8 +274,8 @@ the defaults.
 - The backend makes no outbound notification call; a receiver or broker outage
   delays emails and deliveries in notification-service's outboxes
   (`notification_outbox_pending`) without touching checkout.
-- Webhook deliveries and commerce emails leave 5–8 seconds after the change
-  (settle delay plus poll interval) instead of right after the commit. The
+- Webhook deliveries and commerce emails leave up to one poll interval (5 s)
+  after the change instead of right after the commit. The
   delivery body is byte-compatible, so receivers notice only the latency.
 - One more container per site: 160 MiB limit each (see the memory budget in
   [ANSIBLE.md](ANSIBLE.md#memory-budget)) and a fourth database role per site.
@@ -382,8 +383,8 @@ lightweight profile about 300–400 MiB only when a student asks for it.
   backend, now plus the broker. Checkout never waits for the broker: while
   Artemis is unreachable the relay's backlog grows (`events_relay_pending`) and
   drains afterwards.
-- Latency from a cancellation to its effect drops from 5–8 seconds (settle
-  delay plus poll interval) to about one second (the relay interval).
+- Latency from a cancellation to its effect drops from up to 5 seconds (the
+  poll interval) to about one second (the relay interval).
 - Ordering is per order (message groups), and only while nothing is being
   redelivered: a redelivery delay lets later events of the same order overtake
   the failed one. Consumers therefore deduplicate by event id only and no longer

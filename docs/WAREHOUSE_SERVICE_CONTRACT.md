@@ -254,8 +254,9 @@ X-Service-Token: <WAREHOUSE_SERVICE_TOKEN>
       nextCursor, hasMore }
 ```
 
-Events are ordered by `sequence`; only events recorded at least three seconds
-ago are served (settle delay) and events are kept for 30 days. After a page the
+Events are ordered by `sequence`, the event's feed position: positions follow
+commit order, so a cursor never passes an event that commits later (see
+EVENT_FEED.md). Events are kept for 30 days. After a page the
 cursor moves to `nextCursor`, past events of other types.
 
 ### `order.cancelled` handling

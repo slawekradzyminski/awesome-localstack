@@ -39,7 +39,7 @@ limits, signature header, SSRF rules and retry policy. What changed:
   `GET /api/v1/admin/webhooks` to notification-service (port 4005), whose
   OpenAPI is `/notification/v3/api-docs`.
 - Deliveries are built from the backend's [event feed](EVENT_FEED.md), so a
-  delivery leaves 5–8 seconds after the change instead of right after the
+  delivery leaves up to 5 seconds after the change instead of right after the
   commit; the body is byte-compatible with what the backend sent.
 - Every profile that runs notification-service starts the backend with
   `WEBHOOKS_ENABLED=false`: the backend records no deliveries and runs no

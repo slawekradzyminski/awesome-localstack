@@ -137,7 +137,7 @@ and the services **pull** them.
 
 | Feed | Writer | Readers | Delivery |
 | --- | --- | --- | --- |
-| `domain_events`, `GET /internal/v1/events` | backend | payment-service (`card-refund.requested`), warehouse-service (`order.cancelled`), notification-service (webhook types, `notification.requested`) | each consumer polls every 5 s from its own cursor; events are served after a 3 s settle delay and kept for 30 days; at-least-once, deduplicated by event `id` |
+| `domain_events`, `GET /internal/v1/events` | backend | payment-service (`card-refund.requested`), warehouse-service (`order.cancelled`), notification-service (webhook types, `notification.requested`) | each consumer polls every 5 s from its own cursor; events are served in commit order (feed position) and kept for 30 days; at-least-once, deduplicated by event `id` |
 
 Up to backend 3.15.0 card refunds went the other way, from a backend
 `payment_refund_outbox` to `POST /internal/v1/payments/refunds` on

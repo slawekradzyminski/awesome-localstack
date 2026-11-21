@@ -68,7 +68,7 @@ flowchart TB
 ```
 
 Solid arrows are calls made when needed, dotted arrows are polls every 5 s
-(events become visible after a 3 s settle delay, so expect 5–8 s end to end).
+(events become visible once their transaction commits, so expect up to 5 s end to end).
 The reasons, and why this is not an ActiveMQ topic, are in the
 [architecture decisions](../reference/ARCHITECTURE_DECISIONS.md); the feed
 contract is in [Event feed](../reference/EVENT_FEED.md).

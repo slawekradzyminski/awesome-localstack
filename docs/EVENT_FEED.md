@@ -61,20 +61,32 @@ every host) and is absent from the public OpenAPI document.
 - `nextCursor` is the last returned sequence (or `after` for an empty page);
   the consumer passes it as the next `after`. It also moves past events the
   `types` filter excluded.
-- `hasMore` is true when more matching settled events exist.
+- `hasMore` is true when more matching events exist.
 - 400 `{"message": ...}` for bad parameters, 401 for a missing or wrong service
   token, 404 when no service token is configured.
 
-### Settle delay
+### Commit-ordered positions
 
-Only events recorded at least `events.settle-delay` ago (default `PT3S`) are
-served. Sequences are allocated when a row is inserted, not when its
-transaction commits: transaction A can take sequence 10, transaction B
+The `sequence` a consumer sees is the event's **feed position**, assigned in
+commit order. Insert sequences are allocated when a row is inserted, not when
+its transaction commits: transaction A can take sequence 10, transaction B
 sequence 11, and B can commit first. A consumer that read 11 and stored it as
-its cursor would never see 10. Holding back the last three seconds gives slower
-transactions time to commit before their neighbours become visible. The price
-is latency: an event reaches a consumer three seconds plus up to one poll
-interval (5 s) after it was recorded, so typically 5–8 seconds.
+its cursor would never see 10.
+
+So every feed read first gives the committed events that have no position yet
+a position (backend V29 `domain_events.feed_position`), one reader at a time
+under the lock of the single `domain_event_feed_head` row. A row is visible to
+that reader only once its transaction has committed, so A, committing after B
+was served at position 11, gets position 12 and is served on the next poll.
+Each position is `max(last position + 1, insert sequence)`, so positions equal
+the insert sequences whenever transactions commit in insert order. An event
+reaches a consumer within one poll interval (5 s) of its commit.
+
+Until backend 3.24.0 the feed held back events recorded less than 3 s ago
+(`events.settle-delay`). That only narrowed the window: a cancellation whose
+transaction committed more than 3 s after it inserted its events (for example
+under database latency) was skipped by every consumer, and its card refund
+was never made. The exploratory chaos session of 2026-11-21 found it.
 
 ### Retention
 
@@ -86,7 +98,6 @@ net for cancellations, and card refunds keep their own record in the backend's
 
 | Property | Environment variable | Default |
 | --- | --- | --- |
-| `events.settle-delay` | `EVENTS_SETTLE_DELAY` | `PT3S` |
 | `events.retention` | `EVENTS_RETENTION` | `P30D` |
 | `events.retention-job.enabled` | `EVENTS_RETENTION_JOB_ENABLED` | `true` |
 | `events.retention-job.interval` | `EVENTS_RETENTION_JOB_INTERVAL` | `PT1H` |
