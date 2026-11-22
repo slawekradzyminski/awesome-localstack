@@ -6,7 +6,7 @@ name: awesome-full-native
 
 services:
   backend:
-    image: slawekradzyminski/backend:3.24.0@sha256:aa1ea75151591cbe4798a2640352d1594d805ce3a00c12020f73726365476c1a
+    image: slawekradzyminski/backend:3.25.0@sha256:cb494ca7b1c43c7e0f31bd701718248043bc5a1f9478cbf8ed0f28a0e94f6e27
     restart: always
     expose:
       - "4001"
@@ -68,7 +68,7 @@ services:
       - my-private-ntwk
 
   warehouse-service:
-    image: slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6
+    image: slawekradzyminski/warehouse-service:1.8.0@sha256:52b23e051161e0afd4374bd8115f489ad30536b2aeb92cca606b6bf9e9ffc17b
     restart: always
     expose:
       - "4003"
