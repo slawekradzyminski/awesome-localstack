@@ -167,9 +167,10 @@
 **Settlement delay**
 :   Time after which `PROCESSING` test payments settle (10 s by default).
 
-**Settle delay (event feed)**
-:   The feed serves only events recorded at least 3 s ago, so a transaction
-    that committed late with a lower sequence is not skipped.
+**Feed position (event feed)**
+:   The `sequence` the feed serves: assigned to events in commit order, so a
+    transaction that inserted its event early and committed late is served
+    after the events that overtook it instead of being skipped.
 
 **SSRF**
 :   Server-side request forgery; webhook URLs are checked so they cannot reach

@@ -465,7 +465,7 @@ currencies and webhooks.
   `/api/v1/webhooks` (served by notification-service from backend 3.21.0).
   Without a public receiver, create a built-in inbox, subscribe with its
   `inbox://<token>` URL, send `POST /api/v1/webhooks/{id}/test` and read the
-  signed request back through the API. Deliveries arrive 5–8 seconds after the
+  signed request back through the API. Deliveries arrive up to 5 seconds after the
   change (they come from the event feed; about one second with the
   [broker option](#optional-event-broker)). Details: [WEBHOOKS.md](WEBHOOKS.md).
 - **Stock reservations with a time limit (backend 3.21.0):** a new order holds
@@ -511,7 +511,7 @@ docker compose -f lightweight-docker-compose.yml -f docker-compose.broker.yml up
   times
 - queues from the command line: `scripts/broker stat`
 - webhooks, refunds and restored stock follow a change after about one second
-  instead of 5–8 seconds
+  instead of up to 5 seconds
 
 Stop it with the same two `-f` files. Details:
 [EVENT_BROKER_CONTRACT.md](EVENT_BROKER_CONTRACT.md).

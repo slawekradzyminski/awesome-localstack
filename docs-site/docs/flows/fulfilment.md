@@ -78,7 +78,7 @@ sequenceDiagram
     Note over B: fulfilmentState CANCELLED
     B->>F: order.cancelled (same transaction)
     B-->>C: 200 CANCELLED
-    Note over F: Settle delay 3 s
+    Note over F: Feed position assigned on commit
     W->>F: Poll order.cancelled (every 5 s)
     F-->>W: order.cancelled, order 42
     Note over W: Shipment CANCELLED, lastActor system
@@ -92,7 +92,7 @@ sequenceDiagram
 | `PACKED`, `SHIPPED` | Left alone and logged (the backend refuses those cancellations) |
 | Finished, already cancelled, or no shipment | Ignored |
 
-The shipment is cancelled about **5–8 seconds** after the order. An operator
+The shipment is cancelled up to about **5 seconds** after the order. An operator
 who acts inside that window gets `409 Order was cancelled by the customer` and
 the shipment is cancelled on the spot.
 

@@ -4,7 +4,7 @@
     From backend 3.21.0 user webhooks live in **notification-service**
     (port 4005, OpenAPI `/notification/v3/api-docs`). The endpoints, bodies,
     signature and limits below did not change; deliveries are built from the
-    backend's event feed, so they leave 5–8 s after the change. See
+    backend's event feed, so they leave up to 5 s after the change. See
     [Notifications](notifications.md).
 
 Any signed-in user can subscribe an HTTP URL to **their own order events**.

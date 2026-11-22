@@ -59,7 +59,7 @@ public hosts, use the read-only curl smoke test, `scripts/smoke-features.sh <url
   never see each other's products.
 - **Wait for the system, never for the clock.** Background steps are
   awaited with `expect.poll`: card settlement (10 s), payment results, the
-  event feed (5 s polling, 3 s settle delay) and webhook deliveries. The
+  event feed (5 s polling) and webhook deliveries. The
   timeout comes from one constant, `ASYNC_TIMEOUT`.
 - **Fast-forward instead of waiting.** The carrier moves a shipment one step every two minutes. Tests call
   `POST /api/v1/warehouse/shipments/{id}/carrier/advance` instead.

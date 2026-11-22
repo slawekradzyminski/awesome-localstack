@@ -51,6 +51,8 @@ Responses:
 - **404** `{"message":"Product 1 not found","productId":1}`: the product has no stock item.
 - A repeat call with the same `reservationId` and identical lines returns the stored 201 body. With different lines
   it returns 409 `"reservationId already used with different lines"`.
+- **409** `"Reservation already released"` when the id belongs to a `RELEASED` reservation or a release tombstone
+  (2.3). Nothing is deducted.
 
 ### 2.2 Confirm
 `POST /internal/v1/stock/reservations/{reservationId}/confirm`
@@ -71,10 +73,16 @@ Behaviour:
 - If the reservation is `PENDING_CONFIRMATION`, puts the stock back. Each line writes an `ORDER_RESTORED` movement
   with `actor = "system"` and `reason = "Reservation released"`, and the status becomes `RELEASED`.
 
+- If the id is unknown, stores a `RELEASED` tombstone without lines (`username = "system"`). The backend releases a
+  reservation whose reserve call timed out, and that reserve may still be on its way: when it arrives, it finds the
+  tombstone and deducts nothing (2.1).
+
 Responses:
-- **200** `{"reservationId":"uuid","status":"RELEASED"}`
+- **200** `{"reservationId":"uuid","status":"RELEASED"}`, also for an unknown id.
 - A repeat call returns 200 with the same body.
 - **409** for a `CONFIRMED` reservation: confirmed orders are restored only through `order.cancelled`.
+- **409** `"Reservation was created concurrently; release it again"` when the reserve commits the id while the
+  tombstone is being stored.
 
 ### 2.4 Adjust (admin)
 `POST /internal/v1/stock/adjustments`
@@ -144,7 +152,8 @@ Response: **204**, idempotent (204 also when the item is missing).
   existing `processed_events`.
 - warehouse no longer derives restores from `order.cancelled`. Only `stock.restore-requested` restores stock.
   Legacy and shipped orders get no such event.
-- Latency is the feed settle delay (3 s) plus `WAREHOUSE_EVENTS_POLL_INTERVAL` (5 s) plus the level push (3.3).
+- Latency is up to one `WAREHOUSE_EVENTS_POLL_INTERVAL` (5 s) after the cancellation commits, plus the level push
+  (3.3).
   Clients must poll.
 
 ### 3.2 Purchase receipts and return restocks
@@ -185,7 +194,9 @@ Never hold a DB connection during an HTTP call: the pool size is 3.
 1. A read-only tx loads the cart and validates it (the existing checks, including the local `checkAvailable`
    against the projection, for a fast 409).
 2. No tx: reserve (2.1) with a new UUID. On 409 or 404, map to today's 409 `"Insufficient stock for product <id>"`
-   or 404.
+   or 404. On an unknown outcome (read timeout, connection error, 5xx) answer 503 and release (2.3) the same id on a
+   background thread, so a timed-out checkout does not hold the stock until the reaper and a retry does not hold it
+   twice.
 3. A tx saves the order with `orders.stock_reservation_id` (V25, internal, never serialized),
    `inventoryState = DEDUCTED`, and the existing tender, coupon and cart logic. It applies the returned
    `quantityAfter` and `ledgerVersion` to the projection, using the same newer-version rule.

@@ -83,7 +83,7 @@ off up to 30 seconds while the events wait in `domain_events`.
 
 The fault-injection lab has four broker exercises
 ([reference](../reference/FAULT_INJECTION_LAB.md#broker-transport)): an event
-crossing the broker in about a second (against 5–8 seconds with the feed), a
+crossing the broker in about a second (against up to 5 seconds with the feed), a
 poison message ending in the dead-letter queue without blocking the queue, a
 stopped consumer whose queue fills up and drains, and checkout working while
 the backend cannot reach the broker. `scripts/chaos up lightweight broker`
