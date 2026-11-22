@@ -9,7 +9,7 @@ cross every service. The repository is public:
 
 ## What it covers
 
-606 tests: 441 API, 160 UI and 5 journeys, run in about three minutes with 4 workers.
+822 tests: 597 API, 219 UI and 6 journeys, run in about four minutes with 4 workers on a laptop.
 On its first full run the suite found 11 bugs in four services. Among them were
 connection-pool deadlocks in payment-service and warehouse-service under concurrent
 requests, and an event retention job that never deleted anything. All 11 were fixed in
@@ -77,5 +77,8 @@ public hosts, use the read-only curl smoke test, `scripts/smoke-features.sh <url
 
 The repository's `Commerce e2e` workflow checks out awesome-localstack, starts
 the lightweight profile with the pinned images and runs all three projects. The
-HTML report and traces are uploaded as an artifact. To test a new image pin
+suite is split into four jobs, each with its own stack: `api-1` and `api-2` halve
+the API project, `ui-1` and `ui-2` halve the browser projects. A run takes about
+three and a half minutes, and each job uploads its HTML report and traces as the
+artifact `playwright-report-<job>`. To test a new image pin
 before it reaches `main`, start the workflow by hand with `localstack_ref`.
