@@ -70,8 +70,9 @@ docker build --build-context repo-docs=docs -t awesome-localstack/docs:local doc
 docker run --rm -p 8090:80 awesome-localstack/docs:local   # http://localhost:8090/docs/
 ```
 
-CI (`.github/workflows/test.yml`, job `verifyDocsSite`) runs the strict build,
-which fails on broken internal links and anchors, and builds the image.
+CI (`.github/workflows/test.yml`, job `verifyDocsSite`) builds the image, whose
+build is the strict build (it fails on broken internal links and anchors), and
+smoke-tests the container.
 
 !!! note "Maintenance"
     Material for MkDocs announces end of life on 5 May 2027 (critical fixes

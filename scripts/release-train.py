@@ -633,7 +633,13 @@ def cmd_pr(shell, args):
         print("[dry-run] gh pr checks <pr> --watch --fail-fast" + (" && gh pr merge --squash" if args.merge else ""))
         return
     print(url)
-    time.sleep(10)  # let GitHub register the checks before watching them
+    # CI starts on the pull request event, so its checks appear a few seconds
+    # after the PR; watching before that fails with "no checks reported".
+    for _ in range(30):
+        if shell.read(["gh", "pr", "checks", url, "--json", "name", "--jq", "length"], check=False) not in ("", "0"):
+            break
+        time.sleep(5)
+    time.sleep(10)  # let the rest of the run's jobs register
     shell.act(["gh", "pr", "checks", url, "--watch", "--fail-fast"])
     if args.merge:
         shell.act(["gh", "pr", "merge", url, "--squash", "--delete-branch"])

@@ -256,7 +256,7 @@ the same ids. The gateway does not log `/images/` and `/branding/`.
 
 ## Guarantees
 
-`scripts/verify-correlation-ids.py` (CI job `verifyCorrelationIds`) checks
+`scripts/verify-correlation-ids.py` (CI job `verifyContracts`) checks
 that every server block of every gateway configuration logs JSON, returns
 `X-Request-Id` and passes both headers from every proxied location, and that
 the server's Spring services enable ECS logging. With `--routing` it starts

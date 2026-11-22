@@ -34,6 +34,7 @@ The Docker Hub token should be scoped to repository image writes and stored sepa
 The workflows use action generations whose JavaScript entrypoints target Node.js 24:
 
 - `actions/checkout@v7.0.1`
+- `actions/cache@v6.1.0` (LocalStack CI: the ansible-core virtual environment)
 - `actions/setup-node@v7.0.0`
 - `actions/setup-java@v5.6.0`
 - `docker/setup-qemu-action@v4.2.0`
@@ -1486,7 +1487,7 @@ order, rollback) in the release PR before merging. New Vault keys still go in
 before `deploy`, and the course suite (`l20`) runs after it. The pure parts
 (version parsing, pin replacement, release-section rendering, deploy target,
 deploy preflight) are unit-tested in `scripts/test_release_train.py` (CI job
-`verifyReleaseTrain`).
+`verifyContracts`).
 
 The manual sequence the script follows:
 

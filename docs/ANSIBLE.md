@@ -240,7 +240,7 @@ prune refuses to run when the checkout listing misses one of the directories
 (a wipe instead of a mirror). The decision is
 `roles/app/filter_plugins/asset_mirror.py`; built-in modules do the rest, with
 no rsync on the server. `scripts/verify-asset-mirror.py` (CI job
-`verifyAnsible`) runs the real tasks against a fixture git repository: a
+`verifyContracts`) runs the real tasks against a fixture git repository: a
 tracked and deleted file is removed, an unknown manual file and the secrets
 are kept.
 
