@@ -395,7 +395,7 @@ the chosen profile does not run (the consumer in the lightweight profile) has
 no target rather than a DOWN one. It also accepts k6 remote write
 (`k6 run -o experimental-prometheus-rw`). `scripts/verify-monitoring-overlay.sh`
 starts a profile with the overlay and checks the dashboards and targets; CI
-runs it for the lightweight profile.
+runs it for the lightweight profile (job `verifyLightweight`).
 
 ## Fault-injection lab and tracing
 

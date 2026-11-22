@@ -243,7 +243,7 @@ not wait for the sandbox) and the backend keeps `service_started` for
 `verify` expects six probe results.
 
 **Contract and tests.** `scripts/verify-production-monitoring.py` (CI job
-`verifyProductionMonitoring`) checks the Grafana removal, the healthchecks and
+`verifyContracts`) checks the Grafana removal, the healthchecks and
 dependency conditions, the aitesters probes, the watchdog role, units and
 deploy ordering, the backup `OnFailure=` hooks and the deployment pause.
 `scripts/verify-watchdog.py` tests the script against a fake Docker CLI, fake

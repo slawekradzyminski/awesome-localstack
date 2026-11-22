@@ -4,8 +4,8 @@
 is the reference Playwright implementation for this stack. It tests payments,
 gift cards and loyalty points, VAT and currencies, product search, carrier
 tracking and user webhooks, through the API, the browser and journeys that
-cross every service. The repository is private for now; ask for access if you
-take part in a course.
+cross every service. The repository is public:
+[awesome-localstack-e2e-tests](https://github.com/slawekradzyminski/awesome-localstack-e2e-tests).
 
 ## What it covers
 

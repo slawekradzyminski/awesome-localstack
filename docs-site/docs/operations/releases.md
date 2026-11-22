@@ -71,10 +71,31 @@ Vault keys go in before the deploy; backend migrations use
 | `scripts/verify-release-images.py` | The seven first-party images (with notification-service) form one compatibility set across profiles; a `PENDING_*_DIGEST` placeholder always fails; the sandbox reuses the same images; env-file isolation; no backend sets `PAYMENT_BASE_URL` (removed in backend 3.16.0); gateway upstreams per host; required gateway locations in every server block (payments, tracking, `/internal/`, `/docs/`); the docs service is built locally with a bounded memory limit. `--remote` also checks both architectures exist |
 | `scripts/verify-java-security.py` | The frozen Java certificate blocklist is mounted in every JVM container |
 | `scripts/verify-deployment-silence.py`, `verify-backend-upgrade.py`, `verify-postgres-restore.py` | Ansible ordering and safety properties: preparation (docs build, pulls, Compose validation) before the quiesce, rescue restart of the stopped backends |
-| `scripts/verify-asset-mirror.py` | Runs the deploy's asset mirror against a fixture git repository: files the repository tracked and deleted are pruned; untracked manual files, rendered secrets and `app_dir` runtime files are kept (CI job `verifyAnsible`, with `ansible-playbook --syntax-check` of every playbook) |
+| `scripts/verify-asset-mirror.py` | Runs the deploy's asset mirror against a fixture git repository: files the repository tracked and deleted are pruned; untracked manual files, rendered secrets and `app_dir` runtime files are kept (CI job `verifyContracts`, with `ansible-playbook --syntax-check` of every playbook) |
 | `scripts/verify-edge-proxy.sh` | The edge only trusts forwarded headers from the provider range |
 | `scripts/verify-correlation-ids.py` | Every gateway server block validates or generates `X-Request-Id` and `traceparent`, passes them from every proxied location, returns `X-Request-Id` and logs JSON; the server's Spring services log ECS JSON. `--routing` proves it against stub upstreams ([Tracing a request](tracing.md)) |
 | `scripts/test_release_train.py` | Unit tests of the release train: version parsing, pin replacement, release-section rendering, deploy target, deploy preflight |
+
+## CI layout
+
+`.github/workflows/test.yml` runs on pull requests and on `main`; a branch
+without a pull request runs on request (`workflow_dispatch`). A newer push to a
+pull request cancels its running CI.
+
+| Job | Runs | What it does |
+| --- | --- | --- |
+| `changes` | always | Lists the changed files and decides which of the jobs below are needed |
+| `verifyContracts` | always | Every contract script above, the release-train and adapter unit tests, the Ansible syntax check and the asset mirror; each step runs even when an earlier one failed |
+| `verifyDocsSite` | always | Builds the docs image (`mkdocs build --strict`) and smoke-tests the container |
+| `verifyLightweight` | unless only documentation changed | Lightweight profile with the monitoring overlay: feature smoke test, Grafana dashboards and Prometheus targets, gateway re-resolution |
+| `verifyEventBroker` | unless only documentation changed | Lightweight profile with the broker transport and the chaos overlay |
+| `runDocker` | unless only documentation changed | Full profile with the Ollama mock and the monitoring overlay |
+| `runDocker-Jenkins` | when the Jenkins image inputs change | Builds the root `Dockerfile` and waits for Jenkins |
+
+"Only documentation" means every changed file is under `docs/`, `docs-site/` or
+is a Markdown file in the repository root. The Jenkins inputs are `Dockerfile`,
+`entrypoint.sh`, `docker-compose-jenkins.yml`, `run-docker-compose-jenkins.sh`
+and `security/java/`. A change to the workflow itself runs everything.
 
 The current pins and the release history are in
 [Container releases](../reference/CONTAINER_RELEASES.md#current-compatibility-set).
