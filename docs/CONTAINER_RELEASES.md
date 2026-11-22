@@ -193,6 +193,55 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.25.0, warehouse-service 1.8.0 — 22 November 2026
+
+Published by `scripts/release-train.py`. Fixes the three findings of the
+exploratory chaos session of 21 November 2026
+([test-secure-backend PR #119](https://github.com/slawekradzyminski/test-secure-backend/pull/119),
+[warehouse-service PR #15](https://github.com/slawekradzyminski/warehouse-service/pull/15)):
+
+- **Event feed in commit order (backend, F1).** A cancellation that committed
+  more than 3 s after it inserted its events was overtaken by a later one and
+  skipped by every feed consumer, so its card refund was never made. Flyway
+  V29 adds `domain_events.feed_position`, assigned to committed rows in commit
+  order at every feed read (lock on the one-row `domain_event_feed_head`); the
+  feed pages by it and the 3 s settle delay (`EVENTS_SETTLE_DELAY`) is gone.
+  Existing rows keep position = sequence, so consumer cursors stay valid.
+  The broker transport (both production sites) is unchanged.
+- **Timed-out checkout gives the stock back (backend + warehouse-service,
+  F2).** After a reserve with an unknown outcome the backend releases that
+  reservation id in the background; warehouse-service stores a release of an
+  unknown id as a `RELEASED` tombstone (200, was 404) and answers a reserve of
+  a released id with 409, so a late reserve deducts nothing. Retries no longer
+  hold stock several times until the reaper.
+- **Database outage answers 503 after 5 s (both, F3).** HikariCP
+  `connection-timeout: 5000` (was the 30 s default; `loginTimeout` stays 30 s)
+  and connection failures answer `503 {"message":"Database unavailable"}`
+  instead of a generic 500.
+
+Verified before tagging: both repositories' CI, native smoke tests, the
+private e2e reference suite (827 passed) on an isolated lightweight copy with
+the fixed images, and the chaos-lab repros of all three findings.
+
+LocalStack changes: pins, plus the docs of
+[PR #113](https://github.com/slawekradzyminski/awesome-localstack/pull/113)
+(EVENT_FEED.md, INVENTORY_OWNERSHIP_CONTRACT.md 2.1/2.3, FAULT_INJECTION_LAB.md).
+
+Upgrade: backend first (`make ansible-deploy-backend-upgrade`, V29 runs at
+start-up), warehouse-service with it. Rollback: backend 3.24.0 starts on the
+V29 schema (Hibernate validation ignores the extra column and table; checked
+in the lab) and serves the feed by sequence again; events it records get a
+position when 3.25.0 returns. warehouse-service 1.7.0 has no schema change.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.25.0@sha256:cb494ca7b1c43c7e0f31bd701718248043bc5a1f9478cbf8ed0f28a0e94f6e27` | [PR #119](https://github.com/slawekradzyminski/test-secure-backend/pull/119), `e5d8fc4` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/45023568556) |
+| `slawekradzyminski/warehouse-service:1.8.0@sha256:52b23e051161e0afd4374bd8115f489ad30536b2aeb92cca606b6bf9e9ffc17b` | [PR #15](https://github.com/slawekradzyminski/warehouse-service/pull/15), `41c8400` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/45023570704) |
+| `slawekradzyminski/payment-service:1.4.0` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.1.0` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.0` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.24.0 — 17 November 2026
 
 Published by `scripts/release-train.py`. The follow-up of ADR 6 (warehouse-service
@@ -1253,15 +1302,15 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.24.0, released 17 November 2026:
+Release train: backend 3.25.0, warehouse-service 1.8.0, released 22 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.24.0@sha256:aa1ea75151591cbe4798a2640352d1594d805ce3a00c12020f73726365476c1a` |
+| Backend | `slawekradzyminski/backend:3.25.0@sha256:cb494ca7b1c43c7e0f31bd701718248043bc5a1f9478cbf8ed0f28a0e94f6e27` |
 | Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.7.0@sha256:c067fed4b976fe33d28023f263a4810a23e757604edc1b654e248bb44b0a18e6` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.8.0@sha256:52b23e051161e0afd4374bd8115f489ad30536b2aeb92cca606b6bf9e9ffc17b` |
 | Payment service | `slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765` |
 | Notification service | `slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb` |
 
