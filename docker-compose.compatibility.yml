@@ -2,7 +2,7 @@
 name: awesome-compatibility
 
 x-backend: &backend
-  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.25.0@sha256:cb494ca7b1c43c7e0f31bd701718248043bc5a1f9478cbf8ed0f28a0e94f6e27}
+  image: ${COMPAT_BACKEND_IMAGE:-slawekradzyminski/backend:3.25.1@sha256:767f972fc4af0fd272ee8bc33fb8fee8c57ea97413e61917f5525f17913bb582}
   environment: &backend-environment
     SPRING_PROFILES_ACTIVE: local,server
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb
@@ -53,7 +53,7 @@ x-backend: &backend
 x-warehouse: &warehouse
   # The stock owner next to each backend (schema and role `warehouse` in that
   # backend's database), prepared by the matching *-postgres-roles one-shot.
-  image: ${COMPAT_WAREHOUSE_IMAGE:-slawekradzyminski/warehouse-service:1.8.0@sha256:52b23e051161e0afd4374bd8115f489ad30536b2aeb92cca606b6bf9e9ffc17b}
+  image: ${COMPAT_WAREHOUSE_IMAGE:-slawekradzyminski/warehouse-service:1.8.1@sha256:39d43a8be26a500b1c6dac2bf0e3d9505e4e02c3536c5258a5f08551b5ebae6a}
   environment: &warehouse-environment
     SPRING_PROFILES_ACTIVE: docker
     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/testdb?currentSchema=warehouse
@@ -190,7 +190,7 @@ services:
 
   frontend:
     profiles: [graphql-preview]
-    image: slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325
+    image: slawekradzyminski/frontend:3.15.1@sha256:2e7c9effb130c568a1acb1c3af6f1224308d4a2c8894cb6cbe7d18bec6cf340a
   gateway:
     profiles: [graphql-preview]
     image: nginx:1.31.3-trixie@sha256:5a88c9c45479443d7be2eadc894b4ed0a9801bae03d97a5760ae13b5c2005942

@@ -194,6 +194,60 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.25.1, warehouse-service 1.8.1, payment-service 1.4.1, notification-service 1.1.1, frontend 3.15.1 — 25 November 2026
+
+Published by `scripts/release-train.py`. Fixes the "fix now" findings of the
+agentic test pass of 24 November 2026 (unit/static, API and UI floors). The
+feature PRs were verified together before merging: the full
+`awesome-localstack-e2e-tests` suite (827 tests) passed against an isolated
+lightweight stack built from the fix branches, with native images for all four
+Java services.
+
+- **payment-service 1.4.1** ([PR #14](https://github.com/slawekradzyminski/payment-service/pull/14)):
+  a 401, 403, 408 or 429 from the backend's payment-result endpoint is retried
+  instead of giving up a CAPTURED result on the first attempt; any other final
+  rejection voids the capture, so a customer is never left charged without a
+  refund. The event feed poller keeps its cursor on database and transaction
+  failures and skips only poison events (bad payload, final backend rejection,
+  integrity violation).
+- **notification-service 1.1.1** ([PR #8](https://github.com/slawekradzyminski/notification-service/pull/8))
+  and **warehouse-service 1.8.1** ([PR #19](https://github.com/slawekradzyminski/warehouse-service/pull/19)):
+  the same feed-poller rule, so a dropped database connection no longer loses
+  a webhook, an email or a stock restore. warehouse-service also rejects
+  restore quantities outside 1..2147483647 as a poison event instead of
+  overflowing and stalling the feed.
+- **backend 3.25.1** ([PR #122](https://github.com/slawekradzyminski/test-secure-backend/pull/122)):
+  replaying a rotated refresh token now revokes the whole token family (the
+  revoke was rolled back by `UserService`'s transaction); concurrent edits of
+  one cart line lock the line and never answer 500 (optimistic and pessimistic
+  locking failures map to 409).
+- **frontend 3.15.1** ([PR #114](https://github.com/slawekradzyminski/vite-react-frontend/pull/114)):
+  only a 401 ends the session (a 503 on `/users/me`, a business 403 or a failed
+  refresh no longer sign the user out); error boundaries instead of a white
+  screen; 15 s request timeout; load errors no longer shown as "not found" or
+  "no products"; naive backend timestamps rendered as UTC (they were 1 h off in
+  CET); hashed assets cached as immutable and `index.html` revalidated, with a
+  404 for a missing asset.
+
+LocalStack changes: image pins only (the gateway hardening of
+[#117](https://github.com/slawekradzyminski/awesome-localstack/pull/117) is
+already on `main`). No Flyway migration, no new Vault key, no API contract
+change.
+
+Upgrade: `scripts/release-train.py deploy --yes` (backend version change:
+quiesced upgrade with a pre-deploy backup). Rollback: re-pin backend 3.25.0,
+warehouse-service 1.8.0, payment-service 1.4.0, notification-service 1.1.0 and
+frontend 3.15.0; the schema is unchanged, so no restore is needed.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.25.1@sha256:767f972fc4af0fd272ee8bc33fb8fee8c57ea97413e61917f5525f17913bb582` | [PR #123](https://github.com/slawekradzyminski/test-secure-backend/pull/123), `e25036e` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/45701152922) |
+| `slawekradzyminski/warehouse-service:1.8.1@sha256:39d43a8be26a500b1c6dac2bf0e3d9505e4e02c3536c5258a5f08551b5ebae6a` | [PR #20](https://github.com/slawekradzyminski/warehouse-service/pull/20), `665bdd7` | [run](https://github.com/slawekradzyminski/warehouse-service/actions/runs/45701155271) |
+| `slawekradzyminski/payment-service:1.4.1@sha256:e298c8c101900a287b0c38075d45a5bb95c1aad7c527aa6b5d36b0c3fb2e8bff` | [PR #15](https://github.com/slawekradzyminski/payment-service/pull/15), `bc9b841` | [run](https://github.com/slawekradzyminski/payment-service/actions/runs/45701159799) |
+| `slawekradzyminski/notification-service:1.1.1@sha256:7a63256f65b9422981d72bd9d6885d9292f92c71b131780e545d2a4777750183` | [PR #9](https://github.com/slawekradzyminski/notification-service/pull/9), `239ad03` | [run](https://github.com/slawekradzyminski/notification-service/actions/runs/45701164755) |
+| `slawekradzyminski/frontend:3.15.1@sha256:2e7c9effb130c568a1acb1c3af6f1224308d4a2c8894cb6cbe7d18bec6cf340a` | [PR #115](https://github.com/slawekradzyminski/vite-react-frontend/pull/115), `649f448` | [run](https://github.com/slawekradzyminski/vite-react-frontend/actions/runs/45701170136) |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.25.0, warehouse-service 1.8.0 — 22 November 2026
 
 Published by `scripts/release-train.py`. Fixes the three findings of the
@@ -1303,17 +1357,17 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.25.0, warehouse-service 1.8.0, released 22 November 2026:
+Release train: backend 3.25.1, warehouse-service 1.8.1, payment-service 1.4.1, notification-service 1.1.1, frontend 3.15.1, released 25 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.25.0@sha256:cb494ca7b1c43c7e0f31bd701718248043bc5a1f9478cbf8ed0f28a0e94f6e27` |
-| Frontend | `slawekradzyminski/frontend:3.15.0@sha256:7640d1625b460b1ad5d19a9a6176444c8d8765a527699140fa6fa81eeac0e325` |
+| Backend | `slawekradzyminski/backend:3.25.1@sha256:767f972fc4af0fd272ee8bc33fb8fee8c57ea97413e61917f5525f17913bb582` |
+| Frontend | `slawekradzyminski/frontend:3.15.1@sha256:2e7c9effb130c568a1acb1c3af6f1224308d4a2c8894cb6cbe7d18bec6cf340a` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
-| Warehouse service | `slawekradzyminski/warehouse-service:1.8.0@sha256:52b23e051161e0afd4374bd8115f489ad30536b2aeb92cca606b6bf9e9ffc17b` |
-| Payment service | `slawekradzyminski/payment-service:1.4.0@sha256:5eb95f799d845f47c75227a5c83a302886196e6d7d23e7bd180df629916ba765` |
-| Notification service | `slawekradzyminski/notification-service:1.1.0@sha256:c47d7db3568abf66468dda37135900acaf8c582a4974aafaa073711173eb3eeb` |
+| Warehouse service | `slawekradzyminski/warehouse-service:1.8.1@sha256:39d43a8be26a500b1c6dac2bf0e3d9505e4e02c3536c5258a5f08551b5ebae6a` |
+| Payment service | `slawekradzyminski/payment-service:1.4.1@sha256:e298c8c101900a287b0c38075d45a5bb95c1aad7c527aa6b5d36b0c3fb2e8bff` |
+| Notification service | `slawekradzyminski/notification-service:1.1.1@sha256:7a63256f65b9422981d72bd9d6885d9292f92c71b131780e545d2a4777750183` |
 
 ## Backend 3.9.1 traffic preview patch
 
