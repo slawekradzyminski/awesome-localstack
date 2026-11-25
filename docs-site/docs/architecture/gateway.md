@@ -48,7 +48,7 @@ the generic `/api/v1/` route to the backend.
 | `/swagger-ui/`, `/v3/api-docs` | prefix | backend | Swagger UI and the backend OpenAPI document |
 | `/actuator/` | prefix | backend (local) | Server: only `= /actuator/health` is proxied, the rest is `404` |
 | `/images/`, `/branding/` | prefix | gateway filesystem | Product images and logos served by nginx itself |
-| `/mailpit/...`, `/mailhog/...` | exact + prefix | — | Server only: always `404` so the inbox never leaks |
+| `/mailpit/...`, `/mailhog/...` | exact + prefix | — | Server only, on both hosts: always `404` so the inbox never leaks |
 | `= /docs`, `/docs/` | exact + prefix | docs | This wiki; `/docs` redirects to `/docs/` |
 | `/` | prefix | frontend | The SPA; unknown non-API paths are handled by the client-side router |
 
@@ -99,6 +99,20 @@ services run with `SERVER_FORWARD_HEADERS_STRATEGY=framework`, so redirects,
 generated links and the OpenAPI `servers` URL use the public scheme and host.
 Swagger UI's "Try it out" therefore calls `https://awesome.byst.re` in
 production and `http://localhost:8081` locally.
+
+## Response headers
+
+Every app server block (`localhost`, `awesome.byst.re`, `aitesters.byst.re`)
+sets `server_tokens off`, so `Server: nginx` carries no version, and uses
+`absolute_redirect off`, so nginx's own redirects (for example
+`/api/v1/warehouse` to `/api/v1/warehouse/`) stay relative and keep the
+client on `https`. The SPA location `/` adds `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: SAMEORIGIN` and `Referrer-Policy:
+strict-origin-when-cross-origin`; because a location-level `add_header` stops
+the server's from being inherited, it repeats `X-Request-Id`. API responses
+keep the headers the services set themselves. Cache rules for the SPA
+(`index.html` revalidated, hashed `/assets/` immutable and `404` when missing)
+live in the frontend image's own nginx configuration.
 
 ## Correlation ids
 
