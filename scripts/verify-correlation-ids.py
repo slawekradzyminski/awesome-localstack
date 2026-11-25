@@ -120,8 +120,12 @@ def static_checks() -> list[str]:
             if "X-Request-Id" not in directive(server_level, "proxy_hide_header"):
                 errors.append(f"{label}: an upstream X-Request-Id is not hidden (duplicate header)")
             for location in blocks(server, "location"):
+                # A location-level add_header stops the server's from being
+                # inherited, so it must repeat X-Request-Id itself.
+                adds = directive(location, "add_header")
+                drops_request_id = bool(adds) and "X-Request-Id $corr_request_id always" not in adds
                 if not directive(location, "proxy_pass"):
-                    if directive(location, "add_header"):
+                    if drops_request_id:
                         errors.append(f"{label}: a location's add_header drops X-Request-Id")
                     continue
                 headers = directive(location, "proxy_set_header")
@@ -129,7 +133,7 @@ def static_checks() -> list[str]:
                     errors.append(f"{label}: location without X-Request-Id: {location.strip()[:60]!r}")
                 if "traceparent $corr_traceparent" not in headers:
                     errors.append(f"{label}: location without traceparent: {location.strip()[:60]!r}")
-                if directive(location, "add_header"):
+                if drops_request_id:
                     errors.append(f"{label}: a proxied location's add_header drops X-Request-Id")
 
     compose = (ROOT / "docker-compose.server.yml").read_text()
