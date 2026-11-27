@@ -7,5 +7,7 @@ After=docker.service
 Type=oneshot
 WorkingDirectory={{ app_dir }}
 ExecStart=/usr/bin/docker compose -f {{ app_compose_file }} up -d --force-recreate --renew-anon-volumes --no-deps aitesters-postgres aitesters-postgres-roles aitesters-backend aitesters-warehouse-service aitesters-payment-service aitesters-notification-service
+# The fresh database repeats earlier event ids; let the broker accept them again.
+ExecStartPost={{ aitesters_broker_dedupe_reset_path }}
 StandardOutput=append:{{ aitesters_reset_log_file }}
 StandardError=append:{{ aitesters_reset_log_file }}
