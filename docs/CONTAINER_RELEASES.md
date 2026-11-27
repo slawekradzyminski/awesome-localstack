@@ -194,6 +194,20 @@ whether 3.20.1 runs on the V23 to V25 schema is decided in the release review,
 so keep the pre-deploy backup. Subscriptions created after the move exist only
 in notification-service.
 
+## Release train: backend 3.25.2 — 27 November 2026
+
+Published by `scripts/release-train.py`. TODO: what changes, LocalStack
+changes, upgrade order and rollback.
+
+| Image | Source | Release workflow |
+| --- | --- | --- |
+| `slawekradzyminski/backend:3.25.2@sha256:bc90224a5839472ac6a8ae4daa90fb7dbca985d8afcb8285162a6e8208ac1014` | [PR #124](https://github.com/slawekradzyminski/test-secure-backend/pull/124), `58470cf` | [run](https://github.com/slawekradzyminski/test-secure-backend/actions/runs/45997124848) |
+| `slawekradzyminski/warehouse-service:1.8.1` | unchanged | unchanged |
+| `slawekradzyminski/payment-service:1.4.1` | unchanged | unchanged |
+| `slawekradzyminski/notification-service:1.1.1` | unchanged | unchanged |
+| `slawekradzyminski/frontend:3.15.1` | unchanged | unchanged |
+| `slawekradzyminski/consumer:3.6.0` | unchanged | unchanged |
+
 ## Release train: backend 3.25.1, warehouse-service 1.8.1, payment-service 1.4.1, notification-service 1.1.1, frontend 3.15.1 — 25 November 2026
 
 Published by `scripts/release-train.py`. Fixes the "fix now" findings of the
@@ -1357,11 +1371,11 @@ approved restart; production PostgreSQL is independent and preserved.
 
 ## Current compatibility set
 
-Release train: backend 3.25.1, warehouse-service 1.8.1, payment-service 1.4.1, notification-service 1.1.1, frontend 3.15.1, released 25 November 2026:
+Release train: backend 3.25.2, released 27 November 2026:
 
 | Service | Immutable image |
 | --- | --- |
-| Backend | `slawekradzyminski/backend:3.25.1@sha256:767f972fc4af0fd272ee8bc33fb8fee8c57ea97413e61917f5525f17913bb582` |
+| Backend | `slawekradzyminski/backend:3.25.2@sha256:bc90224a5839472ac6a8ae4daa90fb7dbca985d8afcb8285162a6e8208ac1014` |
 | Frontend | `slawekradzyminski/frontend:3.15.1@sha256:2e7c9effb130c568a1acb1c3af6f1224308d4a2c8894cb6cbe7d18bec6cf340a` |
 | Consumer | `slawekradzyminski/consumer:3.6.0@sha256:6975c932304eaba294b5cba87b14e3d8722ed6e6029031c0455524e0307b8775` |
 | Ollama mock | `slawekradzyminski/ollama-mock:1.0.13@sha256:7e3ea7b3c6774c38e81726e64e47323159cea53ce5777ab35754a0e5a9b4ef5e` |
