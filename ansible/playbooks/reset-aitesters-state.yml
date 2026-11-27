@@ -10,6 +10,11 @@
         chdir: "{{ app_dir }}"
       changed_when: true
 
+    - name: Let the broker accept the repeated aitesters event ids again
+      ansible.builtin.command:
+        cmd: "{{ aitesters_broker_dedupe_reset_path | default('/usr/local/sbin/aitesters-broker-dedupe-reset') }}"
+      changed_when: true
+
     - name: Wait for aitesters login route
       ansible.builtin.uri:
         url: http://127.0.0.1/login

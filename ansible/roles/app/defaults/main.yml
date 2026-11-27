@@ -3,3 +3,8 @@
 # them (or anything below them).
 app_copy_prune_excludes:
   - alertmanager/secrets
+
+# Run after every aitesters sandbox reset: the fresh database repeats earlier event ids,
+# which Artemis' duplicate detection would otherwise refuse on this address.
+aitesters_events_broker_address: aitesters.commerce.events
+aitesters_broker_dedupe_reset_path: /usr/local/sbin/aitesters-broker-dedupe-reset

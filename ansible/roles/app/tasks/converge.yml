@@ -221,6 +221,15 @@
     wait: true
     wait_timeout: 60
 
+- name: Install aitesters broker duplicate-cache reset
+  ansible.builtin.template:
+    src: aitesters-broker-dedupe-reset.sh.j2
+    dest: "{{ aitesters_broker_dedupe_reset_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+  when: aitesters_reset_enabled | bool
+
 - name: Install aitesters reset service
   ansible.builtin.template:
     src: aitesters-reset.service.j2

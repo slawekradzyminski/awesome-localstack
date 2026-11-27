@@ -95,7 +95,7 @@ with `max_connections=40` and `shared_buffers=32MB` inside a 256 MiB limit.
 | lightweight | tmpfs | every `docker compose ... up` that recreates `postgres` |
 | full | named volume `postgres-data` | `docker compose down -v` |
 | awesome.byst.re | named volume, encrypted daily backups | `make ansible-reset-demo-state` (destructive) |
-| aitesters.byst.re | `aitesters-postgres` volume | nightly `aitesters-reset` timer, or `make ansible-reset-aitesters-state` |
+| aitesters.byst.re | `aitesters-postgres` volume | nightly `aitesters-reset` timer, or `make ansible-reset-aitesters-state`; both then clear the broker's duplicate-ID cache of `aitesters.commerce.events` |
 
 Database access in the full profile: `localhost:5432`, database `testdb`,
 user and password `postgres`, or

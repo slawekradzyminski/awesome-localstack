@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Clears Artemis' duplicate-ID cache of the aitesters commerce address after the aitesters
+# sandbox reset. The reset starts aitesters-postgres from a fresh volume, so order ids start
+# again from the seed data. notification.requested events have name-based ids derived from
+# them, and the backend's EventRelay sends every event id as the duplicate-detection id.
+# Without this, the first id that repeats a previous day's is refused as a duplicate, the
+# relay's transacted batch rolls back on every retry, and no aitesters event reaches
+# warehouse-, payment- or notification-service again. Consumers still deduplicate by event
+# id in their own processed_events tables, so clearing the broker cache is safe.
+# Managed by Ansible (role app).
+set -euo pipefail
+
+address="{{ aitesters_events_broker_address }}"
+cd "{{ app_dir }}"
+
+broker="$(docker compose -f {{ app_compose_file }} ps -q activemq)"
+if [ -z "$broker" ]; then
+  echo "$(date -u +%FT%TZ) aitesters-broker-dedupe-reset: no Artemis broker runs; nothing to clear"
+  exit 0
+fi
+
+ip="$(docker inspect -f '{{ '{{' }}range .NetworkSettings.Networks{{ '}}' }}{{ '{{' }}.IPAddress{{ '}}' }} {{ '{{' }}end{{ '}}' }}' "$broker" | awk '{print $1}')"
+# The broker's own credentials, read from the container; never printed or put on a command line.
+user="$(docker exec "$broker" printenv ARTEMIS_USER)"
+password="$(docker exec "$broker" printenv ARTEMIS_PASSWORD)"
+mbean="org.apache.activemq.artemis:broker=%220.0.0.0%22,component=addresses,address=%22${address}%22"
+
+for attempt in $(seq 1 30); do
+  if answer="$(curl -s --max-time 10 --config - -H 'Origin: http://localhost' \
+      "http://${ip}:8161/console/jolokia/exec/${mbean}/clearDuplicateIdCache()" \
+      <<<"user = \"${user}:${password}\"")" \
+      && grep -q '"value":true' <<<"$answer"; then
+    echo "$(date -u +%FT%TZ) aitesters-broker-dedupe-reset: cleared the duplicate-ID cache of ${address}"
+    exit 0
+  fi
+  sleep 2
+done
+
+echo "$(date -u +%FT%TZ) aitesters-broker-dedupe-reset: could not clear the duplicate-ID cache of ${address}" >&2
+exit 1

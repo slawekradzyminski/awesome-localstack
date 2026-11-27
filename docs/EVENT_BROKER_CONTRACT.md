@@ -125,10 +125,23 @@ transaction that changed the order. Backend 3.23.0 adds `published_at`
 3. It sets `published_at` on the sent rows in a second short transaction.
 
 Delivery is **at least once**. A crash between steps 2 and 3 sends the batch
-again on the next run. The broker's duplicate detection (`_AMQ_DUPL_ID`)
-drops those copies; with it switched off
-(`EVENTS_BROKER_DUPLICATE_DETECTION=false`, a lab setting) the consumers get the
-duplicate and their `processed_events` table ignores it.
+again on the next run. Because the batch is one JMS transaction, Artemis'
+duplicate detection (`_AMQ_DUPL_ID`) does not drop single copies: it rejects
+the whole commit, and the relay retries the same batch with backoff (warning
+"Event relay cannot reach the broker (Uncategorized exception occurred during
+JMS processing)", broker warning `AMQ222059: Duplicate message detected`) until
+the address's duplicate-ID cache no longer holds those ids. With duplicate
+detection switched off (`EVENTS_BROKER_DUPLICATE_DETECTION=false`, a lab
+setting) the consumers get the duplicate and their `processed_events` table
+ignores it.
+
+The aitesters sandbox hits this every day: its nightly reset starts
+`aitesters-postgres` from a fresh volume, order ids start again from the seed
+data, and the name-based ids of `notification.requested` events repeat the
+previous day's. The reset therefore runs `aitesters-broker-dedupe-reset`
+(Ansible role `app`) after recreating the services, which calls
+`clearDuplicateIdCache()` on `aitesters.commerce.events` through the broker's
+management API. Consumers still deduplicate by event id, so this is safe.
 
 Rows older than `EVENTS_RELAY_MAX_AGE` (24 h) are marked published without
 being sent, with a warning. This bounds what a relay switched on late (or a
@@ -208,6 +221,7 @@ consumer back to `feed` re-reads the feed from where it stopped, and
 | Broker down | – | Backend keeps recording; `events_relay_pending` grows and drains after recovery. Consumers reconnect every 5 s |
 | Handler fails every time (poison event) | Logged and skipped | Redelivered 5 times, then in `DLQ.<queue>` |
 | Duplicate delivery | `processed_events` | Broker duplicate detection, then `processed_events` |
+| A batch repeats an id the broker has seen (relay crash, aitesters reset) | – | The relay retries the batch until the id leaves the duplicate-ID cache; the aitesters reset clears it |
 | Two events of one order | Handled in sequence order | Same order through the message group, while no message is being redelivered |
 
 The [fault-injection lab](FAULT_INJECTION_LAB.md#broker-transport) has an
