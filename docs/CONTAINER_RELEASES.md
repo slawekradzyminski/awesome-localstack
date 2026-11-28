@@ -1584,7 +1584,7 @@ python3 scripts/release-train.py pin                # digests -> Compose files a
 make sync-release-images                            # sibling development Compose files
 python3 scripts/release-train.py verify [--compat]  # Compose config + every contract script
 python3 scripts/release-train.py pr --merge         # branch, commit, push, PR, CI, squash-merge
-# then, from the main checkout (Vault links present), on merged main:
+# then, from the same checkout (Vault links present), now on merged main:
 python3 scripts/release-train.py deploy --yes
 ```
 
@@ -1595,7 +1595,7 @@ python3 scripts/release-train.py deploy --yes
 | `wait` | Polls each repository's `publish-image.yml` run for the tag (`--timeout`, `--interval`). | A job fails or the run concludes with anything but `success`: exits at once with the run URL. |
 | `pin` | Resolves the Docker Hub digest (`docker buildx imagetools inspect`), replaces the **current** pin of each image in every Compose file (other versions, e.g. rollback references in documents, are left alone), updates the image rows of [Current compatibility set](#current-compatibility-set) and inserts a release-section stub (PR, commit, run links; text marked TODO) above the newest dated section. | The publish run is not `success`. |
 | `verify` | `docker compose config --quiet` for every profile (overlays on their base), every contract script, the release-train unit tests and `verify-release-images.py --remote` (`--offline` skips it). `--compat` first checks that Docker's clock is within 5 s of the host's (JWT issued-at checks fail otherwise), then runs `verify-course-compatibility.py`. | Any check fails. |
-| `pr` | Creates `release/<image>-<version>…`, commits only the Compose files and this document, pushes, opens the PR, waits for its checks; `--merge` squash-merges. | Nothing was pinned. |
+| `pr` | Creates `release/<image>-<version>…`, commits only the Compose files and this document, pushes, opens the PR, waits for its checks; `--merge` squash-merges on GitHub, deletes the remote branch and moves this checkout to the merged `main`: fast-forwarded, or detached at `origin/main` when another worktree has `main` checked out (a release worktree next to a main checkout with local changes). | Nothing was pinned. |
 | `preflight` | `docker compose -f docker-compose.server.yml config --quiet` and `docker build --build-context repo-docs=docs docs-site` (the server's docs image build, `mkdocs build --strict`). Also `make deploy-preflight`, a prerequisite of the deploy targets. | Either check fails. |
 | `deploy` | Runs `preflight`, then `make ansible-deploy-backend-upgrade` when the backend version differs from the previous commit's (`--since`, default `HEAD~1`: the squash-merged release), else `make ansible-deploy`. The target runs with `SKIP_DEPLOY_PREFLIGHT=1`. | No `--yes`; not on `main`; `HEAD` is not `origin/main`; dirty tree; the preflight fails; the Vault links `ansible/.vault_pass` or `ansible/inventory/group_vars/production/vault.yml` missing (presence only, never read). |
 
