@@ -280,6 +280,64 @@ class ChangedReleaseFiles(unittest.TestCase):
         self.assertEqual(rt.changed_release_files(self.FakeShell("")), [])
 
 
+class MergeAndReturnToMain(unittest.TestCase):
+    """`pr --merge` from a release worktree while main is checked out elsewhere (27 November 2026):
+    `gh pr merge --delete-branch` merged, then failed to switch the local checkout and exited 1."""
+
+    ROOT = Path("/work/release")
+
+    class FakeShell:
+        def __init__(self, worktrees: str):
+            self.worktrees = worktrees
+            self.acts: list[list[str]] = []
+
+        def act(self, args, **_kwargs):
+            self.acts.append(args)
+            return ""
+
+        def read(self, args, **_kwargs):
+            assert args == ["git", "worktree", "list", "--porcelain"], args
+            return self.worktrees
+
+    @staticmethod
+    def porcelain(*entries: tuple[str, str | None]) -> str:
+        blocks = []
+        for path, branch in entries:
+            blocks.append(f"worktree {path}\nHEAD {'0' * 40}\n"
+                          + (f"branch refs/heads/{branch}" if branch else "detached"))
+        return "\n\n".join(blocks)
+
+    def merge(self, worktrees: str) -> list[list[str]]:
+        shell = self.FakeShell(worktrees)
+        with mock.patch.object(rt, "ROOT", self.ROOT):
+            rt.merge_and_return_to_main(shell, "https://github.com/o/r/pull/9", "release/backend-3.25.2")
+        return shell.acts
+
+    def test_merges_on_github_only_and_detaches_when_main_is_in_another_worktree(self):
+        acts = self.merge(self.porcelain(("/work/main", "main"), (str(self.ROOT), "release/backend-3.25.2")))
+
+        self.assertEqual(acts, [
+            ["gh", "pr", "merge", "https://github.com/o/r/pull/9", "--squash"],
+            ["git", "push", "origin", "--delete", "release/backend-3.25.2"],
+            ["git", "fetch", "origin", "main"],
+            ["git", "switch", "--detach", "origin/main"],
+            ["git", "branch", "-D", "release/backend-3.25.2"],
+        ])
+
+    def test_fast_forwards_main_when_no_other_worktree_holds_it(self):
+        acts = self.merge(self.porcelain((str(self.ROOT), "release/backend-3.25.2"), ("/work/other", None)))
+
+        self.assertIn(["git", "switch", "main"], acts)
+        self.assertIn(["git", "merge", "--ff-only", "origin/main"], acts)
+        self.assertNotIn(["git", "switch", "--detach", "origin/main"], acts)
+        self.assertEqual(acts[-1], ["git", "branch", "-D", "release/backend-3.25.2"])
+
+    def test_main_in_this_worktree_is_not_elsewhere(self):
+        self.assertFalse(rt.main_checked_out_elsewhere(self.porcelain((str(self.ROOT), "main")), self.ROOT))
+        self.assertFalse(rt.main_checked_out_elsewhere(self.porcelain(("/work/x", "main-old")), self.ROOT))
+        self.assertTrue(rt.main_checked_out_elsewhere(self.porcelain(("/work/x", "main")), self.ROOT))
+
+
 class DeployPreflight(unittest.TestCase):
     """The checks that would otherwise fail on the server, mid-deploy (deploy of 12 November 2026)."""
 

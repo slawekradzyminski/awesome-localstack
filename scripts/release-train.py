@@ -630,7 +630,8 @@ def cmd_pr(shell, args):
     url = shell.act(["gh", "pr", "create", "--base", "main", "--head", branch, "--title", title, "--body", body],
                     capture=True)
     if shell.dry_run:
-        print("[dry-run] gh pr checks <pr> --watch --fail-fast" + (" && gh pr merge --squash" if args.merge else ""))
+        print("[dry-run] gh pr checks <pr> --watch --fail-fast"
+              + (" && gh pr merge --squash, then the local checkout moves to the merged main" if args.merge else ""))
         return
     print(url)
     # CI starts on the pull request event, so its checks appear a few seconds
@@ -642,7 +643,38 @@ def cmd_pr(shell, args):
     time.sleep(10)  # let the rest of the run's jobs register
     shell.act(["gh", "pr", "checks", url, "--watch", "--fail-fast"])
     if args.merge:
-        shell.act(["gh", "pr", "merge", url, "--squash", "--delete-branch"])
+        merge_and_return_to_main(shell, url, branch)
+
+
+def merge_and_return_to_main(shell, url: str, branch: str) -> None:
+    """Squash-merges on GitHub, then leaves this checkout on the merged main for `deploy`.
+
+    `gh pr merge --delete-branch` also switches the local checkout to main, which fails (after the
+    merge succeeded) when main is checked out in another worktree: the recommended way to release
+    while the main checkout has local changes. So the merge touches only GitHub, and git does the
+    rest: a checkout that may take main fast-forwards it, any other detaches at origin/main.
+    """
+    shell.act(["gh", "pr", "merge", url, "--squash"])
+    shell.act(["git", "push", "origin", "--delete", branch])
+    shell.act(["git", "fetch", "origin", "main"])
+    worktrees = shell.read(["git", "worktree", "list", "--porcelain"])
+    if main_checked_out_elsewhere(worktrees, ROOT):
+        shell.act(["git", "switch", "--detach", "origin/main"])
+    else:
+        shell.act(["git", "switch", "main"])
+        shell.act(["git", "merge", "--ff-only", "origin/main"])
+    shell.act(["git", "branch", "-D", branch])
+
+
+def main_checked_out_elsewhere(worktree_porcelain: str, root: Path) -> bool:
+    """True when `git worktree list --porcelain` shows refs/heads/main in a worktree other than root."""
+    path = None
+    for line in worktree_porcelain.splitlines():
+        if line.startswith("worktree "):
+            path = Path(line.removeprefix("worktree "))
+        elif line == "branch refs/heads/main" and path is not None and path.resolve() != root.resolve():
+            return True
+    return False
 
 
 def preflight_commands() -> list[list[str]]:
